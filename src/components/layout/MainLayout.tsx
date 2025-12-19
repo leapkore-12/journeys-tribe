@@ -1,12 +1,12 @@
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { Home, Navigation, User } from 'lucide-react';
+import { Menu, CircleDot, CreditCard } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 
 const tabs = [
-  { path: '/feed', icon: Home, label: 'Feed' },
-  { path: '/trip', icon: Navigation, label: 'Trip' },
-  { path: '/profile', icon: User, label: 'Profile' },
+  { path: '/feed', icon: Menu, label: 'Feed' },
+  { path: '/trip', icon: CircleDot, label: 'Trip' },
+  { path: '/profile', icon: CreditCard, label: 'Profile' },
 ];
 
 const MainLayout = () => {
@@ -19,14 +19,14 @@ const MainLayout = () => {
   return (
     <div className="min-h-screen bg-background flex flex-col">
       {/* Main Content */}
-      <main className="flex-1 pb-20">
+      <main className="flex-1 pb-20 overflow-y-auto">
         <Outlet />
       </main>
 
       {/* Bottom Tab Navigation */}
       {!hideBottomNav && (
-        <nav className="fixed bottom-0 left-0 right-0 bg-card border-t border-border safe-bottom z-50">
-          <div className="flex items-center justify-around h-16 max-w-lg mx-auto">
+        <nav className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[430px] bg-card border-t border-border safe-bottom z-50">
+          <div className="flex items-center justify-around h-16">
             {tabs.map((tab) => {
               const isActive = location.pathname.startsWith(tab.path);
               const Icon = tab.icon;
