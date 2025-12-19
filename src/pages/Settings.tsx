@@ -23,7 +23,7 @@ const Settings = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background safe-top">
+    <div className="flex flex-col bg-background safe-top">
       <header className="sticky top-0 z-40 bg-background border-b border-border">
         <div className="flex items-center gap-3 px-4 h-14">
           <button onClick={() => navigate(-1)} className="text-foreground">
