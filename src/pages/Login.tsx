@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Eye, EyeOff, Mail, Lock, Phone } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -119,9 +119,9 @@ const Login = () => {
                 </div>
 
                 <div className="flex justify-end">
-                  <Link to="/forgot-password" className="text-sm text-primary hover:underline">
+                  <button type="button" className="text-sm text-primary hover:underline">
                     Forgot password?
-                  </Link>
+                  </button>
                 </div>
 
                 <Button
@@ -159,13 +159,6 @@ const Login = () => {
             </Button>
           </div>
 
-          {/* Sign Up Link */}
-          <p className="mt-8 text-center text-muted-foreground">
-            Don't have an account?{' '}
-            <Link to="/signup" className="text-primary font-semibold hover:underline">
-              Sign up
-            </Link>
-          </p>
         </motion.div>
       </div>
     </div>
