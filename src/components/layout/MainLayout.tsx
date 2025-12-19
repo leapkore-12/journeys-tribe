@@ -17,7 +17,7 @@ const MainLayout = () => {
   const hideBottomNav = ['/trip/active', '/trip/complete'].some(p => location.pathname.startsWith(p));
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
+    <div className="h-full bg-background flex flex-col overflow-hidden">
       {/* Main Content */}
       <main className="flex-1 pb-20 overflow-y-auto">
         <Outlet />

@@ -38,7 +38,7 @@ const Comments = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background flex flex-col safe-top">
+    <div className="flex flex-col bg-background safe-top">
       {/* Header */}
       <header className="sticky top-0 z-40 bg-background border-b border-border">
         <div className="flex items-center justify-between px-4 h-14">
