@@ -3,10 +3,10 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import MobileContainer from "./components/layout/MobileContainer";
 import MainLayout from "./components/layout/MainLayout";
 import Splash from "./pages/Splash";
 import Login from "./pages/Login";
-import SignUp from "./pages/SignUp";
 import Feed from "./pages/Feed";
 import Search from "./pages/Search";
 import Notifications from "./pages/Notifications";
@@ -28,30 +28,31 @@ const App = () => (
         <div className="dark">
           <Toaster />
           <Sonner />
-          <Routes>
-            {/* Entry Flow */}
-            <Route path="/" element={<Splash />} />
-            <Route path="/login" element={<Login />} />
-            <Route path="/signup" element={<SignUp />} />
-            
-            {/* Main App with Bottom Navigation */}
-            <Route element={<MainLayout />}>
-              <Route path="/feed" element={<Feed />} />
-              <Route path="/trip" element={<TripPlanner />} />
-              <Route path="/profile" element={<Profile />} />
-            </Route>
-            
-            {/* Standalone Pages */}
-            <Route path="/search" element={<Search />} />
-            <Route path="/notifications" element={<Notifications />} />
-            <Route path="/trip/active" element={<ActiveTrip />} />
-            <Route path="/trip/complete" element={<TripComplete />} />
-            <Route path="/user/:userId" element={<UserProfile />} />
-            <Route path="/garage" element={<Garage />} />
-            <Route path="/settings" element={<Settings />} />
-            
-            <Route path="*" element={<NotFound />} />
-          </Routes>
+          <MobileContainer>
+            <Routes>
+              {/* Entry Flow */}
+              <Route path="/" element={<Splash />} />
+              <Route path="/login" element={<Login />} />
+              
+              {/* Main App with Bottom Navigation */}
+              <Route element={<MainLayout />}>
+                <Route path="/feed" element={<Feed />} />
+                <Route path="/trip" element={<TripPlanner />} />
+                <Route path="/profile" element={<Profile />} />
+              </Route>
+              
+              {/* Standalone Pages */}
+              <Route path="/search" element={<Search />} />
+              <Route path="/notifications" element={<Notifications />} />
+              <Route path="/trip/active" element={<ActiveTrip />} />
+              <Route path="/trip/complete" element={<TripComplete />} />
+              <Route path="/user/:userId" element={<UserProfile />} />
+              <Route path="/garage" element={<Garage />} />
+              <Route path="/settings" element={<Settings />} />
+              
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </MobileContainer>
         </div>
       </TooltipProvider>
     </BrowserRouter>
