@@ -10,6 +10,8 @@ import Login from "./pages/Login";
 import Feed from "./pages/Feed";
 import Search from "./pages/Search";
 import Notifications from "./pages/Notifications";
+import Comments from "./pages/Comments";
+import Share from "./pages/Share";
 import TripPlanner from "./pages/TripPlanner";
 import ActiveTrip from "./pages/ActiveTrip";
 import TripComplete from "./pages/TripComplete";
@@ -44,6 +46,8 @@ const App = () => (
               {/* Standalone Pages */}
               <Route path="/search" element={<Search />} />
               <Route path="/notifications" element={<Notifications />} />
+              <Route path="/comments/:postId" element={<Comments />} />
+              <Route path="/share/:postId" element={<Share />} />
               <Route path="/trip/active" element={<ActiveTrip />} />
               <Route path="/trip/complete" element={<TripComplete />} />
               <Route path="/user/:userId" element={<UserProfile />} />
