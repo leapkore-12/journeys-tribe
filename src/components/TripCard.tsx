@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { MoreHorizontal, Flag, MessageCircle, Upload } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -10,6 +11,12 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import {
+  Carousel,
+  CarouselContent,
+  CarouselItem,
+  type CarouselApi,
+} from '@/components/ui/carousel';
 
 interface TripCardProps {
   post: TripPost;
@@ -21,9 +28,37 @@ interface TripCardProps {
 }
 
 const TripCard = ({ post, index, onLike, onComment, onShare, onUserClick }: TripCardProps) => {
+  const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [carouselApi, setCarouselApi] = useState<CarouselApi>();
+  const [currentSlide, setCurrentSlide] = useState(0);
   const currentUser = getCurrentUser();
   const isOwnPost = post.user.id === currentUser.id || post.user.id === 'current';
+
+  // Build slides array: map first, vehicle second, then user photos
+  const slides = [
+    { type: 'map' as const, src: post.mapImage, label: 'Route map' },
+    { type: 'vehicle' as const, src: post.vehicle.images[0], label: `${post.vehicle.make} ${post.vehicle.model}` },
+    ...post.photos.map((photo, idx) => ({ type: 'photo' as const, src: photo, label: `Trip photo ${idx + 1}` })),
+  ];
+
+  const onCarouselSelect = useCallback(() => {
+    if (!carouselApi) return;
+    setCurrentSlide(carouselApi.selectedScrollSnap());
+  }, [carouselApi]);
+
+  // Subscribe to carousel events
+  useState(() => {
+    if (!carouselApi) return;
+    carouselApi.on('select', onCarouselSelect);
+    return () => {
+      carouselApi.off('select', onCarouselSelect);
+    };
+  });
+
+  const handleConvoyMemberClick = (userId: string) => {
+    navigate(`/user/${userId}`);
+  };
 
   const handleEdit = () => {
     console.log('Edit trip:', post.id);
@@ -122,10 +157,16 @@ const TripCard = ({ post, index, onLike, onComment, onShare, onUserClick }: Trip
               <p className="text-muted-foreground text-xs">Convoy with</p>
               <div className="flex -space-x-2 mt-0.5">
                 {post.convoyMembers.slice(0, 3).map((member) => (
-                  <Avatar key={member.id} className="h-6 w-6 border-2 border-card">
-                    <AvatarImage src={member.avatar} alt={member.name} />
-                    <AvatarFallback className="text-xs">{member.name[0]}</AvatarFallback>
-                  </Avatar>
+                  <button
+                    key={member.id}
+                    onClick={() => handleConvoyMemberClick(member.id)}
+                    className="hover:z-10 transition-transform hover:scale-110"
+                  >
+                    <Avatar className="h-6 w-6 border-2 border-card">
+                      <AvatarImage src={member.avatar} alt={member.name} />
+                      <AvatarFallback className="text-xs">{member.name[0]}</AvatarFallback>
+                    </Avatar>
+                  </button>
                 ))}
                 {post.convoyMembers.length > 3 && (
                   <div className="h-6 w-6 rounded-full bg-secondary flex items-center justify-center text-xs border-2 border-card">
@@ -138,28 +179,47 @@ const TripCard = ({ post, index, onLike, onComment, onShare, onUserClick }: Trip
         </div>
       </div>
 
-      {/* Side-by-Side Media */}
+      {/* Swipeable Media Carousel */}
       <div className="px-4 pb-3">
-        <div className="flex gap-2 h-40 rounded-xl overflow-hidden">
-          {/* Map - larger portion */}
-          <div className="flex-[3] bg-secondary rounded-lg overflow-hidden">
-            <img
-              src={post.mapImage}
-              alt="Route map"
-              className="w-full h-full object-cover"
-            />
-          </div>
-          {/* Photo - smaller portion */}
-          {post.photos.length > 0 && (
-            <div className="flex-1 bg-secondary rounded-lg overflow-hidden">
-              <img
-                src={post.photos[0]}
-                alt="Trip photo"
-                className="w-full h-full object-cover"
+        <Carousel
+          setApi={setCarouselApi}
+          opts={{ loop: false }}
+          className="w-full"
+        >
+          <CarouselContent className="-ml-0">
+            {slides.map((slide, idx) => (
+              <CarouselItem key={idx} className="pl-0">
+                <div className="relative h-48 rounded-xl overflow-hidden bg-secondary">
+                  <img
+                    src={slide.src}
+                    alt={slide.label}
+                    className="w-full h-full object-cover"
+                  />
+                  {/* Slide type indicator */}
+                  <div className="absolute top-2 left-2 bg-background/80 backdrop-blur-sm px-2 py-0.5 rounded text-xs text-foreground">
+                    {slide.type === 'map' ? '🗺️ Route' : slide.type === 'vehicle' ? '🚗 Vehicle' : '📷 Photo'}
+                  </div>
+                </div>
+              </CarouselItem>
+            ))}
+          </CarouselContent>
+        </Carousel>
+        
+        {/* Pagination Dots */}
+        {slides.length > 1 && (
+          <div className="flex justify-center gap-1.5 mt-2">
+            {slides.map((_, idx) => (
+              <button
+                key={idx}
+                onClick={() => carouselApi?.scrollTo(idx)}
+                className={cn(
+                  "w-1.5 h-1.5 rounded-full transition-colors",
+                  idx === currentSlide ? "bg-primary" : "bg-muted"
+                )}
               />
-            </div>
-          )}
-        </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Engagement Row */}
