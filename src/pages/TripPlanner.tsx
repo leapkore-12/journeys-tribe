@@ -89,7 +89,7 @@ const TripPlanner = () => {
         <h1 className="text-xl font-semibold text-primary text-center">Trip Planner</h1>
       </div>
 
-      <div className="flex-1 px-4 pb-24">
+      <div className="flex-1 px-4 pb-36">
         <AnimatePresence mode="wait">
           {/* Step 1: Start Point & Vehicle */}
           {step === 1 && (
@@ -280,7 +280,7 @@ const TripPlanner = () => {
       </div>
 
       {/* Bottom Button */}
-      <div className="fixed bottom-0 left-0 right-0 p-4 bg-background">
+      <div className="fixed bottom-20 left-0 right-0 p-4 bg-background">
         <Button
           onClick={handleNext}
           disabled={!canProceed()}

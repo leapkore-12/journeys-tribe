@@ -10,7 +10,7 @@ import logoWhite from '@/assets/logo-white.svg';
 
 const TripReview = () => {
   const navigate = useNavigate();
-  const { tripState, startTrip } = useTrip();
+  const { tripState, startTrip, resetTrip } = useTrip();
 
   const handleStartTrip = () => {
     startTrip();
@@ -39,7 +39,7 @@ const TripReview = () => {
         <h1 className="text-xl font-semibold text-primary text-center">Trip Planner</h1>
       </div>
 
-      <div className="flex-1 px-4 pb-24 space-y-4">
+      <div className="flex-1 px-4 pb-40 space-y-4">
         {/* Route Section */}
         <div className="space-y-2">
           <label className="text-sm text-muted-foreground">Route</label>
@@ -137,8 +137,18 @@ const TripReview = () => {
         </motion.div>
       </div>
 
-      {/* Start Trip Button */}
-      <div className="fixed bottom-0 left-0 right-0 p-4 bg-background">
+      {/* Bottom Buttons */}
+      <div className="fixed bottom-20 left-0 right-0 p-4 bg-background space-y-3">
+        <Button
+          variant="outline"
+          onClick={() => {
+            resetTrip();
+            navigate('/trip');
+          }}
+          className="w-full h-12 border-primary text-primary hover:bg-primary/10 font-medium"
+        >
+          Cancel Trip
+        </Button>
         <Button
           onClick={handleStartTrip}
           className="w-full h-14 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-lg"
