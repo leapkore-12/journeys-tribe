@@ -1,5 +1,24 @@
 // Mock data for RoadTribe MVP
 
+export interface UserStats {
+  ytd: {
+    trips: number;
+    distance: number; // in km
+    timeOnRoad: number; // in minutes
+  };
+  allTime: {
+    trips: number;
+    distance: number;
+    timeOnRoad: number;
+    longestTrip: number;
+  };
+}
+
+export interface MutualFollowers {
+  users: { id: string; username: string; avatar: string }[];
+  total: number;
+}
+
 export interface User {
   id: string;
   name: string;
@@ -9,8 +28,12 @@ export interface User {
   tripsCount: number;
   followersCount: number;
   followingCount: number;
+  vehiclesCount: number;
   mutuals: string[];
+  mutualFollowers?: MutualFollowers;
   isFollowing?: boolean;
+  isPrivate?: boolean;
+  stats?: UserStats;
 }
 
 export interface Vehicle {
@@ -75,8 +98,22 @@ export const mockUsers: User[] = [
     tripsCount: 47,
     followersCount: 1234,
     followingCount: 567,
+    vehiclesCount: 2,
     mutuals: ['Sarah', 'Mike', 'Chris'],
+    mutualFollowers: {
+      users: [
+        { id: '2', username: '@sarahdrives', avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&h=150&fit=crop&crop=face' },
+        { id: '3', username: '@mikeontour', avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&h=150&fit=crop&crop=face' },
+        { id: '4', username: '@chris_r', avatar: 'https://images.unsplash.com/photo-1527980965255-d3b416303d12?w=150&h=150&fit=crop&crop=face' },
+      ],
+      total: 94,
+    },
     isFollowing: false,
+    isPrivate: false,
+    stats: {
+      ytd: { trips: 48, distance: 2548, timeOnRoad: 5394 },
+      allTime: { trips: 160, distance: 10886, timeOnRoad: 9066, longestTrip: 1200 },
+    },
   },
   {
     id: '2',
@@ -87,8 +124,21 @@ export const mockUsers: User[] = [
     tripsCount: 89,
     followersCount: 2456,
     followingCount: 432,
+    vehiclesCount: 3,
     mutuals: ['Alex', 'Mike'],
+    mutualFollowers: {
+      users: [
+        { id: '1', username: '@alexrides', avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop&crop=face' },
+        { id: '3', username: '@mikeontour', avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&h=150&fit=crop&crop=face' },
+      ],
+      total: 45,
+    },
     isFollowing: true,
+    isPrivate: false,
+    stats: {
+      ytd: { trips: 32, distance: 4200, timeOnRoad: 7200 },
+      allTime: { trips: 89, distance: 15600, timeOnRoad: 12000, longestTrip: 980 },
+    },
   },
   {
     id: '3',
@@ -99,19 +149,39 @@ export const mockUsers: User[] = [
     tripsCount: 156,
     followersCount: 5678,
     followingCount: 234,
+    vehiclesCount: 4,
     mutuals: ['Alex', 'Sarah', 'Chris'],
+    mutualFollowers: {
+      users: [
+        { id: '1', username: '@alexrides', avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop&crop=face' },
+        { id: '2', username: '@sarahdrives', avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&h=150&fit=crop&crop=face' },
+        { id: '4', username: '@chris_r', avatar: 'https://images.unsplash.com/photo-1527980965255-d3b416303d12?w=150&h=150&fit=crop&crop=face' },
+      ],
+      total: 120,
+    },
     isFollowing: true,
+    isPrivate: false,
+    stats: {
+      ytd: { trips: 65, distance: 8900, timeOnRoad: 14400 },
+      allTime: { trips: 156, distance: 45000, timeOnRoad: 36000, longestTrip: 2400 },
+    },
   },
   {
     id: 'current',
-    name: 'You',
+    name: 'John Doe',
     username: '@roadtriber',
     avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop&crop=face',
     bio: 'RoadTribe member | Building memories one mile at a time 🛣️',
-    tripsCount: 23,
-    followersCount: 456,
+    tripsCount: 160,
+    followersCount: 603,
     followingCount: 321,
+    vehiclesCount: 3,
     mutuals: [],
+    isPrivate: false,
+    stats: {
+      ytd: { trips: 48, distance: 2548, timeOnRoad: 5394 },
+      allTime: { trips: 160, distance: 10886, timeOnRoad: 9066, longestTrip: 1200 },
+    },
   },
 ];
 
@@ -344,6 +414,12 @@ export const formatTimestamp = (date: Date, country: string) => {
     return `Today at ${timeStr} • ${country}`;
   }
   return `${formatTimeAgo(date)} • ${country}`;
+};
+
+export const formatStatsTime = (minutes: number) => {
+  const hours = Math.floor(minutes / 60);
+  const mins = minutes % 60;
+  return `${hours}h ${mins}m`;
 };
 
 export const getCurrentUser = () => mockUsers.find(u => u.id === 'current')!;
