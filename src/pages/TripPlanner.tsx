@@ -1,283 +1,292 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { 
-  MapPin, Navigation, Clock, Car, Users, Plus, X, Search, 
-  ChevronRight, AlertTriangle 
+  Crosshair, Flag, Search, ChevronDown, Check, Plus
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { 
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import { mockUsers, mockVehicles, formatDistance, formatDuration } from '@/lib/mock-data';
-
-interface Stop {
-  id: string;
-  name: string;
-}
+import { Checkbox } from '@/components/ui/checkbox';
+import TripHeader from '@/components/trip/TripHeader';
+import { mockUsers, mockVehicles, Vehicle } from '@/lib/mock-data';
+import { useTrip } from '@/context/TripContext';
 
 const TripPlanner = () => {
   const navigate = useNavigate();
-  const [startLocation, setStartLocation] = useState('');
-  const [destination, setDestination] = useState('');
-  const [stops, setStops] = useState<Stop[]>([]);
-  const [selectedVehicle, setSelectedVehicle] = useState('');
-  const [selectedConvoy, setSelectedConvoy] = useState<string[]>([]);
-  const [useCurrentLocation, setUseCurrentLocation] = useState(true);
+  const { tripState, setStep, setStartLocation, setDestination, addStop, removeStop, setVehicle, toggleConvoyMember } = useTrip();
+  const [step, setLocalStep] = useState(tripState.step);
+  const [startInput, setStartInput] = useState(tripState.startLocation || 'Your location');
+  const [destInput, setDestInput] = useState(tripState.destination);
+  const [stopInput, setStopInput] = useState('');
+  const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | null>(tripState.vehicle);
+  const [showVehicleDropdown, setShowVehicleDropdown] = useState(false);
+  const [searchFriends, setSearchFriends] = useState('');
+  const [localStops, setLocalStops] = useState(tripState.stops);
+  const [selectedFriends, setSelectedFriends] = useState<string[]>(tripState.convoy.map(u => u.id));
 
-  // Mock calculated values
-  const estimatedDistance = destination ? 156 : 0;
-  const estimatedDuration = destination ? 180 : 0;
+  const friends = mockUsers.filter(u => u.id !== 'current');
+  const filteredFriends = friends.filter(f => 
+    f.name.toLowerCase().includes(searchFriends.toLowerCase())
+  );
 
-  const addStop = () => {
-    setStops([...stops, { id: Date.now().toString(), name: '' }]);
+  const handleNext = () => {
+    if (step === 1) {
+      setStartLocation(startInput);
+      setVehicle(selectedVehicle);
+      setLocalStep(2);
+      setStep(2);
+    } else if (step === 2) {
+      setDestination(destInput, destInput);
+      setLocalStep(3);
+      setStep(3);
+    } else if (step === 3) {
+      setLocalStep(4);
+      setStep(4);
+    } else if (step === 4) {
+      // Navigate to review
+      navigate('/trip/review');
+    }
   };
 
-  const removeStop = (id: string) => {
-    setStops(stops.filter(s => s.id !== id));
+  const handleAddStop = () => {
+    if (stopInput.trim()) {
+      addStop(stopInput);
+      setLocalStops([...localStops, { id: Date.now().toString(), address: stopInput }]);
+      setStopInput('');
+    }
   };
 
-  const updateStop = (id: string, name: string) => {
-    setStops(stops.map(s => s.id === id ? { ...s, name } : s));
+  const handleToggleFriend = (userId: string) => {
+    const user = friends.find(u => u.id === userId);
+    if (user) {
+      toggleConvoyMember(user);
+      setSelectedFriends(prev => 
+        prev.includes(userId) 
+          ? prev.filter(id => id !== userId)
+          : [...prev, userId]
+      );
+    }
   };
 
-  const toggleConvoyMember = (userId: string) => {
-    setSelectedConvoy(prev => 
-      prev.includes(userId) 
-        ? prev.filter(id => id !== userId)
-        : [...prev, userId]
-    );
+  const canProceed = () => {
+    if (step === 1) return startInput && selectedVehicle;
+    if (step === 2) return destInput;
+    return true;
   };
 
-  const canStartTrip = (useCurrentLocation || startLocation) && destination && selectedVehicle;
-
-  const handleStartTrip = () => {
-    navigate('/trip/active');
+  const getButtonText = () => {
+    if (step === 4) return 'Invite';
+    return 'Finished';
   };
 
   return (
-    <div className="flex flex-col bg-background safe-top pb-24">
-      {/* Header */}
-      <header className="sticky top-0 z-40 bg-background border-b border-border">
-        <div className="flex items-center justify-between px-4 h-14">
-          <h1 className="text-lg font-semibold text-foreground">Plan Trip</h1>
-        </div>
-      </header>
-
-      <div className="p-4 space-y-6">
-        {/* Starting Location */}
-        <motion.section
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="space-y-3"
-        >
-          <label className="text-sm font-medium text-foreground flex items-center gap-2">
-            <MapPin className="h-4 w-4 text-primary" />
-            Starting Point
-          </label>
-          <div className="space-y-2">
-            <button
-              onClick={() => setUseCurrentLocation(true)}
-              className={`w-full p-3 rounded-lg border text-left flex items-center gap-3 transition-colors ${
-                useCurrentLocation 
-                  ? 'border-primary bg-primary/10' 
-                  : 'border-border bg-card'
-              }`}
-            >
-              <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
-                useCurrentLocation ? 'border-primary' : 'border-muted-foreground'
-              }`}>
-                {useCurrentLocation && <div className="w-2.5 h-2.5 rounded-full bg-primary" />}
-              </div>
-              <span className="text-foreground">Use current location</span>
-            </button>
-            {!useCurrentLocation && (
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search starting location..."
-                  value={startLocation}
-                  onChange={(e) => setStartLocation(e.target.value)}
-                  className="pl-10 bg-card"
-                />
-              </div>
-            )}
-            <button
-              onClick={() => setUseCurrentLocation(false)}
-              className="text-sm text-primary hover:underline"
-            >
-              {useCurrentLocation ? 'Or enter address manually' : 'Use current location instead'}
-            </button>
-          </div>
-        </motion.section>
-
-        {/* Destination */}
-        <motion.section
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-          className="space-y-3"
-        >
-          <label className="text-sm font-medium text-foreground flex items-center gap-2">
-            <Navigation className="h-4 w-4 text-primary" />
-            Destination
-          </label>
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Where are you heading?"
-              value={destination}
-              onChange={(e) => setDestination(e.target.value)}
-              className="pl-10 bg-card"
-            />
-          </div>
-        </motion.section>
-
-        {/* Stops */}
-        <motion.section
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-          className="space-y-3"
-        >
-          <label className="text-sm font-medium text-foreground">
-            Stops (Optional)
-          </label>
-          <div className="space-y-2">
-            {stops.map((stop, index) => (
-              <div key={stop.id} className="relative flex gap-2">
-                <div className="relative flex-1">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
-                    {index + 1}
-                  </span>
-                  <Input
-                    placeholder={`Stop ${index + 1}`}
-                    value={stop.name}
-                    onChange={(e) => updateStop(stop.id, e.target.value)}
-                    className="pl-8 bg-card"
-                  />
-                </div>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => removeStop(stop.id)}
-                  className="text-muted-foreground hover:text-destructive"
-                >
-                  <X className="h-4 w-4" />
-                </Button>
-              </div>
-            ))}
-            <Button
-              variant="outline"
-              onClick={addStop}
-              className="w-full border-dashed"
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              Add Stop
-            </Button>
-          </div>
-        </motion.section>
-
-        {/* Vehicle Selection */}
-        <motion.section
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3 }}
-          className="space-y-3"
-        >
-          <label className="text-sm font-medium text-foreground flex items-center gap-2">
-            <Car className="h-4 w-4 text-primary" />
-            Vehicle
-          </label>
-          <Select value={selectedVehicle} onValueChange={setSelectedVehicle}>
-            <SelectTrigger className="bg-card">
-              <SelectValue placeholder="Select your vehicle" />
-            </SelectTrigger>
-            <SelectContent>
-              {mockVehicles.map(vehicle => (
-                <SelectItem key={vehicle.id} value={vehicle.id}>
-                  {vehicle.year} {vehicle.make} {vehicle.model} - {vehicle.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </motion.section>
-
-        {/* Convoy Selection */}
-        <motion.section
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.4 }}
-          className="space-y-3"
-        >
-          <label className="text-sm font-medium text-foreground flex items-center gap-2">
-            <Users className="h-4 w-4 text-primary" />
-            Convoy (Optional)
-          </label>
-          <div className="flex flex-wrap gap-2">
-            {mockUsers.filter(u => u.id !== 'current').map(user => (
-              <button
-                key={user.id}
-                onClick={() => toggleConvoyMember(user.id)}
-                className={`flex items-center gap-2 px-3 py-2 rounded-full transition-colors ${
-                  selectedConvoy.includes(user.id)
-                    ? 'bg-primary text-primary-foreground'
-                    : 'bg-card border border-border'
-                }`}
-              >
-                <Avatar className="h-6 w-6">
-                  <AvatarImage src={user.avatar} alt={user.name} />
-                  <AvatarFallback>{user.name[0]}</AvatarFallback>
-                </Avatar>
-                <span className="text-sm">{user.name.split(' ')[0]}</span>
-              </button>
-            ))}
-          </div>
-        </motion.section>
-
-        {/* Trip Summary */}
-        {destination && (
-          <motion.section
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="bg-card rounded-xl p-4 border border-border"
-          >
-            <h3 className="font-semibold text-foreground mb-3">Trip Summary</h3>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="flex items-center gap-2">
-                <Navigation className="h-5 w-5 text-primary" />
-                <div>
-                  <p className="text-xs text-muted-foreground">Distance</p>
-                  <p className="font-semibold text-foreground">{formatDistance(estimatedDistance)}</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <Clock className="h-5 w-5 text-primary" />
-                <div>
-                  <p className="text-xs text-muted-foreground">Est. Time</p>
-                  <p className="font-semibold text-foreground">{formatDuration(estimatedDuration)}</p>
-                </div>
-              </div>
-            </div>
-          </motion.section>
-        )}
+    <div className="min-h-screen flex flex-col bg-background safe-top">
+      <TripHeader backTo="/feed" />
+      
+      {/* Title */}
+      <div className="px-4 pt-2 pb-4">
+        <h1 className="text-xl font-semibold text-primary text-center">Trip Planner</h1>
       </div>
 
-      {/* Start Trip Button */}
-      <div className="fixed bottom-20 left-0 right-0 p-4 bg-gradient-to-t from-background via-background to-transparent">
+      <div className="flex-1 px-4 pb-24">
+        <AnimatePresence mode="wait">
+          {/* Step 1: Start Point & Vehicle */}
+          {step === 1 && (
+            <motion.div
+              key="step1"
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              className="space-y-6"
+            >
+              {/* Add start point */}
+              <div className="space-y-2">
+                <label className="text-sm text-muted-foreground">Add start point</label>
+                <div className="relative">
+                  <Crosshair className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                  <Input
+                    value={startInput}
+                    onChange={(e) => setStartInput(e.target.value)}
+                    placeholder="Your location"
+                    className="pl-11 h-12 bg-secondary border-0 text-foreground placeholder:text-muted-foreground"
+                  />
+                </div>
+              </div>
+
+              {/* Select vehicle */}
+              <div className="space-y-2">
+                <label className="text-sm text-muted-foreground">Select vehicle</label>
+                <div className="relative">
+                  <button
+                    onClick={() => setShowVehicleDropdown(!showVehicleDropdown)}
+                    className="w-full h-12 px-4 bg-secondary rounded-lg flex items-center justify-between text-left"
+                  >
+                    <span className={selectedVehicle ? 'text-foreground' : 'text-primary'}>
+                      {selectedVehicle ? `🚗 ${selectedVehicle.name}` : 'Select'}
+                    </span>
+                    <ChevronDown className={`h-5 w-5 text-primary transition-transform ${showVehicleDropdown ? 'rotate-180' : ''}`} />
+                  </button>
+                  
+                  {showVehicleDropdown && (
+                    <motion.div
+                      initial={{ opacity: 0, y: -10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="absolute top-full left-0 right-0 mt-1 bg-secondary rounded-lg border border-border overflow-hidden z-50"
+                    >
+                      {mockVehicles.map(vehicle => (
+                        <button
+                          key={vehicle.id}
+                          onClick={() => {
+                            setSelectedVehicle(vehicle);
+                            setShowVehicleDropdown(false);
+                          }}
+                          className="w-full px-4 py-3 flex items-center justify-between hover:bg-muted/50 transition-colors"
+                        >
+                          <span className="text-foreground">🚗 {vehicle.name}</span>
+                          {selectedVehicle?.id === vehicle.id && (
+                            <Check className="h-5 w-5 text-primary" />
+                          )}
+                        </button>
+                      ))}
+                    </motion.div>
+                  )}
+                </div>
+              </div>
+            </motion.div>
+          )}
+
+          {/* Step 2: Add Destination */}
+          {step === 2 && (
+            <motion.div
+              key="step2"
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              className="space-y-6"
+            >
+              <div className="space-y-2">
+                <label className="text-sm text-muted-foreground">Add destination</label>
+                <div className="relative">
+                  <Flag className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                  <Input
+                    value={destInput}
+                    onChange={(e) => setDestInput(e.target.value)}
+                    placeholder="Enter the address"
+                    className="pl-11 h-12 bg-secondary border-0 text-foreground placeholder:text-muted-foreground"
+                  />
+                </div>
+              </div>
+            </motion.div>
+          )}
+
+          {/* Step 3: Add Stops */}
+          {step === 3 && (
+            <motion.div
+              key="step3"
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              className="space-y-6"
+            >
+              <div className="space-y-2">
+                <label className="text-sm text-muted-foreground">Add stops</label>
+                <div className="relative">
+                  <Flag className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                  <Input
+                    value={stopInput}
+                    onChange={(e) => setStopInput(e.target.value)}
+                    placeholder="Enter the address"
+                    className="pl-11 pr-12 h-12 bg-secondary border-0 text-foreground placeholder:text-muted-foreground"
+                    onKeyDown={(e) => e.key === 'Enter' && handleAddStop()}
+                  />
+                  <button 
+                    onClick={handleAddStop}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 flex items-center justify-center bg-primary rounded-full"
+                  >
+                    <Plus className="h-4 w-4 text-primary-foreground" />
+                  </button>
+                </div>
+              </div>
+
+              {/* List of added stops */}
+              {localStops.length > 0 && (
+                <div className="space-y-2">
+                  {localStops.map((stop, idx) => (
+                    <div key={stop.id} className="flex items-center gap-3 p-3 bg-secondary rounded-lg">
+                      <span className="text-muted-foreground text-sm">{idx + 1}.</span>
+                      <span className="text-foreground flex-1">{stop.address}</span>
+                      <button 
+                        onClick={() => {
+                          removeStop(stop.id);
+                          setLocalStops(localStops.filter(s => s.id !== stop.id));
+                        }}
+                        className="text-muted-foreground hover:text-destructive"
+                      >
+                        ×
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </motion.div>
+          )}
+
+          {/* Step 4: Invite Friends */}
+          {step === 4 && (
+            <motion.div
+              key="step4"
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              className="space-y-6"
+            >
+              <div className="space-y-2">
+                <label className="text-sm text-muted-foreground">Invite your friends to convoy</label>
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                  <Input
+                    value={searchFriends}
+                    onChange={(e) => setSearchFriends(e.target.value)}
+                    placeholder="Search for your friends"
+                    className="pl-11 h-12 bg-secondary border-0 text-foreground placeholder:text-muted-foreground"
+                  />
+                </div>
+              </div>
+
+              {/* Friends list */}
+              <div className="space-y-2">
+                {filteredFriends.map(friend => (
+                  <button
+                    key={friend.id}
+                    onClick={() => handleToggleFriend(friend.id)}
+                    className="w-full flex items-center gap-3 p-3 bg-secondary rounded-lg hover:bg-muted/50 transition-colors"
+                  >
+                    <Avatar className="h-10 w-10">
+                      <AvatarImage src={friend.avatar} alt={friend.name} />
+                      <AvatarFallback>{friend.name[0]}</AvatarFallback>
+                    </Avatar>
+                    <span className="text-foreground flex-1 text-left">{friend.name}</span>
+                    <Checkbox 
+                      checked={selectedFriends.includes(friend.id)}
+                      className="border-muted-foreground data-[state=checked]:bg-primary data-[state=checked]:border-primary"
+                    />
+                  </button>
+                ))}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+
+      {/* Bottom Button */}
+      <div className="fixed bottom-0 left-0 right-0 p-4 bg-background">
         <Button
-          onClick={handleStartTrip}
-          disabled={!canStartTrip}
+          onClick={handleNext}
+          disabled={!canProceed()}
           className="w-full h-14 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-lg disabled:opacity-50"
         >
-          <Navigation className="h-5 w-5 mr-2" />
-          Start Trip
+          {getButtonText()}
         </Button>
       </div>
     </div>
