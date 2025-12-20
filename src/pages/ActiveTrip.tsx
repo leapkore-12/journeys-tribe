@@ -2,143 +2,197 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { 
-  Pause, Play, AlertTriangle, MapPin, Navigation, Clock, 
-  Users, ChevronUp, Phone, X
+  ChevronLeft, Phone, ArrowUp, Mic, Navigation, Compass,
+  Search, X, AlertTriangle, LocateFixed, Route
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { formatDistance, formatDuration, mockUsers } from '@/lib/mock-data';
-import { cn } from '@/lib/utils';
+import { useTrip } from '@/context/TripContext';
+import logoWhite from '@/assets/logo-white.svg';
 
 const ActiveTrip = () => {
   const navigate = useNavigate();
-  const [isPaused, setIsPaused] = useState(false);
+  const { tripState, pauseTrip, updateProgress } = useTrip();
   const [showSOS, setShowSOS] = useState(false);
-  const [showConvoy, setShowConvoy] = useState(false);
-  const [elapsedTime, setElapsedTime] = useState(0);
-  const [distance, setDistance] = useState(0);
+  const [elapsedTime, setElapsedTime] = useState(tripState.timeElapsed);
+  const [distance, setDistance] = useState(tripState.distanceCovered);
+
+  // Simulated convoy positions on map
+  const convoyPositions = tripState.convoy.slice(0, 3);
 
   // Simulate trip progress
   useEffect(() => {
-    if (isPaused) return;
+    if (tripState.isPaused) return;
     
     const interval = setInterval(() => {
-      setElapsedTime(prev => prev + 1);
-      setDistance(prev => prev + 0.1);
+      setElapsedTime(prev => {
+        const newTime = prev + 1;
+        updateProgress(distance + 0.05, newTime);
+        return newTime;
+      });
+      setDistance(prev => prev + 0.05);
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [isPaused]);
+  }, [tripState.isPaused]);
 
-  const handleEndTrip = () => {
-    navigate('/trip/complete');
+  const handlePauseTrip = () => {
+    pauseTrip();
+    navigate('/trip/paused');
   };
 
-  const convoyMembers = mockUsers.filter(u => u.id !== 'current').slice(0, 2);
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    return `${mins} min`;
+  };
+
+  const formatETA = () => {
+    const now = new Date();
+    now.setMinutes(now.getMinutes() + tripState.eta);
+    return now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+  };
 
   return (
-    <div className="min-h-screen bg-background relative">
-      {/* Full Screen Map Placeholder */}
-      <div className="absolute inset-0 bg-secondary">
-        <div className="w-full h-full flex items-center justify-center text-muted-foreground">
-          <div className="text-center">
-            <Navigation className="h-16 w-16 mx-auto mb-4 animate-pulse" />
-            <p className="text-lg font-medium">Live Navigation</p>
-            <p className="text-sm">Mapbox token required</p>
-          </div>
-        </div>
-      </div>
-
-      {/* Top Stats Bar */}
-      <div className="absolute top-0 left-0 right-0 safe-top bg-gradient-to-b from-background/90 to-transparent p-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <div className="bg-card/90 backdrop-blur rounded-lg px-3 py-2">
-              <p className="text-xs text-muted-foreground">Distance</p>
-              <p className="font-bold text-foreground">{formatDistance(Math.round(distance))}</p>
-            </div>
-            <div className="bg-card/90 backdrop-blur rounded-lg px-3 py-2">
-              <p className="text-xs text-muted-foreground">Time</p>
-              <p className="font-bold text-foreground">{formatDuration(Math.floor(elapsedTime / 60))}</p>
-            </div>
+    <div className="min-h-screen bg-background relative overflow-hidden">
+      {/* Map Placeholder - Full Screen */}
+      <div className="absolute inset-0 bg-[#1a1a2e]">
+        {/* Simulated map with gradient */}
+        <div className="w-full h-full bg-gradient-to-b from-[#16213e] to-[#1a1a2e] relative">
+          {/* Road lines simulation */}
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div className="w-1 h-full bg-muted-foreground/20" />
           </div>
           
-          {/* Convoy Button */}
-          {convoyMembers.length > 0 && (
-            <button
-              onClick={() => setShowConvoy(true)}
-              className="bg-card/90 backdrop-blur rounded-lg px-3 py-2 flex items-center gap-2"
-            >
-              <Users className="h-4 w-4 text-primary" />
-              <div className="flex -space-x-2">
-                {convoyMembers.map(member => (
-                  <Avatar key={member.id} className="h-6 w-6 border-2 border-card">
-                    <AvatarImage src={member.avatar} alt={member.name} />
-                    <AvatarFallback>{member.name[0]}</AvatarFallback>
-                  </Avatar>
-                ))}
-              </div>
-            </button>
-          )}
-        </div>
-      </div>
+          {/* Convoy avatars on map */}
+          <div className="absolute top-1/3 left-1/2 -translate-x-1/2 space-y-8">
+            {convoyPositions.map((member, idx) => (
+              <motion.div
+                key={member.id}
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                transition={{ delay: idx * 0.2 }}
+                className="relative"
+                style={{ marginLeft: idx % 2 === 0 ? -20 : 20 }}
+              >
+                <Avatar className="h-10 w-10 border-2 border-primary">
+                  <AvatarImage src={member.avatar} alt={member.name} />
+                  <AvatarFallback>{member.name[0]}</AvatarFallback>
+                </Avatar>
+              </motion.div>
+            ))}
+          </div>
 
-      {/* ETA Display */}
-      <div className="absolute top-24 left-4 right-4">
-        <div className="bg-card/90 backdrop-blur rounded-xl p-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-muted-foreground">Next Stop</p>
-              <p className="font-semibold text-foreground">San Francisco, CA</p>
-            </div>
-            <div className="text-right">
-              <p className="text-sm text-muted-foreground">ETA</p>
-              <p className="font-semibold text-foreground">2h 45m</p>
-            </div>
+          {/* Navigation marker */}
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
+            <div className="w-4 h-4 bg-primary rounded-full animate-pulse" />
           </div>
         </div>
       </div>
 
-      {/* Bottom Controls */}
-      <div className="absolute bottom-0 left-0 right-0 safe-bottom bg-gradient-to-t from-background via-background/95 to-transparent pt-8 pb-4 px-4">
-        <div className="space-y-4">
-          {/* Pause/Resume & End Trip */}
-          <div className="flex gap-3">
-            <Button
-              variant="outline"
-              onClick={() => setIsPaused(!isPaused)}
-              className="flex-1 h-14 bg-card border-border"
-            >
-              {isPaused ? (
-                <>
-                  <Play className="h-5 w-5 mr-2" />
-                  Resume
-                </>
-              ) : (
-                <>
-                  <Pause className="h-5 w-5 mr-2" />
-                  Pause
-                </>
-              )}
-            </Button>
-            <Button
-              onClick={handleEndTrip}
-              className="flex-1 h-14 bg-primary hover:bg-primary/90"
-            >
-              End Trip
-            </Button>
-          </div>
-
-          {/* SOS Button */}
-          <Button
-            variant="destructive"
-            onClick={() => setShowSOS(true)}
-            className="w-full h-12 bg-destructive hover:bg-destructive/90"
+      {/* Header Overlay */}
+      <div className="absolute top-0 left-0 right-0 safe-top z-20">
+        <div className="flex items-center justify-between px-4 h-14">
+          <button 
+            onClick={() => navigate('/feed')}
+            className="w-10 h-10 flex items-center justify-center"
           >
-            <AlertTriangle className="h-5 w-5 mr-2" />
-            SOS Emergency
-          </Button>
+            <ChevronLeft className="h-6 w-6 text-foreground" />
+          </button>
+          
+          <img src={logoWhite} alt="RoadTribe" className="h-6" />
+          
+          <button 
+            onClick={() => setShowSOS(true)}
+            className="w-10 h-10 flex items-center justify-center bg-primary rounded-full"
+          >
+            <Phone className="h-4 w-4 text-primary-foreground" />
+          </button>
         </div>
+      </div>
+
+      {/* Direction Banner */}
+      <div className="absolute top-20 left-4 right-4 z-10">
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-green-600 rounded-xl p-4 flex items-center gap-4"
+        >
+          <div className="w-12 h-12 bg-white/20 rounded-lg flex items-center justify-center">
+            <ArrowUp className="h-6 w-6 text-white" />
+          </div>
+          <div className="flex-1">
+            <p className="text-white font-semibold text-lg">towards Main Rd</p>
+            <p className="text-white/70 text-sm flex items-center gap-1">
+              Then <ArrowUp className="h-3 w-3 rotate-[-45deg]" />
+            </p>
+          </div>
+          <button className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
+            <Mic className="h-5 w-5 text-white" />
+          </button>
+        </motion.div>
+      </div>
+
+      {/* Right Side Floating Buttons */}
+      <div className="absolute right-4 top-1/3 z-10 space-y-3">
+        <button className="w-12 h-12 bg-card rounded-full flex items-center justify-center shadow-lg">
+          <Compass className="h-5 w-5 text-foreground" />
+        </button>
+        <button className="w-12 h-12 bg-card rounded-full flex items-center justify-center shadow-lg">
+          <Search className="h-5 w-5 text-foreground" />
+        </button>
+        <button className="w-12 h-12 bg-card rounded-full flex items-center justify-center shadow-lg relative">
+          <Route className="h-5 w-5 text-foreground" />
+          <div className="absolute -top-1 -right-1 w-4 h-4 bg-destructive rounded-full flex items-center justify-center">
+            <X className="h-2.5 w-2.5 text-white" />
+          </div>
+        </button>
+        <button className="w-12 h-12 bg-card rounded-full flex items-center justify-center shadow-lg">
+          <AlertTriangle className="h-5 w-5 text-foreground" />
+        </button>
+      </div>
+
+      {/* Re-centre Button */}
+      <div className="absolute left-4 bottom-56 z-10">
+        <button className="px-4 py-2 bg-card rounded-full flex items-center gap-2 shadow-lg">
+          <LocateFixed className="h-4 w-4 text-foreground" />
+          <span className="text-sm text-foreground">Re-centre</span>
+        </button>
+      </div>
+
+      {/* Bottom Info Card */}
+      <div className="absolute bottom-28 left-4 right-4 z-10">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-card rounded-xl p-4 flex items-center justify-between"
+        >
+          <div className="flex items-center gap-4">
+            <div>
+              <p className="text-3xl font-bold text-primary">{formatTime(elapsedTime)}</p>
+              <p className="text-sm text-muted-foreground">
+                {Math.round(15 - distance)} km • {formatETA()}
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <button className="w-10 h-10 bg-secondary rounded-full flex items-center justify-center">
+              <Route className="h-5 w-5 text-foreground" />
+            </button>
+            <button className="px-4 py-2 bg-destructive rounded-full">
+              <span className="text-destructive-foreground font-medium">Exit</span>
+            </button>
+          </div>
+        </motion.div>
+      </div>
+
+      {/* Pause Trip Button */}
+      <div className="absolute bottom-0 left-0 right-0 p-4 bg-background z-10">
+        <Button
+          onClick={handlePauseTrip}
+          className="w-full h-14 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-lg"
+        >
+          Pause trip
+        </Button>
       </div>
 
       {/* SOS Modal */}
@@ -174,40 +228,6 @@ const ActiveTrip = () => {
               >
                 Cancel
               </Button>
-            </div>
-          </div>
-        </motion.div>
-      )}
-
-      {/* Convoy Panel */}
-      {showConvoy && (
-        <motion.div
-          initial={{ y: '100%' }}
-          animate={{ y: 0 }}
-          exit={{ y: '100%' }}
-          className="absolute bottom-0 left-0 right-0 bg-card rounded-t-2xl border-t border-border z-40"
-        >
-          <div className="p-4">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="font-semibold text-foreground">Convoy Members</h3>
-              <button onClick={() => setShowConvoy(false)}>
-                <X className="h-5 w-5 text-muted-foreground" />
-              </button>
-            </div>
-            <div className="space-y-3">
-              {convoyMembers.map(member => (
-                <div key={member.id} className="flex items-center gap-3 p-3 bg-secondary rounded-lg">
-                  <Avatar className="h-12 w-12">
-                    <AvatarImage src={member.avatar} alt={member.name} />
-                    <AvatarFallback>{member.name[0]}</AvatarFallback>
-                  </Avatar>
-                  <div className="flex-1">
-                    <p className="font-medium text-foreground">{member.name}</p>
-                    <p className="text-sm text-primary">0.3 mi behind</p>
-                  </div>
-                  <div className="w-2 h-2 bg-green-500 rounded-full" />
-                </div>
-              ))}
             </div>
           </div>
         </motion.div>
