@@ -1,204 +1,197 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
-import { Settings, Car, Flag, Users, UserPlus, MapPin, Calendar } from 'lucide-react';
+import { Search, Settings, Flag, BarChart3 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { getCurrentUser, mockTripPosts, formatDistance } from '@/lib/mock-data';
-import { cn } from '@/lib/utils';
+import { getCurrentUser, mockTripPosts, formatDistance, formatStatsTime } from '@/lib/mock-data';
+import ProfileTripCard from '@/components/ProfileTripCard';
 
 const Profile = () => {
   const navigate = useNavigate();
   const user = getCurrentUser();
-  const [activeTab, setActiveTab] = useState('trips');
+  const [activeTab, setActiveTab] = useState<'trips' | 'stats'>('trips');
 
-  const userTrips = mockTripPosts.slice(0, 2); // Mock user's trips
+  const userTrips = mockTripPosts.filter(p => p.user.id === 'current' || p.user.id === user.id);
 
-  // Mock stats
-  const stats = {
-    ytd: {
-      trips: 12,
-      miles: 4567,
-      hours: 89,
-    },
-    allTime: {
-      trips: 47,
-      miles: 23456,
-      hours: 412,
-    },
+  const stats = user.stats || {
+    ytd: { trips: 48, distance: 2548, timeOnRoad: 5394 },
+    allTime: { trips: 160, distance: 10886, timeOnRoad: 9066, longestTrip: 1200 },
   };
 
   return (
-    <div className="flex flex-col bg-background safe-top pb-24">
+    <div className="flex flex-col min-h-screen bg-background safe-top pb-24">
       {/* Header */}
-      <header className="sticky top-0 z-40 bg-background border-b border-border">
+      <header className="sticky top-0 z-40 bg-background">
         <div className="flex items-center justify-between px-4 h-14">
-          <h1 className="text-lg font-semibold text-foreground">Profile</h1>
-          <Button
-            variant="ghost"
-            size="icon"
+          <button className="text-primary">
+            <Search className="h-6 w-6" />
+          </button>
+          <span className="text-primary font-medium">{user.username}</span>
+          <button
             onClick={() => navigate('/settings')}
-            className="text-foreground"
+            className="text-primary"
           >
-            <Settings className="h-5 w-5" />
-          </Button>
+            <Settings className="h-6 w-6" />
+          </button>
         </div>
       </header>
 
       {/* Profile Info */}
       <div className="px-4 py-6">
-        <div className="flex items-start gap-4">
-          <Avatar className="h-20 w-20 border-4 border-primary">
+        {/* Avatar and Name */}
+        <div className="flex flex-col items-center">
+          <Avatar className="h-24 w-24 border-4 border-muted">
             <AvatarImage src={user.avatar} alt={user.name} />
             <AvatarFallback>{user.name[0]}</AvatarFallback>
           </Avatar>
-          <div className="flex-1">
-            <h2 className="text-xl font-bold text-foreground">{user.name}</h2>
-            <p className="text-muted-foreground">{user.username}</p>
-            <p className="text-sm text-foreground mt-2">{user.bio}</p>
-          </div>
+          <h2 className="text-xl font-bold text-foreground mt-3">{user.name}</h2>
         </div>
 
         {/* Stats Row */}
-        <div className="flex items-center justify-around py-4 mt-4 bg-card rounded-xl border border-border">
+        <div className="flex items-center justify-center gap-8 mt-4">
           <div className="text-center">
             <p className="text-2xl font-bold text-foreground">{user.tripsCount}</p>
-            <p className="text-xs text-muted-foreground">Trips</p>
+            <p className="text-sm text-muted-foreground">trips</p>
           </div>
-          <div className="w-px h-8 bg-border" />
           <div className="text-center">
             <p className="text-2xl font-bold text-foreground">{user.followersCount}</p>
-            <p className="text-xs text-muted-foreground">Followers</p>
+            <p className="text-sm text-muted-foreground">followers</p>
           </div>
-          <div className="w-px h-8 bg-border" />
           <div className="text-center">
-            <p className="text-2xl font-bold text-foreground">{user.followingCount}</p>
-            <p className="text-xs text-muted-foreground">Following</p>
+            <p className="text-2xl font-bold text-foreground">{user.vehiclesCount}</p>
+            <p className="text-sm text-muted-foreground">vehicles</p>
           </div>
         </div>
 
-        {/* Garage Button */}
-        <Button
-          variant="outline"
-          onClick={() => navigate('/garage')}
-          className="w-full mt-4"
-        >
-          <Car className="h-4 w-4 mr-2" />
-          My Garage
-        </Button>
+        {/* Bio */}
+        <p className="text-center text-foreground mt-4 px-4">{user.bio}</p>
+
+        {/* Action Buttons */}
+        <div className="mt-6 space-y-3">
+          <Button
+            variant="secondary"
+            className="w-full h-11 bg-secondary text-muted-foreground font-medium"
+          >
+            Edit profile
+          </Button>
+          <div className="flex gap-3">
+            <Button
+              onClick={() => navigate('/manage-followers')}
+              className="flex-1 h-11 bg-primary text-primary-foreground font-medium"
+            >
+              Manage followers
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => navigate('/garage')}
+              className="flex-1 h-11 border-primary text-primary font-medium"
+            >
+              Manage garage
+            </Button>
+          </div>
+        </div>
       </div>
 
       {/* Tabs */}
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="px-4">
-        <TabsList className="grid w-full grid-cols-2 bg-secondary">
-          <TabsTrigger 
-            value="trips" 
-            className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+      <div className="border-b border-border">
+        <div className="flex">
+          <button
+            onClick={() => setActiveTab('trips')}
+            className={`flex-1 flex items-center justify-center gap-2 py-3 border-b-2 transition-colors ${
+              activeTab === 'trips'
+                ? 'border-primary text-primary'
+                : 'border-transparent text-muted-foreground'
+            }`}
           >
-            Trips
-          </TabsTrigger>
-          <TabsTrigger 
-            value="stats"
-            className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+            <Flag className="h-5 w-5" />
+            <span className="font-medium">Trips</span>
+          </button>
+          <button
+            onClick={() => setActiveTab('stats')}
+            className={`flex-1 flex items-center justify-center gap-2 py-3 border-b-2 transition-colors ${
+              activeTab === 'stats'
+                ? 'border-primary text-primary'
+                : 'border-transparent text-muted-foreground'
+            }`}
           >
-            Stats
-          </TabsTrigger>
-        </TabsList>
+            <BarChart3 className="h-5 w-5" />
+            <span className="font-medium">Stats</span>
+          </button>
+        </div>
+      </div>
 
-        <TabsContent value="trips" className="mt-4 space-y-4">
-          {userTrips.length > 0 ? (
-            userTrips.map((trip) => (
-              <motion.div
-                key={trip.id}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="bg-card rounded-xl overflow-hidden border border-border"
-              >
-                <div className="aspect-video bg-secondary relative">
-                  {trip.photos[0] ? (
-                    <img 
-                      src={trip.photos[0]} 
-                      alt={trip.title}
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center text-muted-foreground">
-                      <MapPin className="h-8 w-8" />
-                    </div>
-                  )}
-                </div>
-                <div className="p-3">
-                  <h3 className="font-semibold text-foreground">{trip.title}</h3>
-                  <p className="text-sm text-muted-foreground">
-                    {formatDistance(trip.distance)} · {trip.startLocation} → {trip.endLocation}
-                  </p>
-                </div>
-              </motion.div>
-            ))
-          ) : (
-            <div className="text-center py-12">
-              <Flag className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
-              <h3 className="font-semibold text-foreground">No trips yet</h3>
-              <p className="text-sm text-muted-foreground">
-                Start your first trip and it will appear here
-              </p>
-              <Button
-                onClick={() => navigate('/trip')}
-                className="mt-4 bg-primary"
-              >
-                Plan a Trip
-              </Button>
-            </div>
-          )}
-        </TabsContent>
+      {/* Tab Content */}
+      <div className="flex-1 px-4 py-4">
+        {activeTab === 'trips' && (
+          <div className="space-y-4">
+            {userTrips.length > 0 ? (
+              userTrips.map((trip) => (
+                <ProfileTripCard key={trip.id} trip={trip} />
+              ))
+            ) : (
+              <div className="text-center py-12">
+                <Flag className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
+                <h3 className="font-semibold text-foreground">No trips yet</h3>
+                <p className="text-sm text-muted-foreground">
+                  Start your first trip and it will appear here
+                </p>
+                <Button
+                  onClick={() => navigate('/trip')}
+                  className="mt-4 bg-primary"
+                >
+                  Plan a Trip
+                </Button>
+              </div>
+            )}
+          </div>
+        )}
 
-        <TabsContent value="stats" className="mt-4 space-y-6">
-          {/* YTD Stats */}
-          <div className="bg-card rounded-xl p-4 border border-border">
-            <div className="flex items-center gap-2 mb-4">
-              <Calendar className="h-5 w-5 text-primary" />
-              <h3 className="font-semibold text-foreground">Year to Date</h3>
+        {activeTab === 'stats' && (
+          <div className="space-y-6">
+            {/* Year to Date */}
+            <div>
+              <h3 className="text-sm font-semibold text-primary uppercase tracking-wider mb-4">
+                YEAR-TO-DATE
+              </h3>
+              <div className="space-y-4">
+                <div className="flex items-center justify-between py-2 border-b border-border">
+                  <span className="text-foreground">Trips</span>
+                  <span className="text-foreground font-medium">{stats.ytd.trips}</span>
+                </div>
+                <div className="flex items-center justify-between py-2 border-b border-border">
+                  <span className="text-foreground">Distance</span>
+                  <span className="text-foreground font-medium">{formatDistance(stats.ytd.distance)}</span>
+                </div>
+                <div className="flex items-center justify-between py-2 border-b border-border">
+                  <span className="text-foreground">Time on road</span>
+                  <span className="text-foreground font-medium">{formatStatsTime(stats.ytd.timeOnRoad)}</span>
+                </div>
+              </div>
             </div>
-            <div className="grid grid-cols-3 gap-4">
-              <div className="text-center">
-                <p className="text-2xl font-bold text-primary">{stats.ytd.trips}</p>
-                <p className="text-xs text-muted-foreground">Trips</p>
-              </div>
-              <div className="text-center">
-                <p className="text-2xl font-bold text-primary">{stats.ytd.miles.toLocaleString()}</p>
-                <p className="text-xs text-muted-foreground">Miles</p>
-              </div>
-              <div className="text-center">
-                <p className="text-2xl font-bold text-primary">{stats.ytd.hours}</p>
-                <p className="text-xs text-muted-foreground">Hours</p>
+
+            {/* All Time */}
+            <div>
+              <h3 className="text-sm font-semibold text-primary uppercase tracking-wider mb-4">
+                ALL TIME
+              </h3>
+              <div className="space-y-4">
+                <div className="flex items-center justify-between py-2 border-b border-border">
+                  <span className="text-foreground">Longest Trip</span>
+                  <span className="text-foreground font-medium">{formatDistance(stats.allTime.longestTrip)}</span>
+                </div>
+                <div className="flex items-center justify-between py-2 border-b border-border">
+                  <span className="text-foreground">Distance</span>
+                  <span className="text-foreground font-medium">{formatDistance(stats.allTime.distance)}</span>
+                </div>
+                <div className="flex items-center justify-between py-2 border-b border-border">
+                  <span className="text-foreground">Time on road</span>
+                  <span className="text-foreground font-medium">{formatStatsTime(stats.allTime.timeOnRoad)}</span>
+                </div>
               </div>
             </div>
           </div>
-
-          {/* All Time Stats */}
-          <div className="bg-card rounded-xl p-4 border border-border">
-            <div className="flex items-center gap-2 mb-4">
-              <Flag className="h-5 w-5 text-primary" />
-              <h3 className="font-semibold text-foreground">All Time</h3>
-            </div>
-            <div className="grid grid-cols-3 gap-4">
-              <div className="text-center">
-                <p className="text-2xl font-bold text-foreground">{stats.allTime.trips}</p>
-                <p className="text-xs text-muted-foreground">Trips</p>
-              </div>
-              <div className="text-center">
-                <p className="text-2xl font-bold text-foreground">{stats.allTime.miles.toLocaleString()}</p>
-                <p className="text-xs text-muted-foreground">Miles</p>
-              </div>
-              <div className="text-center">
-                <p className="text-2xl font-bold text-foreground">{stats.allTime.hours}</p>
-                <p className="text-xs text-muted-foreground">Hours</p>
-              </div>
-            </div>
-          </div>
-        </TabsContent>
-      </Tabs>
+        )}
+      </div>
     </div>
   );
 };
