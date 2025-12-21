@@ -23,6 +23,7 @@ import TripComplete from "./pages/TripComplete";
 import Profile from "./pages/Profile";
 import UserProfile from "./pages/UserProfile";
 import Garage from "./pages/Garage";
+import EditVehicle from "./pages/EditVehicle";
 import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
 
@@ -64,6 +65,7 @@ const App = () => (
                 <Route path="/share/:postId" element={<Share />} />
                 <Route path="/user/:userId" element={<UserProfile />} />
                 <Route path="/garage" element={<Garage />} />
+                <Route path="/garage/edit/:id?" element={<EditVehicle />} />
                 <Route path="/settings" element={<Settings />} />
                 
                 <Route path="*" element={<NotFound />} />
