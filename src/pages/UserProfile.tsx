@@ -55,33 +55,33 @@ const UserProfile = () => {
 
       {/* Profile Info */}
       <div className="px-4 py-6">
-        {/* Avatar and Name */}
-        <div className="flex flex-col items-center">
-          <Avatar className="h-24 w-24 border-4 border-muted">
+        {/* Avatar + Name + Stats in one row */}
+        <div className="flex items-start gap-4">
+          <Avatar className="h-20 w-20 border-4 border-muted flex-shrink-0">
             <AvatarImage src={user.avatar} alt={user.name} />
             <AvatarFallback>{user.name[0]}</AvatarFallback>
           </Avatar>
-          <h2 className="text-xl font-bold text-foreground mt-3">{user.name}</h2>
-        </div>
-
-        {/* Stats Row */}
-        <div className="flex items-center justify-center gap-8 mt-4">
-          <div className="text-center">
-            <p className="text-2xl font-bold text-foreground">{user.tripsCount}</p>
-            <p className="text-sm text-muted-foreground">trips</p>
-          </div>
-          <div className="text-center">
-            <p className="text-2xl font-bold text-foreground">{user.followersCount}</p>
-            <p className="text-sm text-muted-foreground">followers</p>
-          </div>
-          <div className="text-center">
-            <p className="text-2xl font-bold text-foreground">{user.vehiclesCount}</p>
-            <p className="text-sm text-muted-foreground">vehicles</p>
+          <div className="flex-1 min-w-0">
+            <h2 className="text-lg font-bold text-foreground">{user.name}</h2>
+            <div className="flex items-center gap-4 mt-2">
+              <div>
+                <span className="text-lg font-bold text-foreground">{user.tripsCount}</span>
+                <span className="text-sm text-muted-foreground ml-1">trips</span>
+              </div>
+              <div>
+                <span className="text-lg font-bold text-foreground">{user.followersCount}</span>
+                <span className="text-sm text-muted-foreground ml-1">followers</span>
+              </div>
+              <div>
+                <span className="text-lg font-bold text-foreground">{user.vehiclesCount}</span>
+                <span className="text-sm text-muted-foreground ml-1">vehicles</span>
+              </div>
+            </div>
           </div>
         </div>
 
         {/* Bio */}
-        <p className="text-center text-foreground mt-4 px-4">{user.bio}</p>
+        <p className="text-foreground mt-4">{user.bio}</p>
 
         {/* Mutual Followers */}
         {mutualFollowers && mutualFollowers.users.length > 0 && (
