@@ -46,18 +46,18 @@ const Profile = () => {
           </Avatar>
           <div className="flex-1 min-w-0">
             <h2 className="text-lg font-bold text-foreground">{user.name}</h2>
-            <div className="flex items-center gap-4 mt-2">
-              <div>
-                <span className="text-lg font-bold text-foreground">{user.tripsCount}</span>
-                <span className="text-sm text-muted-foreground ml-1">trips</span>
+            <div className="flex items-center gap-6 mt-2">
+              <div className="flex flex-col">
+                <span className="text-xl font-bold text-foreground">{user.tripsCount}</span>
+                <span className="text-sm text-muted-foreground">trips</span>
               </div>
-              <div>
-                <span className="text-lg font-bold text-foreground">{user.followersCount}</span>
-                <span className="text-sm text-muted-foreground ml-1">followers</span>
+              <div className="flex flex-col">
+                <span className="text-xl font-bold text-foreground">{user.followersCount}</span>
+                <span className="text-sm text-muted-foreground">followers</span>
               </div>
-              <div>
-                <span className="text-lg font-bold text-foreground">{user.vehiclesCount}</span>
-                <span className="text-sm text-muted-foreground ml-1">vehicles</span>
+              <div className="flex flex-col">
+                <span className="text-xl font-bold text-foreground">{user.vehiclesCount}</span>
+                <span className="text-sm text-muted-foreground">vehicles</span>
               </div>
             </div>
           </div>
