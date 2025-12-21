@@ -42,6 +42,7 @@ export interface Vehicle {
   make: string;
   model: string;
   year: number;
+  type: 'car' | 'motorbike';
   specs: string;
   images: string[];
 }
@@ -192,21 +193,34 @@ export const mockVehicles: Vehicle[] = [
     name: 'Audi Q7',
     make: 'Audi',
     model: 'Q7',
-    year: 2023,
-    specs: '335hp | 8-speed Auto | AWD',
+    year: 2017,
+    type: 'car',
+    specs: '45 TDI Quattro | 2967cc | V6 Turbocharged Diesel | 245 bhp/600 Nm',
     images: [
       'https://images.unsplash.com/photo-1606664515524-ed2f786a0bd6?w=400&h=300&fit=crop',
+      'https://images.unsplash.com/photo-1603584173870-7f23fdae1b7a?w=400&h=300&fit=crop',
+      'https://images.unsplash.com/photo-1544636331-e26879cd4d9b?w=400&h=300&fit=crop',
+      'https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?w=400&h=300&fit=crop',
+      'https://images.unsplash.com/photo-1503376780353-7e6692767b70?w=400&h=300&fit=crop',
+      'https://images.unsplash.com/photo-1555215695-3004980ad54e?w=400&h=300&fit=crop',
+      'https://images.unsplash.com/photo-1542362567-b07e54358753?w=400&h=300&fit=crop',
     ],
   },
   {
     id: '2',
-    name: 'BMW M3',
-    make: 'BMW',
-    model: 'M3',
-    year: 2023,
-    specs: '473hp | 6-speed Manual | RWD',
+    name: 'Yamaha RX100',
+    make: 'Yamaha',
+    model: 'RX100',
+    year: 1993,
+    type: 'motorbike',
+    specs: '98cc | 2-stroke, air-cooled engine | 11 bhp',
     images: [
-      'https://images.unsplash.com/photo-1617531653332-bd46c24f2068?w=400&h=300&fit=crop',
+      'https://images.unsplash.com/photo-1558981403-c5f9899a28bc?w=400&h=300&fit=crop',
+      'https://images.unsplash.com/photo-1558980664-769d59546b3d?w=400&h=300&fit=crop',
+      'https://images.unsplash.com/photo-1568772585407-9361f9bf3a87?w=400&h=300&fit=crop',
+      'https://images.unsplash.com/photo-1609630875171-b1321377ee65?w=400&h=300&fit=crop',
+      'https://images.unsplash.com/photo-1449426468159-d96dbf08f19f?w=400&h=300&fit=crop',
+      'https://images.unsplash.com/photo-1571008887538-b36bb32f4571?w=400&h=300&fit=crop',
     ],
   },
   {
@@ -215,9 +229,14 @@ export const mockVehicles: Vehicle[] = [
     make: 'Mercedes',
     model: 'AMG GT',
     year: 2022,
-    specs: '523hp | 7-speed Auto | RWD',
+    type: 'car',
+    specs: '4.0L V8 Biturbo | 523 bhp | 7-speed DCT | RWD',
     images: [
       'https://images.unsplash.com/photo-1618843479313-40f8afb4b4d8?w=400&h=300&fit=crop',
+      'https://images.unsplash.com/photo-1617531653332-bd46c24f2068?w=400&h=300&fit=crop',
+      'https://images.unsplash.com/photo-1553440569-bcc63803a83d?w=400&h=300&fit=crop',
+      'https://images.unsplash.com/photo-1580273916550-e323be2ae537?w=400&h=300&fit=crop',
+      'https://images.unsplash.com/photo-1552519507-da3b142c6e3d?w=400&h=300&fit=crop',
     ],
   },
 ];
