@@ -63,7 +63,7 @@ const UserProfile = () => {
           </Avatar>
           <div className="flex-1 min-w-0">
             <h2 className="text-lg font-bold text-foreground">{user.name}</h2>
-            <div className="flex items-center gap-6 mt-2">
+            <div className="flex items-center gap-8 mt-2">
               <div className="flex flex-col">
                 <span className="text-xl font-bold text-foreground">{user.tripsCount}</span>
                 <span className="text-sm text-muted-foreground">trips</span>
