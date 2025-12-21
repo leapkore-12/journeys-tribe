@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ArrowLeft, MoreHorizontal } from 'lucide-react';
+import { ArrowLeft, MoreHorizontal, Plus } from 'lucide-react';
 import { mockVehicles, Vehicle, getCurrentUser } from '@/lib/mock-data';
 
 const Garage = () => {
@@ -23,7 +23,12 @@ const Garage = () => {
           <h1 className="flex-1 text-center text-lg font-semibold text-foreground">
             {user.username}' Garage
           </h1>
-          <div className="w-6" /> {/* Spacer for centering */}
+          <button 
+            onClick={() => navigate('/garage/edit')}
+            className="w-8 h-8 bg-primary rounded-md flex items-center justify-center"
+          >
+            <Plus className="h-5 w-5 text-primary-foreground" />
+          </button>
         </div>
       </header>
 
