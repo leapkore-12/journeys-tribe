@@ -71,6 +71,7 @@ const Profile = () => {
           <Button
             variant="secondary"
             className="w-full h-11 bg-secondary text-muted-foreground font-medium"
+            onClick={() => navigate('/edit-profile')}
           >
             Edit profile
           </Button>

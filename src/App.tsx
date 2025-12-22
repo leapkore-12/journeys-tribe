@@ -26,6 +26,7 @@ import Garage from "./pages/Garage";
 import EditVehicle from "./pages/EditVehicle";
 import Settings from "./pages/Settings";
 import ManageConnections from "./pages/ManageConnections";
+import EditProfile from "./pages/EditProfile";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -68,6 +69,7 @@ const App = () => (
                 <Route path="/garage" element={<Garage />} />
                 <Route path="/garage/edit/:id?" element={<EditVehicle />} />
                 <Route path="/manage-followers" element={<ManageConnections />} />
+                <Route path="/edit-profile" element={<EditProfile />} />
                 <Route path="/settings" element={<Settings />} />
                 
                 <Route path="*" element={<NotFound />} />
