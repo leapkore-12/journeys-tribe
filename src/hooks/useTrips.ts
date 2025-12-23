@@ -52,14 +52,24 @@ export const useFeedTrips = () => {
         .from('profiles')
         .select('id, username, display_name, avatar_url')
         .in('id', userIds);
-      const profileMap = new Map(profiles?.map(p => [p.id, p]) || []);
+      const profileMap = new Map<string, { id: string; username: string | null; display_name: string | null; avatar_url: string | null }>();
+      profiles?.forEach(p => profileMap.set(p.id, p));
 
       // Fetch vehicles
-      const vehicleIds = [...new Set(trips.map(t => t.vehicle_id).filter(Boolean))];
+      const vehicleIds = [...new Set(trips.map(t => t.vehicle_id).filter((id): id is string => id !== null))];
       const { data: vehicles } = vehicleIds.length > 0 
         ? await supabase.from('vehicles').select('*, vehicle_images(image_url)').in('id', vehicleIds)
         : { data: [] };
-      const vehicleMap = new Map(vehicles?.map(v => [v.id, { ...v, images: v.vehicle_images?.map((vi: any) => vi.image_url) || [] }]) || []);
+      
+      type VehicleType = { id: string; name: string; make: string | null; model: string | null; images: string[] };
+      const vehicleMap = new Map<string, VehicleType>();
+      vehicles?.forEach(v => vehicleMap.set(v.id, { 
+        id: v.id, 
+        name: v.name, 
+        make: v.make, 
+        model: v.model, 
+        images: (v.vehicle_images as { image_url: string }[] | null)?.map(vi => vi.image_url) || [] 
+      }));
 
       // Check likes
       let likedIds = new Set<string>();
@@ -115,11 +125,20 @@ export const useUserTrips = (userId?: string) => {
         .single();
 
       // Fetch vehicles
-      const vehicleIds = [...new Set(trips.map(t => t.vehicle_id).filter(Boolean))];
+      const vehicleIds = [...new Set(trips.map(t => t.vehicle_id).filter((id): id is string => id !== null))];
       const { data: vehicles } = vehicleIds.length > 0 
         ? await supabase.from('vehicles').select('*, vehicle_images(image_url)').in('id', vehicleIds)
         : { data: [] };
-      const vehicleMap = new Map(vehicles?.map(v => [v.id, { ...v, images: v.vehicle_images?.map((vi: any) => vi.image_url) || [] }]) || []);
+      
+      type VehicleType = { id: string; name: string; make: string | null; model: string | null; images: string[] };
+      const vehicleMap = new Map<string, VehicleType>();
+      vehicles?.forEach(v => vehicleMap.set(v.id, { 
+        id: v.id, 
+        name: v.name, 
+        make: v.make, 
+        model: v.model, 
+        images: (v.vehicle_images as { image_url: string }[] | null)?.map(vi => vi.image_url) || [] 
+      }));
 
       return trips.map(trip => ({
         ...trip,
