@@ -32,11 +32,12 @@ export const useNotifications = () => {
       if (error || !data) return [];
 
       // Fetch actor profiles
-      const actorIds = [...new Set(data.map(n => n.actor_id).filter(Boolean))];
+      const actorIds = [...new Set(data.map(n => n.actor_id).filter((id): id is string => id !== null))];
       const { data: profiles } = actorIds.length > 0 
         ? await supabase.from('profiles').select('id, username, display_name, avatar_url').in('id', actorIds)
         : { data: [] };
-      const profileMap = new Map(profiles?.map(p => [p.id, p]) || []);
+      const profileMap = new Map<string, typeof profiles extends (infer T)[] | null ? T : never>();
+      profiles?.forEach(p => profileMap.set(p.id, p));
 
       return data.map(n => ({
         ...n,
