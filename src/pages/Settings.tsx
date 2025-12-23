@@ -36,7 +36,7 @@ const Settings = () => {
     },
     {
       label: 'Change email or password',
-      onClick: () => {},
+      onClick: () => navigate('/settings/credentials'),
     },
     {
       label: 'Subscription details',
