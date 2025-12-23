@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { useTrip } from '@/context/TripContext';
 import { useGeolocation } from '@/hooks/useGeolocation';
 import { useMapboxRoute } from '@/hooks/useMapboxRoute';
+import { useConvoyPresence } from '@/hooks/useConvoyPresence';
 import LiveTrackingMap from '@/components/map/LiveTrackingMap';
 import logoWhite from '@/assets/logo-white.svg';
 
@@ -18,11 +19,14 @@ const ActiveTrip = () => {
   const [showSOS, setShowSOS] = useState(false);
   const [elapsedTime, setElapsedTime] = useState(tripState.timeElapsed);
   const [distance, setDistance] = useState(tripState.distanceCovered);
+  const [activeTripId] = useState(() => crypto.randomUUID()); // Generate trip ID for presence
   const watchIdRef = useRef<number | null>(null);
 
   // Real GPS tracking
   const { 
     position: userPosition, 
+    heading,
+    speed,
     startWatching, 
     stopWatching,
     error: geoError 
@@ -31,18 +35,23 @@ const ActiveTrip = () => {
   // Route fetching
   const { route, getRoute } = useMapboxRoute();
 
-  // Convoy members with positions (for demo, offset from user position)
-  const convoyMembers = tripState.convoy.slice(0, 3).map((member, idx) => ({
-    id: member.id,
-    name: member.name,
-    avatar: member.avatar,
-    position: userPosition 
-      ? [
-          userPosition[0] + (idx - 1) * 0.001,
-          userPosition[1] - 0.002 - idx * 0.001,
-        ] as [number, number]
-      : [-122.4194, 37.7749] as [number, number],
-  }));
+  // Real-time convoy presence tracking
+  const { 
+    members: convoyMembers, 
+    isConnected: isConvoyConnected,
+    updatePosition,
+    leaveConvoy,
+  } = useConvoyPresence({ 
+    tripId: activeTripId, 
+    enabled: tripState.isActive 
+  });
+
+  // Update convoy position when user moves
+  useEffect(() => {
+    if (userPosition && isConvoyConnected) {
+      updatePosition(userPosition, heading, speed);
+    }
+  }, [userPosition, heading, speed, isConvoyConnected, updatePosition]);
 
   // Start GPS tracking on mount
   useEffect(() => {
@@ -80,7 +89,8 @@ const ActiveTrip = () => {
     return () => clearInterval(interval);
   }, [tripState.isPaused, distance, updateProgress]);
 
-  const handlePauseTrip = () => {
+  const handlePauseTrip = async () => {
+    await leaveConvoy();
     pauseTrip();
     navigate('/trip/paused');
   };
@@ -178,8 +188,16 @@ const ActiveTrip = () => {
         </button>
       </div>
 
-      {/* Re-centre Button */}
-      <div className="absolute left-4 bottom-56 z-10">
+      {/* Re-centre Button and Convoy Status */}
+      <div className="absolute left-4 bottom-56 z-10 space-y-2">
+        {isConvoyConnected && convoyMembers.length > 0 && (
+          <div className="px-3 py-1.5 bg-primary/90 rounded-full flex items-center gap-2 shadow-lg">
+            <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
+            <span className="text-xs text-primary-foreground font-medium">
+              {convoyMembers.length} in convoy
+            </span>
+          </div>
+        )}
         <button className="px-4 py-2 bg-card rounded-full flex items-center gap-2 shadow-lg">
           <LocateFixed className="h-4 w-4 text-foreground" />
           <span className="text-sm text-foreground">Re-centre</span>
