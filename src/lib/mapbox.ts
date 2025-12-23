@@ -1,20 +1,6 @@
 // Mapbox configuration
-// Users should set their Mapbox public token here
-export const MAPBOX_TOKEN = localStorage.getItem('mapbox_token') || '';
-
-export const setMapboxToken = (token: string) => {
-  localStorage.setItem('mapbox_token', token);
-  window.location.reload();
-};
-
-export const getMapboxToken = () => {
-  return localStorage.getItem('mapbox_token') || '';
-};
-
-export const hasMapboxToken = () => {
-  const token = getMapboxToken();
-  return token && token.length > 0;
-};
+// Mapbox public token - safe to include in client code
+export const MAPBOX_TOKEN = 'pk.eyJ1Ijoicm9hZHRyaWJlIiwiYSI6ImNtamloMWszcjFrcGYzZ3F6bzQ1NzdhZGoifQ.93zUwkVwOaImBxxK6CdCLQ';
 
 // Default map styles
 export const MAP_STYLES = {
@@ -24,3 +10,7 @@ export const MAP_STYLES = {
   satellite: 'mapbox://styles/mapbox/satellite-streets-v12',
   navigation: 'mapbox://styles/mapbox/navigation-night-v1',
 };
+
+// Default map center (can be overridden by user location)
+export const DEFAULT_CENTER: [number, number] = [-122.4194, 37.7749]; // San Francisco
+export const DEFAULT_ZOOM = 12;
