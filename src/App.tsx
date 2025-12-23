@@ -29,6 +29,7 @@ import EditVehicle from "./pages/EditVehicle";
 import Settings from "./pages/Settings";
 import ManageConnections from "./pages/ManageConnections";
 import EditProfile from "./pages/EditProfile";
+import ChangeCredentials from "./pages/ChangeCredentials";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -74,6 +75,7 @@ const App = () => (
                   <Route path="/manage-followers" element={<ProtectedRoute><ManageConnections /></ProtectedRoute>} />
                   <Route path="/edit-profile" element={<ProtectedRoute><EditProfile /></ProtectedRoute>} />
                   <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+                  <Route path="/settings/credentials" element={<ProtectedRoute><ChangeCredentials /></ProtectedRoute>} />
                   
                   <Route path="*" element={<NotFound />} />
                 </Routes>
