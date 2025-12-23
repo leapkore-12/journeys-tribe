@@ -1,25 +1,21 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Search as SearchIcon, X } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { mockUsers, mockTripPosts } from '@/lib/mock-data';
+import { useSearchUsers, useSearchTrips } from '@/hooks/useSearch';
+import { Skeleton } from '@/components/ui/skeleton';
+import { useDebounce } from '@/hooks/useDebounce';
 
 const Search = () => {
   const navigate = useNavigate();
   const [query, setQuery] = useState('');
   const [activeTab, setActiveTab] = useState<'users' | 'trips'>('users');
-
-  const filteredUsers = mockUsers.filter(user =>
-    user.name.toLowerCase().includes(query.toLowerCase()) ||
-    user.username.toLowerCase().includes(query.toLowerCase())
-  );
-
-  const filteredTrips = mockTripPosts.filter(post =>
-    post.title.toLowerCase().includes(query.toLowerCase()) ||
-    post.startLocation.toLowerCase().includes(query.toLowerCase()) ||
-    post.endLocation.toLowerCase().includes(query.toLowerCase())
-  );
+  
+  const debouncedQuery = useDebounce(query, 300);
+  
+  const { data: users, isLoading: usersLoading } = useSearchUsers(debouncedQuery);
+  const { data: trips, isLoading: tripsLoading } = useSearchTrips(debouncedQuery);
 
   return (
     <div className="flex flex-col bg-background safe-top">
@@ -82,59 +78,100 @@ const Search = () => {
       <div className="p-4">
         {activeTab === 'users' ? (
           <div className="space-y-3">
-            {filteredUsers.map(user => (
-              <button
-                key={user.id}
-                onClick={() => navigate(`/user/${user.id}`)}
-                className="w-full flex items-center gap-3 p-3 bg-card rounded-lg hover:bg-secondary transition-colors"
-              >
-                <Avatar className="h-12 w-12">
-                  <AvatarImage src={user.avatar} alt={user.name} />
-                  <AvatarFallback>{user.name[0]}</AvatarFallback>
-                </Avatar>
-                <div className="text-left">
-                  <p className="font-semibold text-foreground">{user.name}</p>
-                  <p className="text-sm text-muted-foreground">{user.username}</p>
+            {usersLoading ? (
+              [...Array(3)].map((_, i) => (
+                <div key={i} className="flex items-center gap-3 p-3">
+                  <Skeleton className="h-12 w-12 rounded-full" />
+                  <div className="space-y-2">
+                    <Skeleton className="h-4 w-32" />
+                    <Skeleton className="h-3 w-24" />
+                  </div>
                 </div>
-              </button>
-            ))}
-            {filteredUsers.length === 0 && query && (
+              ))
+            ) : users && users.length > 0 ? (
+              users.map(user => (
+                <button
+                  key={user.id}
+                  onClick={() => navigate(`/user/${user.id}`)}
+                  className="w-full flex items-center gap-3 p-3 bg-card rounded-lg hover:bg-secondary transition-colors"
+                >
+                  <Avatar className="h-12 w-12">
+                    <AvatarImage src={user.avatar_url || undefined} alt={user.display_name || 'User'} />
+                    <AvatarFallback>{user.display_name?.[0] || 'U'}</AvatarFallback>
+                  </Avatar>
+                  <div className="text-left">
+                    <p className="font-semibold text-foreground">{user.display_name || 'User'}</p>
+                    <p className="text-sm text-muted-foreground">@{user.username || 'user'}</p>
+                  </div>
+                </button>
+              ))
+            ) : debouncedQuery ? (
               <p className="text-center text-muted-foreground py-8">
-                No users found for "{query}"
+                No users found for "{debouncedQuery}"
+              </p>
+            ) : (
+              <p className="text-center text-muted-foreground py-8">
+                Search for users by name or username
               </p>
             )}
           </div>
         ) : (
           <div className="space-y-3">
-            {filteredTrips.map(trip => (
-              <button
-                key={trip.id}
-                onClick={() => navigate(`/post/${trip.id}`)}
-                className="w-full flex gap-3 p-3 bg-card rounded-lg hover:bg-secondary transition-colors"
-              >
-                <div className="w-20 h-20 bg-secondary rounded-lg flex-shrink-0 overflow-hidden">
-                  {trip.photos[0] ? (
-                    <img src={trip.photos[0]} alt={trip.title} className="w-full h-full object-cover" />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center text-muted-foreground">
-                      No image
-                    </div>
-                  )}
+            {tripsLoading ? (
+              [...Array(3)].map((_, i) => (
+                <div key={i} className="flex gap-3 p-3">
+                  <Skeleton className="w-20 h-20 rounded-lg" />
+                  <div className="space-y-2 flex-1">
+                    <Skeleton className="h-4 w-full" />
+                    <Skeleton className="h-3 w-3/4" />
+                    <Skeleton className="h-3 w-1/2" />
+                  </div>
                 </div>
-                <div className="text-left flex-1 min-w-0">
-                  <p className="font-semibold text-foreground truncate">{trip.title}</p>
-                  <p className="text-sm text-muted-foreground truncate">
-                    {trip.startLocation} → {trip.endLocation}
-                  </p>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    by {trip.user.name}
-                  </p>
-                </div>
-              </button>
-            ))}
-            {filteredTrips.length === 0 && query && (
+              ))
+            ) : trips && trips.length > 0 ? (
+              trips.map(trip => (
+                <button
+                  key={trip.id}
+                  onClick={() => navigate(`/comments/${trip.id}`)}
+                  className="w-full flex gap-3 p-3 bg-card rounded-lg hover:bg-secondary transition-colors"
+                >
+                  <div className="w-20 h-20 bg-secondary rounded-lg flex-shrink-0 overflow-hidden">
+                    {trip.trip_photos?.[0]?.image_url ? (
+                      <img 
+                        src={trip.trip_photos[0].image_url} 
+                        alt={trip.title} 
+                        className="w-full h-full object-cover" 
+                      />
+                    ) : trip.map_image_url ? (
+                      <img 
+                        src={trip.map_image_url} 
+                        alt={trip.title} 
+                        className="w-full h-full object-cover" 
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-muted-foreground">
+                        No image
+                      </div>
+                    )}
+                  </div>
+                  <div className="text-left flex-1 min-w-0">
+                    <p className="font-semibold text-foreground truncate">{trip.title}</p>
+                    <p className="text-sm text-muted-foreground truncate">
+                      {trip.start_location} → {trip.end_location}
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      by {trip.profile?.display_name || 'Unknown'}
+                    </p>
+                  </div>
+                </button>
+              ))
+            ) : debouncedQuery ? (
               <p className="text-center text-muted-foreground py-8">
-                No trips found for "{query}"
+                No trips found for "{debouncedQuery}"
+              </p>
+            ) : (
+              <p className="text-center text-muted-foreground py-8">
+                Search for trips by title or location
               </p>
             )}
           </div>
