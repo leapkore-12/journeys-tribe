@@ -1,13 +1,15 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { 
-  ChevronLeft, Phone, ArrowUp, Mic, Navigation, Compass,
+  ChevronLeft, Phone, ArrowUp, Mic, Compass,
   Search, X, AlertTriangle, LocateFixed, Route
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useTrip } from '@/context/TripContext';
+import { useGeolocation } from '@/hooks/useGeolocation';
+import { useMapboxRoute } from '@/hooks/useMapboxRoute';
+import LiveTrackingMap from '@/components/map/LiveTrackingMap';
 import logoWhite from '@/assets/logo-white.svg';
 
 const ActiveTrip = () => {
@@ -16,11 +18,53 @@ const ActiveTrip = () => {
   const [showSOS, setShowSOS] = useState(false);
   const [elapsedTime, setElapsedTime] = useState(tripState.timeElapsed);
   const [distance, setDistance] = useState(tripState.distanceCovered);
+  const watchIdRef = useRef<number | null>(null);
 
-  // Simulated convoy positions on map
-  const convoyPositions = tripState.convoy.slice(0, 3);
+  // Real GPS tracking
+  const { 
+    position: userPosition, 
+    startWatching, 
+    stopWatching,
+    error: geoError 
+  } = useGeolocation({ enableHighAccuracy: true });
 
-  // Simulate trip progress
+  // Route fetching
+  const { route, getRoute } = useMapboxRoute();
+
+  // Convoy members with positions (for demo, offset from user position)
+  const convoyMembers = tripState.convoy.slice(0, 3).map((member, idx) => ({
+    id: member.id,
+    name: member.name,
+    avatar: member.avatar,
+    position: userPosition 
+      ? [
+          userPosition[0] + (idx - 1) * 0.001,
+          userPosition[1] - 0.002 - idx * 0.001,
+        ] as [number, number]
+      : [-122.4194, 37.7749] as [number, number],
+  }));
+
+  // Start GPS tracking on mount
+  useEffect(() => {
+    const id = startWatching();
+    if (id) {
+      watchIdRef.current = id;
+    }
+    return () => {
+      if (watchIdRef.current) {
+        stopWatching(watchIdRef.current);
+      }
+    };
+  }, [startWatching, stopWatching]);
+
+  // Fetch route when we have position and destination
+  useEffect(() => {
+    if (userPosition && tripState.destinationCoordinates) {
+      getRoute(userPosition, tripState.destinationCoordinates);
+    }
+  }, [userPosition, tripState.destinationCoordinates, getRoute]);
+
+  // Track trip progress
   useEffect(() => {
     if (tripState.isPaused) return;
     
@@ -34,7 +78,7 @@ const ActiveTrip = () => {
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [tripState.isPaused]);
+  }, [tripState.isPaused, distance, updateProgress]);
 
   const handlePauseTrip = () => {
     pauseTrip();
@@ -47,46 +91,29 @@ const ActiveTrip = () => {
   };
 
   const formatETA = () => {
+    if (route) {
+      const now = new Date();
+      now.setSeconds(now.getSeconds() + route.duration);
+      return now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+    }
     const now = new Date();
     now.setMinutes(now.getMinutes() + tripState.eta);
     return now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
   };
 
+  const currentInstruction = route?.steps?.[0]?.instruction || 'Continue straight';
+  const remainingDistance = route ? (route.distance / 1000).toFixed(1) : (15 - distance).toFixed(1);
+
   return (
     <div className="min-h-screen bg-background relative overflow-hidden">
-      {/* Map Placeholder - Full Screen */}
-      <div className="absolute inset-0 bg-[#1a1a2e]">
-        {/* Simulated map with gradient */}
-        <div className="w-full h-full bg-gradient-to-b from-[#16213e] to-[#1a1a2e] relative">
-          {/* Road lines simulation */}
-          <div className="absolute inset-0 flex items-center justify-center">
-            <div className="w-1 h-full bg-muted-foreground/20" />
-          </div>
-          
-          {/* Convoy avatars on map */}
-          <div className="absolute top-1/3 left-1/2 -translate-x-1/2 space-y-8">
-            {convoyPositions.map((member, idx) => (
-              <motion.div
-                key={member.id}
-                initial={{ scale: 0 }}
-                animate={{ scale: 1 }}
-                transition={{ delay: idx * 0.2 }}
-                className="relative"
-                style={{ marginLeft: idx % 2 === 0 ? -20 : 20 }}
-              >
-                <Avatar className="h-10 w-10 border-2 border-primary">
-                  <AvatarImage src={member.avatar} alt={member.name} />
-                  <AvatarFallback>{member.name[0]}</AvatarFallback>
-                </Avatar>
-              </motion.div>
-            ))}
-          </div>
-
-          {/* Navigation marker */}
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
-            <div className="w-4 h-4 bg-primary rounded-full animate-pulse" />
-          </div>
-        </div>
+      {/* Live Mapbox Map */}
+      <div className="absolute inset-0">
+        <LiveTrackingMap
+          userPosition={userPosition}
+          destination={tripState.destinationCoordinates || undefined}
+          routeCoordinates={route?.coordinates}
+          convoyMembers={convoyMembers}
+        />
       </div>
 
       {/* Header Overlay */}
@@ -121,9 +148,9 @@ const ActiveTrip = () => {
             <ArrowUp className="h-6 w-6 text-white" />
           </div>
           <div className="flex-1">
-            <p className="text-white font-semibold text-lg">towards Main Rd</p>
+            <p className="text-white font-semibold text-lg line-clamp-1">{currentInstruction}</p>
             <p className="text-white/70 text-sm flex items-center gap-1">
-              Then <ArrowUp className="h-3 w-3 rotate-[-45deg]" />
+              {route?.steps?.[1]?.instruction ? `Then ${route.steps[1].instruction.split(' ').slice(0, 3).join(' ')}` : 'Continue'}
             </p>
           </div>
           <button className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
@@ -170,7 +197,7 @@ const ActiveTrip = () => {
             <div>
               <p className="text-3xl font-bold text-primary">{formatTime(elapsedTime)}</p>
               <p className="text-sm text-muted-foreground">
-                {Math.round(15 - distance)} km • {formatETA()}
+                {remainingDistance} km • {formatETA()}
               </p>
             </div>
           </div>
