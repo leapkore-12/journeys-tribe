@@ -1,48 +1,49 @@
-import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Check, X } from 'lucide-react';
+import { ArrowLeft, Check, X, Bell } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { mockNotifications, formatTimeAgo, Notification } from '@/lib/mock-data';
+import { useNotifications, useMarkAsRead } from '@/hooks/useNotifications';
+import { useAcceptFollowRequest, useDeclineFollowRequest } from '@/hooks/useFollows';
 import { cn } from '@/lib/utils';
 import logoWhite from '@/assets/logo-white.svg';
+import { Skeleton } from '@/components/ui/skeleton';
+import { formatDistanceToNow } from 'date-fns';
 
 const Notifications = () => {
   const navigate = useNavigate();
-  const [notifications, setNotifications] = useState(mockNotifications);
+  const { data: notifications, isLoading } = useNotifications();
+  const markAsRead = useMarkAsRead();
+  const acceptRequest = useAcceptFollowRequest();
+  const declineRequest = useDeclineFollowRequest();
 
-  const markAsRead = (id: string) => {
-    setNotifications(notifications.map(n => 
-      n.id === id ? { ...n, isRead: true } : n
-    ));
+  const handleMarkAsRead = (id: string) => {
+    markAsRead.mutate(id);
   };
 
   const handleAccept = (id: string) => {
-    console.log('Accepted convoy invite:', id);
-    setNotifications(notifications.filter(n => n.id !== id));
+    acceptRequest.mutate(id);
   };
 
   const handleDecline = (id: string) => {
-    console.log('Declined convoy invite:', id);
-    setNotifications(notifications.filter(n => n.id !== id));
+    declineRequest.mutate(id);
   };
 
-  const getNotificationContent = (notification: Notification) => {
-    if (notification.type === 'convoy_invite') {
+  const getNotificationContent = (notification: typeof notifications extends (infer T)[] | undefined ? T : never) => {
+    if (!notification) return null;
+    
+    const actorName = notification.actor?.display_name || notification.actor?.username || 'Someone';
+    const timeAgo = notification.created_at 
+      ? formatDistanceToNow(new Date(notification.created_at), { addSuffix: true })
+      : '';
+
+    if (notification.type === 'follow_request') {
       return (
         <div className="flex-1 min-w-0">
           <p className="text-foreground text-sm">
-            <span className="font-semibold">{notification.user.name}</span>{' '}
-            <span className="text-muted-foreground">{notification.message}</span>
+            <span className="font-semibold">{actorName}</span>{' '}
+            <span className="text-muted-foreground">wants to follow you</span>
           </p>
-          {notification.tripName && (
-            <p className="text-primary text-sm font-medium mt-0.5">
-              "{notification.tripName}"
-            </p>
-          )}
-          <p className="text-xs text-muted-foreground mt-1">
-            {formatTimeAgo(notification.createdAt)}
-          </p>
+          <p className="text-xs text-muted-foreground mt-1">{timeAgo}</p>
           {/* Accept/Decline Buttons */}
           <div className="flex gap-2 mt-3">
             <Button
@@ -76,17 +77,10 @@ const Notifications = () => {
     return (
       <div className="flex-1 min-w-0">
         <p className="text-foreground text-sm">
-          <span className="font-semibold">{notification.user.name}</span>{' '}
+          <span className="font-semibold">{actorName}</span>{' '}
           <span className="text-muted-foreground">{notification.message}</span>
         </p>
-        {notification.tripName && (
-          <p className="text-primary text-sm font-medium mt-0.5">
-            "{notification.tripName}"
-          </p>
-        )}
-        <p className="text-xs text-muted-foreground mt-1">
-          {formatTimeAgo(notification.createdAt)}
-        </p>
+        <p className="text-xs text-muted-foreground mt-1">{timeAgo}</p>
       </div>
     );
   };
@@ -108,34 +102,51 @@ const Notifications = () => {
       </header>
 
       {/* Notifications List */}
-      <div className="divide-y divide-border">
-        {notifications.map(notification => (
-          <button
-            key={notification.id}
-            onClick={() => {
-              markAsRead(notification.id);
-              if (notification.type === 'follow') {
-                navigate(`/user/${notification.user.id}`);
-              }
-            }}
-            className={cn(
-              "w-full flex items-start gap-3 p-4 hover:bg-secondary/50 transition-colors text-left",
-              !notification.isRead && "bg-primary/5"
-            )}
-          >
-            <Avatar className="h-12 w-12">
-              <AvatarImage src={notification.user.avatar} alt={notification.user.name} />
-              <AvatarFallback>{notification.user.name[0]}</AvatarFallback>
-            </Avatar>
-            {getNotificationContent(notification)}
-            {!notification.isRead && (
-              <div className="w-2 h-2 bg-primary rounded-full mt-2 flex-shrink-0" />
-            )}
-          </button>
-        ))}
-      </div>
-
-      {notifications.length === 0 && (
+      {isLoading ? (
+        <div className="divide-y divide-border">
+          {[...Array(5)].map((_, i) => (
+            <div key={i} className="flex items-start gap-3 p-4">
+              <Skeleton className="h-12 w-12 rounded-full" />
+              <div className="flex-1 space-y-2">
+                <Skeleton className="h-4 w-full" />
+                <Skeleton className="h-3 w-24" />
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : notifications && notifications.length > 0 ? (
+        <div className="divide-y divide-border">
+          {notifications.map(notification => (
+            <button
+              key={notification.id}
+              onClick={() => {
+                handleMarkAsRead(notification.id);
+                if (notification.type === 'follow' && notification.actor_id) {
+                  navigate(`/user/${notification.actor_id}`);
+                }
+              }}
+              className={cn(
+                "w-full flex items-start gap-3 p-4 hover:bg-secondary/50 transition-colors text-left",
+                !notification.is_read && "bg-primary/5"
+              )}
+            >
+              <Avatar className="h-12 w-12">
+                <AvatarImage 
+                  src={notification.actor?.avatar_url || undefined} 
+                  alt={notification.actor?.display_name || 'User'} 
+                />
+                <AvatarFallback>
+                  {notification.actor?.display_name?.[0] || 'U'}
+                </AvatarFallback>
+              </Avatar>
+              {getNotificationContent(notification)}
+              {!notification.is_read && (
+                <div className="w-2 h-2 bg-primary rounded-full mt-2 flex-shrink-0" />
+              )}
+            </button>
+          ))}
+        </div>
+      ) : (
         <div className="flex flex-col items-center justify-center py-16 px-4">
           <div className="w-16 h-16 bg-secondary rounded-full flex items-center justify-center mb-4">
             <Bell className="h-8 w-8 text-muted-foreground" />
@@ -149,8 +160,5 @@ const Notifications = () => {
     </div>
   );
 };
-
-// Need to import Bell for empty state
-import { Bell } from 'lucide-react';
 
 export default Notifications;

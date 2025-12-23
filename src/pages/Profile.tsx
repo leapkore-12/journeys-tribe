@@ -3,30 +3,78 @@ import { useNavigate } from 'react-router-dom';
 import { Search, Settings, Flag, BarChart3 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { getCurrentUser, mockTripPosts, formatDistance, formatStatsTime } from '@/lib/mock-data';
+import { useCurrentProfile } from '@/hooks/useProfile';
+import { useUserTrips } from '@/hooks/useTrips';
 import ProfileTripCard from '@/components/ProfileTripCard';
+import { Skeleton } from '@/components/ui/skeleton';
+
+const formatDistance = (km: number) => {
+  if (km >= 1000) return `${(km / 1000).toFixed(1)}k km`;
+  return `${Math.round(km)} km`;
+};
+
+const formatStatsTime = (minutes: number) => {
+  const hours = Math.floor(minutes / 60);
+  const mins = minutes % 60;
+  if (hours >= 24) {
+    const days = Math.floor(hours / 24);
+    return `${days}d ${hours % 24}h`;
+  }
+  return `${hours}h ${mins}m`;
+};
 
 const Profile = () => {
   const navigate = useNavigate();
-  const user = getCurrentUser();
+  const { data: profile, isLoading: profileLoading } = useCurrentProfile();
+  const { data: trips, isLoading: tripsLoading } = useUserTrips();
   const [activeTab, setActiveTab] = useState<'trips' | 'stats'>('trips');
 
-  const userTrips = mockTripPosts.filter(p => p.user.id === 'current' || p.user.id === user.id);
-
-  const stats = user.stats || {
-    ytd: { trips: 48, distance: 2548, timeOnRoad: 5394 },
-    allTime: { trips: 160, distance: 10886, timeOnRoad: 9066, longestTrip: 1200 },
+  const stats = {
+    ytd: {
+      trips: profile?.trips_count || 0,
+      distance: profile?.total_distance_km || 0,
+      timeOnRoad: profile?.total_duration_minutes || 0,
+    },
+    allTime: {
+      trips: profile?.trips_count || 0,
+      distance: profile?.total_distance_km || 0,
+      timeOnRoad: profile?.total_duration_minutes || 0,
+      longestTrip: 0,
+    },
   };
+
+  if (profileLoading) {
+    return (
+      <div className="flex flex-col min-h-screen bg-background safe-top pb-24">
+        <header className="sticky top-0 z-40 bg-background">
+          <div className="flex items-center justify-between px-4 h-14">
+            <Skeleton className="h-6 w-6" />
+            <Skeleton className="h-4 w-24" />
+            <Skeleton className="h-6 w-6" />
+          </div>
+        </header>
+        <div className="px-4 py-6 space-y-4">
+          <div className="flex items-start gap-4">
+            <Skeleton className="h-20 w-20 rounded-full" />
+            <div className="space-y-2">
+              <Skeleton className="h-6 w-32" />
+              <Skeleton className="h-4 w-48" />
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col min-h-screen bg-background safe-top pb-24">
       {/* Header */}
       <header className="sticky top-0 z-40 bg-background">
         <div className="flex items-center justify-between px-4 h-14">
-          <button className="text-primary">
+          <button className="text-primary" onClick={() => navigate('/search')}>
             <Search className="h-6 w-6" />
           </button>
-          <span className="text-primary font-medium">{user.username}</span>
+          <span className="text-primary font-medium">@{profile?.username || 'user'}</span>
           <button
             onClick={() => navigate('/settings')}
             className="text-primary"
@@ -41,22 +89,22 @@ const Profile = () => {
         {/* Avatar + Name + Stats in one row */}
         <div className="flex items-start gap-4">
           <Avatar className="h-20 w-20 border-4 border-muted flex-shrink-0">
-            <AvatarImage src={user.avatar} alt={user.name} />
-            <AvatarFallback>{user.name[0]}</AvatarFallback>
+            <AvatarImage src={profile?.avatar_url || undefined} alt={profile?.display_name || 'User'} />
+            <AvatarFallback>{profile?.display_name?.[0] || 'U'}</AvatarFallback>
           </Avatar>
           <div className="flex-1 min-w-0">
-            <h2 className="text-lg font-bold text-foreground">{user.name}</h2>
+            <h2 className="text-lg font-bold text-foreground">{profile?.display_name || 'User'}</h2>
             <div className="flex items-center gap-8 mt-2">
               <div className="flex flex-col">
-                <span className="text-xl font-bold text-foreground">{user.tripsCount}</span>
+                <span className="text-xl font-bold text-foreground">{profile?.trips_count || 0}</span>
                 <span className="text-sm text-muted-foreground">trips</span>
               </div>
               <div className="flex flex-col">
-                <span className="text-xl font-bold text-foreground">{user.followersCount}</span>
+                <span className="text-xl font-bold text-foreground">{profile?.followers_count || 0}</span>
                 <span className="text-sm text-muted-foreground">followers</span>
               </div>
               <div className="flex flex-col">
-                <span className="text-xl font-bold text-foreground">{user.vehiclesCount}</span>
+                <span className="text-xl font-bold text-foreground">{profile?.vehicles_count || 0}</span>
                 <span className="text-sm text-muted-foreground">vehicles</span>
               </div>
             </div>
@@ -64,7 +112,7 @@ const Profile = () => {
         </div>
 
         {/* Bio */}
-        <p className="text-foreground mt-4">{user.bio}</p>
+        <p className="text-foreground mt-4">{profile?.bio || 'No bio yet'}</p>
 
         {/* Action Buttons */}
         <div className="mt-6 space-y-3">
@@ -125,8 +173,14 @@ const Profile = () => {
       <div className="flex-1 px-4 py-4">
         {activeTab === 'trips' && (
           <div className="space-y-4">
-            {userTrips.length > 0 ? (
-              userTrips.map((trip) => (
+            {tripsLoading ? (
+              [...Array(2)].map((_, i) => (
+                <div key={i} className="bg-card rounded-lg p-4">
+                  <Skeleton className="h-32 w-full rounded-lg" />
+                </div>
+              ))
+            ) : trips && trips.length > 0 ? (
+              trips.map((trip) => (
                 <ProfileTripCard key={trip.id} trip={trip} />
               ))
             ) : (

@@ -1,214 +1,66 @@
-import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
-import { mockUsers, getCurrentUser, User } from '@/lib/mock-data';
-
-// Mock connections data
-interface Connection {
-  id: string;
-  user: User;
-  isFollowing: boolean;
-  isFollowingYou: boolean;
-}
-
-const generateMockConnections = (): Connection[] => {
-  const currentUser = getCurrentUser();
-  return mockUsers
-    .filter(u => u.id !== currentUser.id)
-    .map((user, index) => ({
-      id: `conn-${user.id}`,
-      user,
-      isFollowing: index < 2, // First 2 users are being followed
-      isFollowingYou: true,   // All are following the current user
-    }));
-};
-
-const generateMockFollowing = (): Connection[] => {
-  const currentUser = getCurrentUser();
-  return mockUsers
-    .filter(u => u.id !== currentUser.id)
-    .map((user, index) => ({
-      id: `following-${user.id}`,
-      user,
-      isFollowing: true,
-      isFollowingYou: index < 2, // First 2 also follow back
-    }));
-};
-
-interface FollowRequest {
-  id: string;
-  user: User;
-  requestedAt: Date;
-}
-
-const generateMockRequests = (): FollowRequest[] => {
-  // Only return requests if current user is private
-  const currentUser = getCurrentUser();
-  if (!currentUser.isPrivate) return [];
-  
-  return [
-    {
-      id: 'req-1',
-      user: mockUsers[0],
-      requestedAt: new Date(Date.now() - 2 * 60 * 60 * 1000),
-    },
-  ];
-};
+import { 
+  useFollowing, 
+  useFollowers, 
+  useFollowRequests,
+  useFollowUser,
+  useUnfollowUser,
+  useAcceptFollowRequest,
+  useDeclineFollowRequest
+} from '@/hooks/useFollows';
+import { useCurrentProfile } from '@/hooks/useProfile';
+import { Skeleton } from '@/components/ui/skeleton';
 
 const ManageConnections = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const currentUser = getCurrentUser();
+  const { data: profile } = useCurrentProfile();
   
-  const [activeTab, setActiveTab] = useState('following');
-  const [following, setFollowing] = useState<Connection[]>(generateMockFollowing());
-  const [followers, setFollowers] = useState<Connection[]>(generateMockConnections());
-  const [requests, setRequests] = useState<FollowRequest[]>(generateMockRequests());
+  const { data: following, isLoading: followingLoading } = useFollowing();
+  const { data: followers, isLoading: followersLoading } = useFollowers();
+  const { data: requests, isLoading: requestsLoading } = useFollowRequests();
+  
+  const followMutation = useFollowUser();
+  const unfollowMutation = useUnfollowUser();
+  const acceptMutation = useAcceptFollowRequest();
+  const declineMutation = useDeclineFollowRequest();
 
-  const handleToggleFollow = (userId: string, isCurrentlyFollowing: boolean, listType: 'following' | 'followers') => {
-    const user = mockUsers.find(u => u.id === userId);
-    
-    if (listType === 'following') {
-      setFollowing(prev => 
-        prev.map(conn => 
-          conn.user.id === userId 
-            ? { ...conn, isFollowing: !isCurrentlyFollowing }
-            : conn
-        )
-      );
+  const handleToggleFollow = (userId: string, isCurrentlyFollowing: boolean, username?: string) => {
+    if (isCurrentlyFollowing) {
+      unfollowMutation.mutate(userId, {
+        onSuccess: () => {
+          toast({ description: `You unfollowed @${username || 'user'}` });
+        }
+      });
     } else {
-      setFollowers(prev => 
-        prev.map(conn => 
-          conn.user.id === userId 
-            ? { ...conn, isFollowing: !isCurrentlyFollowing }
-            : conn
-        )
-      );
-    }
-    
-    toast({
-      description: isCurrentlyFollowing 
-        ? `You unfollowed ${user?.username}` 
-        : `You followed ${user?.username}`,
-    });
-  };
-
-  const handleAcceptRequest = (requestId: string) => {
-    const request = requests.find(r => r.id === requestId);
-    setRequests(prev => prev.filter(r => r.id !== requestId));
-    
-    // Add to followers
-    if (request) {
-      setFollowers(prev => [
-        ...prev,
-        {
-          id: `conn-${request.user.id}`,
-          user: request.user,
-          isFollowing: false,
-          isFollowingYou: true,
+      followMutation.mutate(userId, {
+        onSuccess: () => {
+          toast({ description: `You followed @${username || 'user'}` });
         }
-      ]);
+      });
     }
-    
-    toast({
-      description: `Accepted ${request?.user.username}'s follow request`,
+  };
+
+  const handleAcceptRequest = (requestId: string, username?: string) => {
+    acceptMutation.mutate(requestId, {
+      onSuccess: () => {
+        toast({ description: `Accepted @${username || 'user'}'s follow request` });
+      }
     });
   };
 
-  const handleDeclineRequest = (requestId: string) => {
-    const request = requests.find(r => r.id === requestId);
-    setRequests(prev => prev.filter(r => r.id !== requestId));
-    
-    toast({
-      description: `Declined ${request?.user.username}'s follow request`,
+  const handleDeclineRequest = (requestId: string, username?: string) => {
+    declineMutation.mutate(requestId, {
+      onSuccess: () => {
+        toast({ description: `Declined @${username || 'user'}'s follow request` });
+      }
     });
   };
-
-  // Sort followers: mutual follows first, then non-mutual
-  const sortedFollowers = [...followers].sort((a, b) => {
-    if (a.isFollowing && !b.isFollowing) return -1;
-    if (!a.isFollowing && b.isFollowing) return 1;
-    return 0;
-  });
-
-  const ConnectionItem = ({ 
-    connection, 
-    listType 
-  }: { 
-    connection: Connection; 
-    listType: 'following' | 'followers';
-  }) => (
-    <div 
-      className="flex items-center justify-between py-3 cursor-pointer"
-      onClick={() => navigate(`/user/${connection.user.id}`)}
-    >
-      <div className="flex items-center gap-3">
-        <Avatar className="h-12 w-12">
-          <AvatarImage src={connection.user.avatar} alt={connection.user.name} />
-          <AvatarFallback>{connection.user.name.charAt(0)}</AvatarFallback>
-        </Avatar>
-        <span className="font-medium text-foreground">{connection.user.name}</span>
-      </div>
-      
-      <Button
-        variant="outline"
-        size="sm"
-        className={`min-w-[100px] ${
-          connection.isFollowing 
-            ? 'border-primary text-primary hover:bg-primary/10' 
-            : 'border-primary text-primary hover:bg-primary/10'
-        }`}
-        onClick={(e) => {
-          e.stopPropagation();
-          handleToggleFollow(connection.user.id, connection.isFollowing, listType);
-        }}
-      >
-        {listType === 'following' 
-          ? (connection.isFollowing ? 'Following' : 'Follow')
-          : (connection.isFollowing ? 'Following' : 'Follow back')
-        }
-      </Button>
-    </div>
-  );
-
-  const RequestItem = ({ request }: { request: FollowRequest }) => (
-    <div 
-      className="flex items-center justify-between py-3"
-    >
-      <div 
-        className="flex items-center gap-3 cursor-pointer"
-        onClick={() => navigate(`/user/${request.user.id}`)}
-      >
-        <Avatar className="h-12 w-12">
-          <AvatarImage src={request.user.avatar} alt={request.user.name} />
-          <AvatarFallback>{request.user.name.charAt(0)}</AvatarFallback>
-        </Avatar>
-        <span className="font-medium text-foreground">{request.user.name}</span>
-      </div>
-      
-      <div className="flex gap-2">
-        <Button
-          size="sm"
-          className="bg-primary text-primary-foreground hover:bg-primary/90"
-          onClick={() => handleAcceptRequest(request.id)}
-        >
-          Accept
-        </Button>
-        <Button
-          variant="outline"
-          size="sm"
-          className="border-muted-foreground text-muted-foreground hover:bg-muted"
-          onClick={() => handleDeclineRequest(request.id)}
-        >
-          Decline
-        </Button>
-      </div>
-    </div>
-  );
 
   return (
     <div className="min-h-screen bg-background">
@@ -229,7 +81,7 @@ const ManageConnections = () => {
       </header>
 
       {/* Tabs */}
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+      <Tabs defaultValue="following" className="w-full">
         <TabsList className="w-full bg-transparent border-b border-border rounded-none h-auto p-0">
           <TabsTrigger 
             value="following"
@@ -243,13 +95,13 @@ const ManageConnections = () => {
           >
             Followers
           </TabsTrigger>
-          {currentUser.isPrivate && (
+          {profile?.is_private && (
             <TabsTrigger 
               value="requests"
               className="flex-1 py-3 rounded-none data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:text-foreground text-muted-foreground font-medium relative"
             >
               Requests
-              {requests.length > 0 && (
+              {requests && requests.length > 0 && (
                 <span className="absolute top-2 right-4 w-2 h-2 bg-destructive rounded-full" />
               )}
             </TabsTrigger>
@@ -258,44 +110,160 @@ const ManageConnections = () => {
 
         <div className="px-4">
           <TabsContent value="following" className="mt-0">
-            {following.length === 0 ? (
-              <div className="py-12 text-center text-muted-foreground">
-                You're not following anyone yet
+            {followingLoading ? (
+              <div className="space-y-3 py-4">
+                {[...Array(3)].map((_, i) => (
+                  <div key={i} className="flex items-center justify-between py-3">
+                    <div className="flex items-center gap-3">
+                      <Skeleton className="h-12 w-12 rounded-full" />
+                      <Skeleton className="h-4 w-32" />
+                    </div>
+                    <Skeleton className="h-8 w-24" />
+                  </div>
+                ))}
               </div>
-            ) : (
+            ) : following && following.length > 0 ? (
               <div className="divide-y divide-border">
                 {following.map(conn => (
-                  <ConnectionItem key={conn.id} connection={conn} listType="following" />
+                  <div 
+                    key={conn.id}
+                    className="flex items-center justify-between py-3 cursor-pointer"
+                    onClick={() => navigate(`/user/${conn.profile.id}`)}
+                  >
+                    <div className="flex items-center gap-3">
+                      <Avatar className="h-12 w-12">
+                        <AvatarImage src={conn.profile.avatar_url || undefined} alt={conn.profile.display_name || 'User'} />
+                        <AvatarFallback>{conn.profile.display_name?.[0] || 'U'}</AvatarFallback>
+                      </Avatar>
+                      <span className="font-medium text-foreground">{conn.profile.display_name || 'User'}</span>
+                    </div>
+                    
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="min-w-[100px] border-primary text-primary hover:bg-primary/10"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleToggleFollow(conn.profile.id, true, conn.profile.username || undefined);
+                      }}
+                    >
+                      Following
+                    </Button>
+                  </div>
                 ))}
+              </div>
+            ) : (
+              <div className="py-12 text-center text-muted-foreground">
+                You're not following anyone yet
               </div>
             )}
           </TabsContent>
 
           <TabsContent value="followers" className="mt-0">
-            {sortedFollowers.length === 0 ? (
-              <div className="py-12 text-center text-muted-foreground">
-                No followers yet
+            {followersLoading ? (
+              <div className="space-y-3 py-4">
+                {[...Array(3)].map((_, i) => (
+                  <div key={i} className="flex items-center justify-between py-3">
+                    <div className="flex items-center gap-3">
+                      <Skeleton className="h-12 w-12 rounded-full" />
+                      <Skeleton className="h-4 w-32" />
+                    </div>
+                    <Skeleton className="h-8 w-24" />
+                  </div>
+                ))}
+              </div>
+            ) : followers && followers.length > 0 ? (
+              <div className="divide-y divide-border">
+                {followers.map(conn => (
+                  <div 
+                    key={conn.id}
+                    className="flex items-center justify-between py-3 cursor-pointer"
+                    onClick={() => navigate(`/user/${conn.profile.id}`)}
+                  >
+                    <div className="flex items-center gap-3">
+                      <Avatar className="h-12 w-12">
+                        <AvatarImage src={conn.profile.avatar_url || undefined} alt={conn.profile.display_name || 'User'} />
+                        <AvatarFallback>{conn.profile.display_name?.[0] || 'U'}</AvatarFallback>
+                      </Avatar>
+                      <span className="font-medium text-foreground">{conn.profile.display_name || 'User'}</span>
+                    </div>
+                    
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="min-w-[100px] border-primary text-primary hover:bg-primary/10"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleToggleFollow(conn.profile.id, conn.is_following_back || false, conn.profile.username || undefined);
+                      }}
+                    >
+                      {conn.is_following_back ? 'Following' : 'Follow back'}
+                    </Button>
+                  </div>
+                ))}
               </div>
             ) : (
-              <div className="divide-y divide-border">
-                {sortedFollowers.map(conn => (
-                  <ConnectionItem key={conn.id} connection={conn} listType="followers" />
-                ))}
+              <div className="py-12 text-center text-muted-foreground">
+                No followers yet
               </div>
             )}
           </TabsContent>
 
-          {currentUser.isPrivate && (
+          {profile?.is_private && (
             <TabsContent value="requests" className="mt-0">
-              {requests.length === 0 ? (
-                <div className="py-12 text-center text-muted-foreground">
-                  No pending requests
+              {requestsLoading ? (
+                <div className="space-y-3 py-4">
+                  {[...Array(2)].map((_, i) => (
+                    <div key={i} className="flex items-center justify-between py-3">
+                      <div className="flex items-center gap-3">
+                        <Skeleton className="h-12 w-12 rounded-full" />
+                        <Skeleton className="h-4 w-32" />
+                      </div>
+                      <div className="flex gap-2">
+                        <Skeleton className="h-8 w-20" />
+                        <Skeleton className="h-8 w-20" />
+                      </div>
+                    </div>
+                  ))}
                 </div>
-              ) : (
+              ) : requests && requests.length > 0 ? (
                 <div className="divide-y divide-border">
                   {requests.map(req => (
-                    <RequestItem key={req.id} request={req} />
+                    <div key={req.id} className="flex items-center justify-between py-3">
+                      <div 
+                        className="flex items-center gap-3 cursor-pointer"
+                        onClick={() => navigate(`/user/${req.profile.id}`)}
+                      >
+                        <Avatar className="h-12 w-12">
+                          <AvatarImage src={req.profile.avatar_url || undefined} alt={req.profile.display_name || 'User'} />
+                          <AvatarFallback>{req.profile.display_name?.[0] || 'U'}</AvatarFallback>
+                        </Avatar>
+                        <span className="font-medium text-foreground">{req.profile.display_name || 'User'}</span>
+                      </div>
+                      
+                      <div className="flex gap-2">
+                        <Button
+                          size="sm"
+                          className="bg-primary text-primary-foreground hover:bg-primary/90"
+                          onClick={() => handleAcceptRequest(req.id, req.profile.username || undefined)}
+                        >
+                          Accept
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="border-muted-foreground text-muted-foreground hover:bg-muted"
+                          onClick={() => handleDeclineRequest(req.id, req.profile.username || undefined)}
+                        >
+                          Decline
+                        </Button>
+                      </div>
+                    </div>
                   ))}
+                </div>
+              ) : (
+                <div className="py-12 text-center text-muted-foreground">
+                  No pending requests
                 </div>
               )}
             </TabsContent>
