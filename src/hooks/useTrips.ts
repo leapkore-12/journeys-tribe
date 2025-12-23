@@ -30,16 +30,36 @@ export const useFeedTrips = () => {
   const { user } = useAuth();
 
   return useInfiniteQuery({
-    queryKey: ['feed-trips'],
+    queryKey: ['feed-trips', user?.id],
     queryFn: async ({ pageParam = 0 }) => {
-      // Fetch trips
-      const { data: trips, error } = await supabase
+      // Get followed user IDs first
+      let followedIds: string[] = [];
+      if (user?.id) {
+        const { data: follows } = await supabase
+          .from('follows')
+          .select('following_id')
+          .eq('follower_id', user.id);
+        followedIds = follows?.map(f => f.following_id) || [];
+      }
+
+      // Fetch trips - from followed users OR public trips
+      let query = supabase
         .from('trips')
         .select('*, trip_photos(*)')
         .eq('status', 'completed')
-        .eq('is_public', true)
         .order('created_at', { ascending: false })
         .range(pageParam * PAGE_SIZE, (pageParam + 1) * PAGE_SIZE - 1);
+
+      // If user is logged in, show trips from followed users + public trips
+      // If not logged in, show only public trips
+      if (followedIds.length > 0) {
+        // Show trips from followed users (regardless of public status) OR public trips from anyone
+        query = query.or(`user_id.in.(${followedIds.join(',')}),is_public.eq.true`);
+      } else {
+        query = query.eq('is_public', true);
+      }
+
+      const { data: trips, error } = await query;
 
       if (error || !trips) {
         console.error('Error fetching feed trips:', error);
@@ -48,10 +68,9 @@ export const useFeedTrips = () => {
 
       // Fetch profiles for all trip owners
       const userIds = [...new Set(trips.map(t => t.user_id))];
-      const { data: profiles } = await supabase
-        .from('profiles')
-        .select('id, username, display_name, avatar_url')
-        .in('id', userIds);
+      const { data: profiles } = userIds.length > 0
+        ? await supabase.from('profiles').select('id, username, display_name, avatar_url').in('id', userIds)
+        : { data: [] };
       const profileMap = new Map<string, { id: string; username: string | null; display_name: string | null; avatar_url: string | null }>();
       profiles?.forEach(p => profileMap.set(p.id, p));
 

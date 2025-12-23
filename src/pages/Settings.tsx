@@ -4,16 +4,18 @@ import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
 import { useState } from 'react';
+import { useAuth } from '@/context/AuthContext';
 
 const Settings = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { signOut } = useAuth();
   const [isPrivate, setIsPrivate] = useState(false);
   const tribeCount = 20; // Mock data
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    await signOut();
     toast({ title: "Logged out", description: "See you on the road!" });
-    navigate('/login');
   };
 
   const handlePrivateToggle = (checked: boolean) => {
