@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { MoreHorizontal, Flag, MessageCircle, Upload } from 'lucide-react';
@@ -63,13 +63,13 @@ const TripCard = ({ trip, index, onLike, onComment, onShare, onUserClick }: Trip
     setCurrentSlide(carouselApi.selectedScrollSnap());
   }, [carouselApi]);
 
-  useState(() => {
+  useEffect(() => {
     if (!carouselApi) return;
     carouselApi.on('select', onCarouselSelect);
     return () => {
       carouselApi.off('select', onCarouselSelect);
     };
-  });
+  }, [carouselApi, onCarouselSelect]);
 
   const handleEdit = () => {
     console.log('Edit trip:', trip.id);
