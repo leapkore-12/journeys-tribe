@@ -1,16 +1,29 @@
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, ChevronRight } from 'lucide-react';
+import { ArrowLeft, ChevronRight, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
 import { useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { supabase } from '@/integrations/supabase/client';
 
 const Settings = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { signOut } = useAuth();
   const [isPrivate, setIsPrivate] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const tribeCount = 20; // Mock data
 
   const handleLogout = async () => {
@@ -26,6 +39,46 @@ const Settings = () => {
         ? "Only approved followers can see your content" 
         : "Anyone can see your content",
     });
+  };
+
+  const handleDeleteAccount = async () => {
+    setIsDeleting(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        throw new Error('No active session');
+      }
+
+      const response = await supabase.functions.invoke('delete-account', {
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
+      });
+
+      if (response.error) {
+        throw response.error;
+      }
+
+      toast({
+        title: 'Account deleted',
+        description: 'Your account and all data have been permanently deleted.',
+      });
+
+      // Sign out and redirect to splash
+      await signOut();
+      navigate('/', { replace: true });
+    } catch (error: any) {
+      console.error('Error deleting account:', error);
+      toast({
+        title: 'Failed to delete account',
+        description: error.message || 'Please try again or contact support.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsDeleting(false);
+      setShowDeleteDialog(false);
+    }
   };
 
   const settingsItems = [
@@ -64,7 +117,7 @@ const Settings = () => {
     },
     {
       label: 'Delete account',
-      onClick: () => {},
+      onClick: () => setShowDeleteDialog(true),
       isDanger: true,
     },
   ];
@@ -122,6 +175,42 @@ const Settings = () => {
           </Button>
         </div>
       </div>
+
+      {/* Delete Account Confirmation Dialog */}
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent className="bg-background border-border">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-destructive">Delete Account</AlertDialogTitle>
+            <AlertDialogDescription className="text-muted-foreground">
+              This action cannot be undone. This will permanently delete your account and remove all your data including:
+              <ul className="list-disc list-inside mt-2 space-y-1">
+                <li>Your profile and avatar</li>
+                <li>All your trips and photos</li>
+                <li>Your vehicles</li>
+                <li>All comments and likes</li>
+                <li>Follower connections</li>
+              </ul>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteAccount}
+              disabled={isDeleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isDeleting ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Deleting...
+                </>
+              ) : (
+                'Delete Account'
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
