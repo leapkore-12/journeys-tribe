@@ -97,3 +97,27 @@ export const useUploadAvatar = () => {
     },
   });
 };
+
+export const useCheckUsernameAvailability = () => {
+  const { user } = useAuth();
+
+  return useMutation({
+    mutationFn: async (username: string): Promise<boolean> => {
+      if (!username.trim()) return true;
+
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('username', username.trim())
+        .maybeSingle();
+
+      if (error) {
+        console.error('Error checking username:', error);
+        return false;
+      }
+
+      // Username is available if no data found, or if it belongs to current user
+      return !data || data.id === user?.id;
+    },
+  });
+};
