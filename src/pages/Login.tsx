@@ -112,9 +112,19 @@ const Login = () => {
               </button>
             </div>
 
+            <div className="flex justify-end">
+              <button
+                type="button"
+                onClick={() => navigate('/forgot-password')}
+                className="text-sm text-primary hover:underline"
+              >
+                Forgot password?
+              </button>
+            </div>
+
             <Button
               type="submit"
-              className="w-full h-12 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold mt-6"
+              className="w-full h-12 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold mt-2"
               disabled={isLoading}
             >
               {isLoading ? 'Logging in...' : 'Login'}

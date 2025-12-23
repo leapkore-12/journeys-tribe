@@ -30,6 +30,8 @@ import Settings from "./pages/Settings";
 import ManageConnections from "./pages/ManageConnections";
 import EditProfile from "./pages/EditProfile";
 import ChangeCredentials from "./pages/ChangeCredentials";
+import ForgotPassword from "./pages/ForgotPassword";
+import ResetPassword from "./pages/ResetPassword";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -48,6 +50,8 @@ const App = () => (
                   {/* Public Routes */}
                   <Route path="/" element={<Splash />} />
                   <Route path="/login" element={<Login />} />
+                  <Route path="/forgot-password" element={<ForgotPassword />} />
+                  <Route path="/reset-password" element={<ResetPassword />} />
                   
                   {/* Protected Routes - Main App with Bottom Navigation */}
                   <Route element={<ProtectedRoute><MainLayout /></ProtectedRoute>}>
