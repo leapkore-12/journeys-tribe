@@ -1,11 +1,29 @@
 import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Search, Settings, Flag, BarChart3, Car } from 'lucide-react';
+import { Search, Settings, Flag, BarChart3, Car, ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { mockUsers, mockTripPosts, formatDistance, formatStatsTime } from '@/lib/mock-data';
 import { useToast } from '@/hooks/use-toast';
+import { useProfile } from '@/hooks/useProfile';
+import { useUserTrips } from '@/hooks/useTrips';
+import { useIsFollowing, useFollowUser, useUnfollowUser } from '@/hooks/useFollows';
 import ProfileTripCard from '@/components/ProfileTripCard';
+import { Skeleton } from '@/components/ui/skeleton';
+
+const formatDistance = (km: number) => {
+  if (km >= 1000) return `${(km / 1000).toFixed(1)}k km`;
+  return `${Math.round(km)} km`;
+};
+
+const formatStatsTime = (minutes: number) => {
+  const hours = Math.floor(minutes / 60);
+  const mins = minutes % 60;
+  if (hours >= 24) {
+    const days = Math.floor(hours / 24);
+    return `${days}d ${hours % 24}h`;
+  }
+  return `${hours}h ${mins}m`;
+};
 
 const UserProfile = () => {
   const navigate = useNavigate();
@@ -13,43 +31,85 @@ const UserProfile = () => {
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState<'trips' | 'stats'>('trips');
   
-  const user = mockUsers.find(u => u.id === userId) || mockUsers[0];
-  const [isFollowing, setIsFollowing] = useState(user.isFollowing || false);
-
-  const userTrips = mockTripPosts.filter(p => p.user.id === userId);
-
-  const stats = user.stats || {
-    ytd: { trips: 48, distance: 2548, timeOnRoad: 5394 },
-    allTime: { trips: 160, distance: 10886, timeOnRoad: 9066, longestTrip: 1200 },
-  };
+  const { data: profile, isLoading: profileLoading } = useProfile(userId);
+  const { data: trips, isLoading: tripsLoading } = useUserTrips(userId);
+  const { data: isFollowing } = useIsFollowing(userId || '');
+  const followMutation = useFollowUser();
+  const unfollowMutation = useUnfollowUser();
 
   const handleFollow = () => {
-    setIsFollowing(!isFollowing);
-    toast({
-      title: isFollowing ? "Unfollowed" : "Following",
-      description: isFollowing 
-        ? `You unfollowed ${user.name}` 
-        : `You are now following ${user.name}`,
-    });
+    if (!userId) return;
+    
+    if (isFollowing) {
+      unfollowMutation.mutate(userId, {
+        onSuccess: () => {
+          toast({
+            title: "Unfollowed",
+            description: `You unfollowed ${profile?.display_name || 'this user'}`,
+          });
+        }
+      });
+    } else {
+      followMutation.mutate(userId, {
+        onSuccess: () => {
+          toast({
+            title: "Following",
+            description: `You are now following ${profile?.display_name || 'this user'}`,
+          });
+        }
+      });
+    }
   };
 
-  const mutualFollowers = user.mutualFollowers;
+  const stats = {
+    ytd: {
+      trips: profile?.trips_count || 0,
+      distance: profile?.total_distance_km || 0,
+      timeOnRoad: profile?.total_duration_minutes || 0,
+    },
+    allTime: {
+      trips: profile?.trips_count || 0,
+      distance: profile?.total_distance_km || 0,
+      timeOnRoad: profile?.total_duration_minutes || 0,
+      longestTrip: 0,
+    },
+  };
+
+  if (profileLoading) {
+    return (
+      <div className="flex flex-col min-h-screen bg-background safe-top pb-24">
+        <header className="sticky top-0 z-40 bg-background">
+          <div className="flex items-center justify-between px-4 h-14">
+            <button onClick={() => navigate(-1)} className="text-primary">
+              <ArrowLeft className="h-6 w-6" />
+            </button>
+            <Skeleton className="h-4 w-24" />
+            <div className="w-6" />
+          </div>
+        </header>
+        <div className="px-4 py-6 space-y-4">
+          <div className="flex items-start gap-4">
+            <Skeleton className="h-20 w-20 rounded-full" />
+            <div className="space-y-2">
+              <Skeleton className="h-6 w-32" />
+              <Skeleton className="h-4 w-48" />
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col min-h-screen bg-background safe-top pb-24">
       {/* Header */}
       <header className="sticky top-0 z-40 bg-background">
         <div className="flex items-center justify-between px-4 h-14">
-          <button className="text-primary">
-            <Search className="h-6 w-6" />
+          <button onClick={() => navigate(-1)} className="text-primary">
+            <ArrowLeft className="h-6 w-6" />
           </button>
-          <span className="text-primary font-medium">{user.username}</span>
-          <button
-            onClick={() => navigate('/settings')}
-            className="text-primary"
-          >
-            <Settings className="h-6 w-6" />
-          </button>
+          <span className="text-primary font-medium">@{profile?.username || 'user'}</span>
+          <div className="w-6" />
         </div>
       </header>
 
@@ -58,22 +118,22 @@ const UserProfile = () => {
         {/* Avatar + Name + Stats in one row */}
         <div className="flex items-start gap-4">
           <Avatar className="h-20 w-20 border-4 border-muted flex-shrink-0">
-            <AvatarImage src={user.avatar} alt={user.name} />
-            <AvatarFallback>{user.name[0]}</AvatarFallback>
+            <AvatarImage src={profile?.avatar_url || undefined} alt={profile?.display_name || 'User'} />
+            <AvatarFallback>{profile?.display_name?.[0] || 'U'}</AvatarFallback>
           </Avatar>
           <div className="flex-1 min-w-0">
-            <h2 className="text-lg font-bold text-foreground">{user.name}</h2>
+            <h2 className="text-lg font-bold text-foreground">{profile?.display_name || 'User'}</h2>
             <div className="flex items-center gap-8 mt-2">
               <div className="flex flex-col">
-                <span className="text-xl font-bold text-foreground">{user.tripsCount}</span>
+                <span className="text-xl font-bold text-foreground">{profile?.trips_count || 0}</span>
                 <span className="text-sm text-muted-foreground">trips</span>
               </div>
               <div className="flex flex-col">
-                <span className="text-xl font-bold text-foreground">{user.followersCount}</span>
+                <span className="text-xl font-bold text-foreground">{profile?.followers_count || 0}</span>
                 <span className="text-sm text-muted-foreground">followers</span>
               </div>
               <div className="flex flex-col">
-                <span className="text-xl font-bold text-foreground">{user.vehiclesCount}</span>
+                <span className="text-xl font-bold text-foreground">{profile?.vehicles_count || 0}</span>
                 <span className="text-sm text-muted-foreground">vehicles</span>
               </div>
             </div>
@@ -81,37 +141,13 @@ const UserProfile = () => {
         </div>
 
         {/* Bio */}
-        <p className="text-foreground mt-4">{user.bio}</p>
-
-        {/* Mutual Followers */}
-        {mutualFollowers && mutualFollowers.users.length > 0 && (
-          <div className="flex items-center justify-center gap-2 mt-4">
-            <div className="flex -space-x-2">
-              {mutualFollowers.users.slice(0, 3).map((mutualUser, index) => (
-                <Avatar key={mutualUser.id} className="h-6 w-6 border-2 border-background">
-                  <AvatarImage src={mutualUser.avatar} alt={mutualUser.username} />
-                  <AvatarFallback>{mutualUser.username[1]}</AvatarFallback>
-                </Avatar>
-              ))}
-            </div>
-            <p className="text-sm text-muted-foreground">
-              Followed by{' '}
-              <span className="text-foreground font-medium">
-                {mutualFollowers.users.slice(0, 2).map(u => u.username.replace('@', '')).join(', ')}
-              </span>
-              {mutualFollowers.total > 2 && (
-                <span className="text-muted-foreground">
-                  {' '}and <span className="text-foreground font-medium">{mutualFollowers.total - 2} others</span>
-                </span>
-              )}
-            </p>
-          </div>
-        )}
+        <p className="text-foreground mt-4">{profile?.bio || 'No bio yet'}</p>
 
         {/* Action Buttons */}
         <div className="mt-6 flex gap-3">
           <Button
             onClick={handleFollow}
+            disabled={followMutation.isPending || unfollowMutation.isPending}
             className={`flex-1 h-11 font-medium ${
               isFollowing
                 ? 'bg-secondary text-foreground'
@@ -163,8 +199,14 @@ const UserProfile = () => {
       <div className="flex-1 px-4 py-4">
         {activeTab === 'trips' && (
           <div className="space-y-4">
-            {userTrips.length > 0 ? (
-              userTrips.map((trip) => (
+            {tripsLoading ? (
+              [...Array(2)].map((_, i) => (
+                <div key={i} className="bg-card rounded-lg p-4">
+                  <Skeleton className="h-32 w-full rounded-lg" />
+                </div>
+              ))
+            ) : trips && trips.length > 0 ? (
+              trips.map((trip) => (
                 <ProfileTripCard key={trip.id} trip={trip} />
               ))
             ) : (
@@ -172,7 +214,7 @@ const UserProfile = () => {
                 <Flag className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
                 <h3 className="font-semibold text-foreground">No trips yet</h3>
                 <p className="text-sm text-muted-foreground">
-                  {user.name} hasn't posted any trips
+                  {profile?.display_name || 'This user'} hasn't posted any trips
                 </p>
               </div>
             )}
