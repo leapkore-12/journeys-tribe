@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Camera } from 'lucide-react';
+import { ArrowLeft, Camera, CheckCircle, XCircle, Loader2 } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -8,8 +8,9 @@ import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
-import { useCurrentProfile, useUpdateProfile, useUploadAvatar } from '@/hooks/useProfile';
+import { useCurrentProfile, useUpdateProfile, useUploadAvatar, useCheckUsernameAvailability } from '@/hooks/useProfile';
 import { pickPhoto } from '@/lib/capacitor-utils';
+import { useDebounce } from '@/hooks/useDebounce';
 
 const EditProfile = () => {
   const navigate = useNavigate();
@@ -18,6 +19,7 @@ const EditProfile = () => {
   const { data: profile, isLoading } = useCurrentProfile();
   const updateProfile = useUpdateProfile();
   const uploadAvatar = useUploadAvatar();
+  const checkUsername = useCheckUsernameAvailability();
 
   const [avatar, setAvatar] = useState('');
   const [name, setName] = useState('');
@@ -25,17 +27,36 @@ const EditProfile = () => {
   const [bio, setBio] = useState('');
   const [isPrivate, setIsPrivate] = useState(false);
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [isUsernameAvailable, setIsUsernameAvailable] = useState<boolean | null>(null);
+  const [originalUsername, setOriginalUsername] = useState('');
+  
+  const debouncedUsername = useDebounce(username, 500);
 
   // Initialize form with profile data
   useEffect(() => {
     if (profile) {
       setAvatar(profile.avatar_url || '');
       setName(profile.display_name || '');
-      setUsername(profile.username?.replace('@', '') || '');
+      const cleanUsername = profile.username?.replace('@', '') || '';
+      setUsername(cleanUsername);
+      setOriginalUsername(cleanUsername);
       setBio(profile.bio || '');
       setIsPrivate(profile.is_private || false);
     }
   }, [profile]);
+
+  // Check username availability when it changes
+  useEffect(() => {
+    if (debouncedUsername && debouncedUsername !== originalUsername) {
+      checkUsername.mutate(debouncedUsername, {
+        onSuccess: (isAvailable) => {
+          setIsUsernameAvailable(isAvailable);
+        },
+      });
+    } else if (debouncedUsername === originalUsername) {
+      setIsUsernameAvailable(null); // Reset when it's the original username
+    }
+  }, [debouncedUsername, originalUsername]);
 
   const handleChangePhoto = async () => {
     const photoUrl = await pickPhoto();
@@ -72,6 +93,16 @@ const EditProfile = () => {
       return;
     }
 
+    // Check username availability before saving
+    if (username !== originalUsername && isUsernameAvailable === false) {
+      toast({
+        title: 'Username unavailable',
+        description: 'This username is already taken. Please choose another.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     try {
       // Upload avatar if changed
       if (avatarFile) {
@@ -103,6 +134,8 @@ const EditProfile = () => {
   };
 
   const isSaving = updateProfile.isPending || uploadAvatar.isPending;
+  const isCheckingUsername = checkUsername.isPending;
+  const canSave = !isSaving && (username === originalUsername || isUsernameAvailable !== false);
 
   if (isLoading) {
     return (
@@ -142,7 +175,7 @@ const EditProfile = () => {
           <span className="text-foreground font-medium">Edit profile</span>
           <button
             onClick={handleSave}
-            disabled={isSaving}
+            disabled={!canSave}
             className="text-primary font-medium disabled:opacity-50"
           >
             {isSaving ? 'Saving...' : 'Save'}
@@ -202,9 +235,27 @@ const EditProfile = () => {
                 value={username}
                 onChange={(e) => setUsername(e.target.value.replace(/[^a-zA-Z0-9_]/g, ''))}
                 placeholder="username"
-                className="bg-secondary border-border text-foreground pl-8"
+                className={`bg-secondary border-border text-foreground pl-8 pr-10 ${
+                  username !== originalUsername && isUsernameAvailable === false
+                    ? 'border-destructive focus-visible:ring-destructive'
+                    : ''
+                }`}
               />
+              {username && username !== originalUsername && (
+                <span className="absolute right-3 top-1/2 -translate-y-1/2">
+                  {isCheckingUsername ? (
+                    <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                  ) : isUsernameAvailable === true ? (
+                    <CheckCircle className="h-4 w-4 text-green-500" />
+                  ) : isUsernameAvailable === false ? (
+                    <XCircle className="h-4 w-4 text-destructive" />
+                  ) : null}
+                </span>
+              )}
             </div>
+            {username !== originalUsername && isUsernameAvailable === false && (
+              <p className="text-xs text-destructive">Username is already taken</p>
+            )}
           </div>
 
           <div className="space-y-2">
