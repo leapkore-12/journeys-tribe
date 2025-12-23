@@ -19,7 +19,7 @@ const MainLayout = () => {
   return (
     <div className="h-full bg-background flex flex-col overflow-hidden">
       {/* Main Content */}
-      <main className="flex-1 pb-20 overflow-y-auto">
+      <main className="flex-1 pb-20 overflow-y-auto scrollbar-hide">
         <Outlet />
       </main>
 
