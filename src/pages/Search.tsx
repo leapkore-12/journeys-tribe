@@ -136,15 +136,9 @@ const Search = () => {
                   className="w-full flex gap-3 p-3 bg-card rounded-lg hover:bg-secondary transition-colors"
                 >
                   <div className="w-20 h-20 bg-secondary rounded-lg flex-shrink-0 overflow-hidden">
-                    {trip.trip_photos?.[0]?.image_url ? (
+                    {trip.image ? (
                       <img 
-                        src={trip.trip_photos[0].image_url} 
-                        alt={trip.title} 
-                        className="w-full h-full object-cover" 
-                      />
-                    ) : trip.map_image_url ? (
-                      <img 
-                        src={trip.map_image_url} 
+                        src={trip.image} 
                         alt={trip.title} 
                         className="w-full h-full object-cover" 
                       />
