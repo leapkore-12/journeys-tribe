@@ -6,6 +6,8 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import MobileContainer from "./components/layout/MobileContainer";
 import MainLayout from "./components/layout/MainLayout";
 import { TripProvider } from "./context/TripContext";
+import { AuthProvider } from "./context/AuthContext";
+import ProtectedRoute from "./components/auth/ProtectedRoute";
 import Splash from "./pages/Splash";
 import Login from "./pages/Login";
 import Feed from "./pages/Feed";
@@ -35,48 +37,50 @@ const App = () => (
   <QueryClientProvider client={queryClient}>
     <BrowserRouter>
       <TooltipProvider>
-        <TripProvider>
-          <div className="dark">
-            <Toaster />
-            <Sonner />
-            <MobileContainer>
-              <Routes>
-                {/* Entry Flow */}
-                <Route path="/" element={<Splash />} />
-                <Route path="/login" element={<Login />} />
-                
-                {/* Main App with Bottom Navigation */}
-                <Route element={<MainLayout />}>
-                  <Route path="/feed" element={<Feed />} />
-                  <Route path="/trip" element={<TripPlanner />} />
-                  <Route path="/profile" element={<Profile />} />
-                </Route>
-                
-                {/* Trip Flow */}
-                <Route path="/trip/review" element={<TripReview />} />
-                <Route path="/trip/active" element={<ActiveTrip />} />
-                <Route path="/trip/paused" element={<TripPaused />} />
-                <Route path="/trip/reached" element={<TripReached />} />
-                <Route path="/trip/post" element={<PostTrip />} />
-                <Route path="/trip/complete" element={<TripComplete />} />
-                
-                {/* Standalone Pages */}
-                <Route path="/search" element={<Search />} />
-                <Route path="/notifications" element={<Notifications />} />
-                <Route path="/comments/:postId" element={<Comments />} />
-                <Route path="/share/:postId" element={<Share />} />
-                <Route path="/user/:userId" element={<UserProfile />} />
-                <Route path="/garage" element={<Garage />} />
-                <Route path="/garage/edit/:id?" element={<EditVehicle />} />
-                <Route path="/manage-followers" element={<ManageConnections />} />
-                <Route path="/edit-profile" element={<EditProfile />} />
-                <Route path="/settings" element={<Settings />} />
-                
-                <Route path="*" element={<NotFound />} />
-              </Routes>
-            </MobileContainer>
-          </div>
-        </TripProvider>
+        <AuthProvider>
+          <TripProvider>
+            <div className="dark">
+              <Toaster />
+              <Sonner />
+              <MobileContainer>
+                <Routes>
+                  {/* Public Routes */}
+                  <Route path="/" element={<Splash />} />
+                  <Route path="/login" element={<Login />} />
+                  
+                  {/* Protected Routes - Main App with Bottom Navigation */}
+                  <Route element={<ProtectedRoute><MainLayout /></ProtectedRoute>}>
+                    <Route path="/feed" element={<Feed />} />
+                    <Route path="/trip" element={<TripPlanner />} />
+                    <Route path="/profile" element={<Profile />} />
+                  </Route>
+                  
+                  {/* Protected Routes - Trip Flow */}
+                  <Route path="/trip/review" element={<ProtectedRoute><TripReview /></ProtectedRoute>} />
+                  <Route path="/trip/active" element={<ProtectedRoute><ActiveTrip /></ProtectedRoute>} />
+                  <Route path="/trip/paused" element={<ProtectedRoute><TripPaused /></ProtectedRoute>} />
+                  <Route path="/trip/reached" element={<ProtectedRoute><TripReached /></ProtectedRoute>} />
+                  <Route path="/trip/post" element={<ProtectedRoute><PostTrip /></ProtectedRoute>} />
+                  <Route path="/trip/complete" element={<ProtectedRoute><TripComplete /></ProtectedRoute>} />
+                  
+                  {/* Protected Routes - Standalone Pages */}
+                  <Route path="/search" element={<ProtectedRoute><Search /></ProtectedRoute>} />
+                  <Route path="/notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
+                  <Route path="/comments/:postId" element={<ProtectedRoute><Comments /></ProtectedRoute>} />
+                  <Route path="/share/:postId" element={<ProtectedRoute><Share /></ProtectedRoute>} />
+                  <Route path="/user/:userId" element={<ProtectedRoute><UserProfile /></ProtectedRoute>} />
+                  <Route path="/garage" element={<ProtectedRoute><Garage /></ProtectedRoute>} />
+                  <Route path="/garage/edit/:id?" element={<ProtectedRoute><EditVehicle /></ProtectedRoute>} />
+                  <Route path="/manage-followers" element={<ProtectedRoute><ManageConnections /></ProtectedRoute>} />
+                  <Route path="/edit-profile" element={<ProtectedRoute><EditProfile /></ProtectedRoute>} />
+                  <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+                  
+                  <Route path="*" element={<NotFound />} />
+                </Routes>
+              </MobileContainer>
+            </div>
+          </TripProvider>
+        </AuthProvider>
       </TooltipProvider>
     </BrowserRouter>
   </QueryClientProvider>
