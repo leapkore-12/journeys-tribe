@@ -9,8 +9,10 @@ export interface Stop {
 export interface TripState {
   step: 1 | 2 | 3 | 4;
   startLocation: string;
+  startCoordinates: [number, number] | null;
   destination: string;
   destinationAddress: string;
+  destinationCoordinates: [number, number] | null;
   stops: Stop[];
   vehicle: Vehicle | null;
   convoy: User[];
@@ -26,8 +28,8 @@ export interface TripState {
 interface TripContextType {
   tripState: TripState;
   setStep: (step: 1 | 2 | 3 | 4) => void;
-  setStartLocation: (location: string) => void;
-  setDestination: (destination: string, address?: string) => void;
+  setStartLocation: (location: string, coordinates?: [number, number]) => void;
+  setDestination: (destination: string, address?: string, coordinates?: [number, number]) => void;
   addStop: (address: string) => void;
   removeStop: (id: string) => void;
   setVehicle: (vehicle: Vehicle | null) => void;
@@ -45,8 +47,10 @@ interface TripContextType {
 const initialState: TripState = {
   step: 1,
   startLocation: 'Your location',
+  startCoordinates: null,
   destination: '',
   destinationAddress: '',
+  destinationCoordinates: null,
   stops: [],
   vehicle: null,
   convoy: [],
@@ -67,15 +71,20 @@ export const TripProvider = ({ children }: { children: ReactNode }) => {
     setTripState(prev => ({ ...prev, step }));
   };
 
-  const setStartLocation = (location: string) => {
-    setTripState(prev => ({ ...prev, startLocation: location }));
+  const setStartLocation = (location: string, coordinates?: [number, number]) => {
+    setTripState(prev => ({ 
+      ...prev, 
+      startLocation: location,
+      startCoordinates: coordinates || null,
+    }));
   };
 
-  const setDestination = (destination: string, address?: string) => {
+  const setDestination = (destination: string, address?: string, coordinates?: [number, number]) => {
     setTripState(prev => ({ 
       ...prev, 
       destination, 
-      destinationAddress: address || destination 
+      destinationAddress: address || destination,
+      destinationCoordinates: coordinates || null,
     }));
   };
 
