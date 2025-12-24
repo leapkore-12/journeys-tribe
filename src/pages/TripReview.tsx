@@ -76,9 +76,13 @@ const TripReview = () => {
                 <Flag className="h-4 w-4 text-primary" />
               </div>
               <div className="flex-1">
-                <p className="text-foreground font-medium">{tripState.destination || 'Goa, India'}</p>
-                <p className="text-sm text-muted-foreground mt-1">Panaji, Goa, India</p>
-                <p className="text-sm text-muted-foreground mt-1">241 km • 6h 7m</p>
+                <p className="text-foreground font-medium">{tripState.destination || 'Destination'}</p>
+                <p className="text-sm text-muted-foreground mt-1">{tripState.destinationAddress}</p>
+                {tripState.routeDistance && tripState.routeDuration && (
+                  <p className="text-sm text-muted-foreground mt-1">
+                    {tripState.routeDistance.toFixed(1)} km • {Math.floor(tripState.routeDuration / 60)}h {Math.round(tripState.routeDuration % 60)}m
+                  </p>
+                )}
               </div>
             </div>
           </motion.div>

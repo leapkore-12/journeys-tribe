@@ -121,7 +121,7 @@ const ActiveTrip = () => {
         <LiveTrackingMap
           userPosition={userPosition}
           destination={tripState.destinationCoordinates || undefined}
-          routeCoordinates={route?.coordinates}
+          routeCoordinates={route?.coordinates || tripState.routeCoordinates || undefined}
           convoyMembers={convoyMembers}
         />
       </div>
@@ -198,7 +198,9 @@ const ActiveTrip = () => {
             </span>
           </div>
         )}
-        <button className="px-4 py-2 bg-card rounded-full flex items-center gap-2 shadow-lg">
+        <button 
+          className="px-4 py-2 bg-card rounded-full flex items-center gap-2 shadow-lg"
+        >
           <LocateFixed className="h-4 w-4 text-foreground" />
           <span className="text-sm text-foreground">Re-centre</span>
         </button>
