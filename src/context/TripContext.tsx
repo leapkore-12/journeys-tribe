@@ -4,6 +4,7 @@ import { User, Vehicle } from '@/lib/mock-data';
 export interface Stop {
   id: string;
   address: string;
+  coordinates?: [number, number] | null;
 }
 
 export interface TripState {
@@ -16,6 +17,10 @@ export interface TripState {
   stops: Stop[];
   vehicle: Vehicle | null;
   convoy: User[];
+  // Route info from Mapbox
+  routeDistance: number | null; // in km
+  routeDuration: number | null; // in minutes
+  routeCoordinates: [number, number][] | null;
   // Active trip state
   isActive: boolean;
   isPaused: boolean;
@@ -30,12 +35,13 @@ interface TripContextType {
   setStep: (step: 1 | 2 | 3 | 4) => void;
   setStartLocation: (location: string, coordinates?: [number, number]) => void;
   setDestination: (destination: string, address?: string, coordinates?: [number, number]) => void;
-  addStop: (address: string) => void;
+  addStop: (address: string, coordinates?: [number, number]) => void;
   removeStop: (id: string) => void;
   setVehicle: (vehicle: Vehicle | null) => void;
   addConvoyMember: (user: User) => void;
   removeConvoyMember: (userId: string) => void;
   toggleConvoyMember: (user: User) => void;
+  setRouteInfo: (distance: number, duration: number, coordinates: [number, number][]) => void;
   startTrip: () => void;
   pauseTrip: () => void;
   resumeTrip: () => void;
@@ -54,12 +60,15 @@ const initialState: TripState = {
   stops: [],
   vehicle: null,
   convoy: [],
+  routeDistance: null,
+  routeDuration: null,
+  routeCoordinates: null,
   isActive: false,
   isPaused: false,
   distanceCovered: 0,
-  distanceRemaining: 241,
+  distanceRemaining: 0,
   timeElapsed: 0,
-  eta: 367,
+  eta: 0,
 };
 
 const TripContext = createContext<TripContextType | undefined>(undefined);
@@ -88,9 +97,20 @@ export const TripProvider = ({ children }: { children: ReactNode }) => {
     }));
   };
 
-  const addStop = (address: string) => {
-    const newStop: Stop = { id: Date.now().toString(), address };
+  const addStop = (address: string, coordinates?: [number, number]) => {
+    const newStop: Stop = { id: Date.now().toString(), address, coordinates };
     setTripState(prev => ({ ...prev, stops: [...prev.stops, newStop] }));
+  };
+
+  const setRouteInfo = (distance: number, duration: number, coordinates: [number, number][]) => {
+    setTripState(prev => ({
+      ...prev,
+      routeDistance: distance,
+      routeDuration: duration,
+      routeCoordinates: coordinates,
+      distanceRemaining: distance,
+      eta: duration,
+    }));
   };
 
   const removeStop = (id: string) => {
@@ -177,6 +197,7 @@ export const TripProvider = ({ children }: { children: ReactNode }) => {
         addConvoyMember,
         removeConvoyMember,
         toggleConvoyMember,
+        setRouteInfo,
         startTrip,
         pauseTrip,
         resumeTrip,
