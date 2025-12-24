@@ -45,7 +45,8 @@ const PostTrip = () => {
     const files = e.target.files;
     if (!files) return;
 
-    const remainingSlots = MAX_PHOTOS - tripState.tripPhotos.length;
+    const currentPhotos = tripState.tripPhotos || [];
+    const remainingSlots = MAX_PHOTOS - currentPhotos.length;
     const newFiles = Array.from(files).slice(0, remainingSlots);
     
     // Filter only images
@@ -131,11 +132,12 @@ const PostTrip = () => {
       });
 
       // Upload trip photos if any
-      if (tripState.tripPhotos.length > 0) {
+      const photos = tripState.tripPhotos || [];
+      if (photos.length > 0) {
         setIsPosting('Uploading photos...');
         await uploadPhotos.mutateAsync({
           tripId: createdTrip.id,
-          photos: tripState.tripPhotos,
+          photos: photos,
         });
       }
 
@@ -300,9 +302,9 @@ const PostTrip = () => {
           className="space-y-3"
         >
           {/* Photo previews */}
-          {tripState.tripPhotos.length > 0 && (
+          {(tripState.tripPhotos || []).length > 0 && (
             <div className="flex gap-2 overflow-x-auto pb-2">
-              {tripState.tripPhotos.map((photo, index) => (
+              {(tripState.tripPhotos || []).map((photo, index) => (
                 <div key={index} className="relative flex-shrink-0">
                   <img
                     src={URL.createObjectURL(photo)}
@@ -321,16 +323,16 @@ const PostTrip = () => {
           )}
 
           {/* Add photos button */}
-          {tripState.tripPhotos.length < MAX_PHOTOS ? (
+          {(tripState.tripPhotos || []).length < MAX_PHOTOS ? (
             <button
               onClick={handleAddPhotoClick}
               className="w-full h-32 border-2 border-dashed border-primary rounded-xl flex flex-col items-center justify-center gap-2"
             >
               <Image className="h-8 w-8 text-primary" />
               <span className="text-primary font-medium">
-                {tripState.tripPhotos.length === 0 
+                {(tripState.tripPhotos || []).length === 0 
                   ? 'Add photos' 
-                  : `Add more (${tripState.tripPhotos.length}/${MAX_PHOTOS})`}
+                  : `Add more (${(tripState.tripPhotos || []).length}/${MAX_PHOTOS})`}
               </span>
             </button>
           ) : (
