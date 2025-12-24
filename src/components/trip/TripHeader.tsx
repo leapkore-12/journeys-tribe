@@ -8,6 +8,7 @@ interface TripHeaderProps {
   showSOS?: boolean;
   onSOSClick?: () => void;
   backTo?: string;
+  onBack?: () => void;
 }
 
 const TripHeader = ({ 
@@ -15,7 +16,8 @@ const TripHeader = ({
   showBell = true, 
   showSOS = false,
   onSOSClick,
-  backTo = '/feed'
+  backTo = '/feed',
+  onBack,
 }: TripHeaderProps) => {
   const navigate = useNavigate();
 
@@ -24,7 +26,7 @@ const TripHeader = ({
       <div className="w-10">
         {showBack && (
           <button 
-            onClick={() => navigate(backTo)}
+            onClick={() => onBack ? onBack() : navigate(backTo)}
             className="w-10 h-10 flex items-center justify-center"
           >
             <ChevronLeft className="h-6 w-6 text-foreground" />

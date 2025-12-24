@@ -27,6 +27,7 @@ const LocationSearchInput = ({
   const { results, isLoading, search, clearResults } = useMapboxGeocoding();
   const debouncedValue = useDebounce(value, 300);
   const containerRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   // Search when debounced value changes
   useEffect(() => {
@@ -69,10 +70,15 @@ const LocationSearchInput = ({
           </div>
         )}
         <Input
+          ref={inputRef}
           value={value}
           onChange={(e) => onChange(e.target.value)}
           onFocus={() => {
             setIsFocused(true);
+            // Select all text on focus so typing replaces it
+            if (inputRef.current) {
+              inputRef.current.select();
+            }
             if (results.length > 0) setShowDropdown(true);
           }}
           onBlur={() => setIsFocused(false)}

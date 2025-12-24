@@ -195,6 +195,16 @@ const TripPlanner = () => {
     return 'Next';
   };
 
+  const handleBack = () => {
+    if (step === 1) {
+      navigate('/feed');
+    } else {
+      const prevStep = (step - 1) as 1 | 2 | 3 | 4;
+      setLocalStep(prevStep);
+      setStep(prevStep);
+    }
+  };
+
   const formatDistance = (km: number) => {
     return km < 1 ? `${(km * 1000).toFixed(0)} m` : `${km.toFixed(1)} km`;
   };
@@ -208,7 +218,7 @@ const TripPlanner = () => {
 
   return (
     <div className="min-h-screen flex flex-col bg-background safe-top">
-      <TripHeader backTo="/feed" />
+      <TripHeader onBack={handleBack} />
       
       {/* Title */}
       <div className="px-4 pt-2 pb-4">
