@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Image, ChevronDown, Trash2 } from 'lucide-react';
+import { Image, ChevronDown, Trash2, X, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -10,18 +10,23 @@ import TripHeader from '@/components/trip/TripHeader';
 import { useTrip } from '@/context/TripContext';
 import { useToast } from '@/hooks/use-toast';
 import { useCreateTrip } from '@/hooks/useTrips';
+import { useUploadTripPhotos } from '@/hooks/useTripPhotos';
 import { generateStaticMapUrl, generateSimpleMapUrl } from '@/lib/mapbox-static';
+
+const MAX_PHOTOS = 5;
 
 const PostTrip = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { tripState, resetTrip } = useTrip();
+  const { tripState, resetTrip, addTripPhoto, removeTripPhoto } = useTrip();
   const createTrip = useCreateTrip();
+  const uploadPhotos = useUploadTripPhotos();
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [visibility, setVisibility] = useState('Everyone');
   const [showVisibilityDropdown, setShowVisibilityDropdown] = useState(false);
-  const [isPosting, setIsPosting] = useState(false);
+  const [isPosting, setIsPosting] = useState('');
 
   const visibilityOptions = ['Everyone', 'Friends only', 'Only me'];
 
@@ -35,6 +40,28 @@ const PostTrip = () => {
           { width: 600, height: 300 }
         )
       : null;
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files) return;
+
+    const remainingSlots = MAX_PHOTOS - tripState.tripPhotos.length;
+    const newFiles = Array.from(files).slice(0, remainingSlots);
+    
+    // Filter only images
+    const imageFiles = newFiles.filter(file => file.type.startsWith('image/'));
+    
+    imageFiles.forEach(file => addTripPhoto(file));
+    
+    // Reset input so same file can be selected again
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
+  const handleAddPhotoClick = () => {
+    fileInputRef.current?.click();
+  };
 
   const handleDelete = () => {
     resetTrip();
@@ -55,7 +82,7 @@ const PostTrip = () => {
       return;
     }
 
-    setIsPosting(true);
+    setIsPosting('Creating trip...');
 
     try {
       // Generate the static map URL for the trip
@@ -80,7 +107,7 @@ const PostTrip = () => {
       const isPublic = visibility === 'Everyone';
 
       // Create the trip in the database
-      await createTrip.mutateAsync({
+      const createdTrip = await createTrip.mutateAsync({
         title: title.trim(),
         description: description.trim() || null,
         start_location: tripState.startLocation || null,
@@ -103,6 +130,15 @@ const PostTrip = () => {
         completed_at: new Date().toISOString(),
       });
 
+      // Upload trip photos if any
+      if (tripState.tripPhotos.length > 0) {
+        setIsPosting('Uploading photos...');
+        await uploadPhotos.mutateAsync({
+          tripId: createdTrip.id,
+          photos: tripState.tripPhotos,
+        });
+      }
+
       toast({
         title: "Trip Posted! 🏁",
         description: "Your trip is now visible to your followers",
@@ -118,7 +154,7 @@ const PostTrip = () => {
         variant: "destructive",
       });
     } finally {
-      setIsPosting(false);
+      setIsPosting('');
     }
   };
 
@@ -246,16 +282,62 @@ const PostTrip = () => {
           <button className="text-primary text-sm font-medium">Edit</button>
         </motion.div>
 
-        {/* Add Photos/Video */}
+        {/* Hidden file input */}
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          multiple
+          onChange={handleFileSelect}
+          className="hidden"
+        />
+
+        {/* Add Photos */}
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.5 }}
+          className="space-y-3"
         >
-          <button className="w-full h-32 border-2 border-dashed border-primary rounded-xl flex flex-col items-center justify-center gap-2">
-            <Image className="h-8 w-8 text-primary" />
-            <span className="text-primary font-medium">Add photos/video</span>
-          </button>
+          {/* Photo previews */}
+          {tripState.tripPhotos.length > 0 && (
+            <div className="flex gap-2 overflow-x-auto pb-2">
+              {tripState.tripPhotos.map((photo, index) => (
+                <div key={index} className="relative flex-shrink-0">
+                  <img
+                    src={URL.createObjectURL(photo)}
+                    alt={`Photo ${index + 1}`}
+                    className="w-20 h-20 object-cover rounded-lg border border-border"
+                  />
+                  <button
+                    onClick={() => removeTripPhoto(index)}
+                    className="absolute -top-2 -right-2 w-6 h-6 bg-destructive rounded-full flex items-center justify-center"
+                  >
+                    <X className="h-4 w-4 text-destructive-foreground" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Add photos button */}
+          {tripState.tripPhotos.length < MAX_PHOTOS ? (
+            <button
+              onClick={handleAddPhotoClick}
+              className="w-full h-32 border-2 border-dashed border-primary rounded-xl flex flex-col items-center justify-center gap-2"
+            >
+              <Image className="h-8 w-8 text-primary" />
+              <span className="text-primary font-medium">
+                {tripState.tripPhotos.length === 0 
+                  ? 'Add photos' 
+                  : `Add more (${tripState.tripPhotos.length}/${MAX_PHOTOS})`}
+              </span>
+            </button>
+          ) : (
+            <div className="w-full py-3 text-center text-muted-foreground text-sm">
+              Maximum {MAX_PHOTOS} photos reached
+            </div>
+          )}
         </motion.div>
 
         {/* Visibility Dropdown */}
@@ -312,10 +394,10 @@ const PostTrip = () => {
           </Button>
           <Button
             onClick={handlePost}
-            disabled={isPosting || createTrip.isPending}
+            disabled={!!isPosting || createTrip.isPending}
             className="flex-1 h-14 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold"
           >
-            {isPosting || createTrip.isPending ? 'Posting...' : 'Post trip'}
+            {isPosting || createTrip.isPending ? (isPosting || 'Posting...') : 'Post trip'}
           </Button>
         </div>
       </div>
