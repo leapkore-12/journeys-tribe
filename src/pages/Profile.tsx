@@ -104,8 +104,8 @@ const Profile = () => {
                 <span className="text-sm text-muted-foreground">followers</span>
               </div>
               <div className="flex flex-col">
-                <span className="text-xl font-bold text-foreground">{profile?.vehicles_count || 0}</span>
-                <span className="text-sm text-muted-foreground">vehicles</span>
+                <span className="text-xl font-bold text-foreground">{profile?.following_count || 0}</span>
+                <span className="text-sm text-muted-foreground">following</span>
               </div>
             </div>
           </div>
