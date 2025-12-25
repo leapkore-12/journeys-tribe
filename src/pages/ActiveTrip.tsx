@@ -1,25 +1,32 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { 
   ChevronLeft, Phone, ArrowUp, Mic, Compass,
-  Search, X, AlertTriangle, LocateFixed, Route
+  Search, X, AlertTriangle, LocateFixed, Route,
+  Share2, Users, Pause
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useTrip } from '@/context/TripContext';
 import { useGeolocation } from '@/hooks/useGeolocation';
 import { useMapboxRoute } from '@/hooks/useMapboxRoute';
 import { useConvoyPresence } from '@/hooks/useConvoyPresence';
+import { useConvoyInvites } from '@/hooks/useConvoyInvites';
+import { useToast } from '@/hooks/use-toast';
 import LiveTrackingMap from '@/components/map/LiveTrackingMap';
+import ConvoyPanel from '@/components/convoy/ConvoyPanel';
+import ConvoyStatusBar from '@/components/convoy/ConvoyStatusBar';
 import logoWhite from '@/assets/logo-white.svg';
 
 const ActiveTrip = () => {
   const navigate = useNavigate();
   const { tripState, pauseTrip, updateProgress } = useTrip();
+  const { toast } = useToast();
   const [showSOS, setShowSOS] = useState(false);
+  const [showConvoyPanel, setShowConvoyPanel] = useState(false);
   const [elapsedTime, setElapsedTime] = useState(tripState.timeElapsed);
   const [distance, setDistance] = useState(tripState.distanceCovered);
-  const [activeTripId] = useState(() => crypto.randomUUID()); // Generate trip ID for presence
+  const [activeTripId] = useState(() => crypto.randomUUID());
   const watchIdRef = useRef<number | null>(null);
 
   // Real GPS tracking
@@ -29,6 +36,7 @@ const ActiveTrip = () => {
     speed,
     startWatching, 
     stopWatching,
+    getCurrentPosition,
     error: geoError 
   } = useGeolocation({ enableHighAccuracy: true });
 
@@ -38,13 +46,33 @@ const ActiveTrip = () => {
   // Real-time convoy presence tracking
   const { 
     members: convoyMembers, 
+    activeMembers,
     isConnected: isConvoyConnected,
     updatePosition,
     leaveConvoy,
   } = useConvoyPresence({ 
     tripId: activeTripId, 
-    enabled: tripState.isActive 
+    enabled: tripState.isActive,
+    onMemberJoin: (member) => {
+      toast({
+        title: 'Rider joined',
+        description: `${member.name} joined the convoy`,
+      });
+    },
+    onMemberLeave: (memberId) => {
+      const member = convoyMembers.find(m => m.id === memberId);
+      if (member) {
+        toast({
+          title: 'Rider left',
+          description: `${member.name} left the convoy`,
+          variant: 'destructive',
+        });
+      }
+    },
   });
+
+  // Convoy invites
+  const { createInvite, copyInviteLink, getShareLink } = useConvoyInvites();
 
   // Update convoy position when user moves
   useEffect(() => {
@@ -89,11 +117,30 @@ const ActiveTrip = () => {
     return () => clearInterval(interval);
   }, [tripState.isPaused, distance, updateProgress]);
 
-  const handlePauseTrip = async () => {
+  const handlePauseTrip = useCallback(async () => {
     await leaveConvoy();
     pauseTrip();
     navigate('/trip/paused');
-  };
+  }, [leaveConvoy, pauseTrip, navigate]);
+
+  // Handle share invite
+  const handleShareInvite = useCallback(async () => {
+    try {
+      const result = await createInvite.mutateAsync({ tripId: activeTripId });
+      
+      if (navigator.share) {
+        await navigator.share({
+          title: 'Join my convoy!',
+          text: 'Join my road trip convoy on RoadTribe',
+          url: getShareLink(result.invite_code),
+        });
+      } else {
+        await copyInviteLink(result.invite_code);
+      }
+    } catch (error) {
+      console.error('Share failed:', error);
+    }
+  }, [createInvite, copyInviteLink, getShareLink, activeTripId]);
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -138,12 +185,23 @@ const ActiveTrip = () => {
           
           <img src={logoWhite} alt="RoadTribe" className="h-6" />
           
-          <button 
-            onClick={() => setShowSOS(true)}
-            className="w-10 h-10 flex items-center justify-center bg-primary rounded-full"
-          >
-            <Phone className="h-4 w-4 text-primary-foreground" />
-          </button>
+          <div className="flex items-center gap-2">
+            {/* Share invite button */}
+            <button 
+              onClick={handleShareInvite}
+              disabled={createInvite.isPending}
+              className="w-10 h-10 flex items-center justify-center bg-card/80 backdrop-blur rounded-full"
+            >
+              <Share2 className="h-4 w-4 text-foreground" />
+            </button>
+            
+            <button 
+              onClick={() => setShowSOS(true)}
+              className="w-10 h-10 flex items-center justify-center bg-primary rounded-full"
+            >
+              <Phone className="h-4 w-4 text-primary-foreground" />
+            </button>
+          </div>
         </div>
       </div>
 
@@ -190,15 +248,16 @@ const ActiveTrip = () => {
 
       {/* Re-centre Button and Convoy Status */}
       <div className="absolute left-4 bottom-56 z-10 space-y-2">
-        {isConvoyConnected && convoyMembers.length > 0 && (
-          <div className="px-3 py-1.5 bg-primary/90 rounded-full flex items-center gap-2 shadow-lg">
-            <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
-            <span className="text-xs text-primary-foreground font-medium">
-              {convoyMembers.length} in convoy
-            </span>
-          </div>
+        {isConvoyConnected && activeMembers.length > 0 && (
+          <ConvoyStatusBar
+            members={activeMembers}
+            isConnected={isConvoyConnected}
+            isOnline={true}
+            onShareInvite={handleShareInvite}
+          />
         )}
         <button 
+          onClick={() => getCurrentPosition()}
           className="px-4 py-2 bg-card rounded-full flex items-center gap-2 shadow-lg"
         >
           <LocateFixed className="h-4 w-4 text-foreground" />
@@ -222,11 +281,23 @@ const ActiveTrip = () => {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <button className="w-10 h-10 bg-secondary rounded-full flex items-center justify-center">
-              <Route className="h-5 w-5 text-foreground" />
+            {/* Convoy button */}
+            <button 
+              onClick={() => setShowConvoyPanel(true)}
+              className="w-10 h-10 bg-secondary rounded-full flex items-center justify-center relative"
+            >
+              <Users className="h-5 w-5 text-foreground" />
+              {activeMembers.length > 0 && (
+                <div className="absolute -top-1 -right-1 w-5 h-5 bg-primary rounded-full flex items-center justify-center">
+                  <span className="text-xs text-primary-foreground font-medium">{activeMembers.length}</span>
+                </div>
+              )}
             </button>
-            <button className="px-4 py-2 bg-destructive rounded-full">
-              <span className="text-destructive-foreground font-medium">Exit</span>
+            <button 
+              onClick={handlePauseTrip}
+              className="px-4 py-2 bg-destructive rounded-full"
+            >
+              <span className="text-destructive-foreground font-medium">Pause</span>
             </button>
           </div>
         </motion.div>
@@ -236,49 +307,105 @@ const ActiveTrip = () => {
       <div className="absolute bottom-0 left-0 right-0 p-4 bg-background z-10">
         <Button
           onClick={handlePauseTrip}
-          className="w-full h-14 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-lg"
+          className="w-full h-14 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-lg gap-2"
         >
+          <Pause className="h-5 w-5" />
           Pause trip
         </Button>
       </div>
 
-      {/* SOS Modal */}
-      {showSOS && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          className="absolute inset-0 bg-background/95 backdrop-blur z-50 flex items-center justify-center p-4"
-        >
-          <div className="bg-card rounded-2xl p-6 w-full max-w-sm border border-destructive">
-            <div className="text-center mb-6">
-              <div className="w-16 h-16 bg-destructive/20 rounded-full flex items-center justify-center mx-auto mb-4">
-                <AlertTriangle className="h-8 w-8 text-destructive" />
+      {/* Convoy Panel Sheet */}
+      <AnimatePresence>
+        {showConvoyPanel && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm"
+            onClick={() => setShowConvoyPanel(false)}
+          >
+            <motion.div
+              initial={{ y: '100%' }}
+              animate={{ y: 0 }}
+              exit={{ y: '100%' }}
+              transition={{ type: 'spring', damping: 25 }}
+              className="absolute bottom-0 left-0 right-0 max-h-[70vh]"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="bg-card rounded-t-2xl border-t border-border/50">
+                <div className="p-4 border-b border-border/50 flex justify-between items-center">
+                  <h2 className="text-lg font-semibold text-foreground">Convoy Members</h2>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleShareInvite}
+                    disabled={createInvite.isPending}
+                    className="gap-2"
+                  >
+                    <Share2 className="h-4 w-4" />
+                    Invite
+                  </Button>
+                </div>
+                <ConvoyPanel
+                  members={convoyMembers}
+                  userPosition={userPosition}
+                  isExpanded={true}
+                  onToggle={() => setShowConvoyPanel(false)}
+                  onMemberClick={(member) => {
+                    console.log('Clicked member:', member);
+                  }}
+                />
               </div>
-              <h2 className="text-xl font-bold text-foreground">Emergency SOS</h2>
-              <p className="text-sm text-muted-foreground mt-2">
-                Your location will be shared with emergency contacts
-              </p>
-            </div>
-            
-            <div className="space-y-3">
-              <a
-                href="tel:911"
-                className="flex items-center justify-center gap-2 w-full h-12 bg-destructive text-destructive-foreground rounded-lg font-semibold"
-              >
-                <Phone className="h-5 w-5" />
-                Call 911
-              </a>
-              <Button
-                variant="outline"
-                onClick={() => setShowSOS(false)}
-                className="w-full h-12"
-              >
-                Cancel
-              </Button>
-            </div>
-          </div>
-        </motion.div>
-      )}
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* SOS Modal */}
+      <AnimatePresence>
+        {showSOS && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="absolute inset-0 bg-background/95 backdrop-blur z-50 flex items-center justify-center p-4"
+          >
+            <motion.div
+              initial={{ scale: 0.9 }}
+              animate={{ scale: 1 }}
+              exit={{ scale: 0.9 }}
+              className="bg-card rounded-2xl p-6 w-full max-w-sm border border-destructive"
+            >
+              <div className="text-center mb-6">
+                <div className="w-16 h-16 bg-destructive/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <AlertTriangle className="h-8 w-8 text-destructive" />
+                </div>
+                <h2 className="text-xl font-bold text-foreground">Emergency SOS</h2>
+                <p className="text-sm text-muted-foreground mt-2">
+                  Your location will be shared with emergency contacts
+                </p>
+              </div>
+              
+              <div className="space-y-3">
+                <a
+                  href="tel:112"
+                  className="flex items-center justify-center gap-2 w-full h-12 bg-destructive text-destructive-foreground rounded-lg font-semibold"
+                >
+                  <Phone className="h-5 w-5" />
+                  Call Emergency (112)
+                </a>
+                <Button
+                  variant="outline"
+                  onClick={() => setShowSOS(false)}
+                  className="w-full h-12"
+                >
+                  Cancel
+                </Button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };
