@@ -253,7 +253,7 @@ export const useAcceptFollowRequest = () => {
     mutationFn: async (requesterId: string) => {
       if (!user?.id) throw new Error('Not authenticated');
       
-      // Find the pending follow request by requester_id and target_id
+      // Find the pending follow request
       const { data: request, error: findError } = await supabase
         .from('follow_requests')
         .select('*')
@@ -264,7 +264,15 @@ export const useAcceptFollowRequest = () => {
       
       if (findError || !request) throw new Error('Follow request not found');
       
-      // Create follow relationship - check for error
+      // Step 1: Update status to 'accepted' - this fires the trigger that creates follow_accepted notification
+      const { error: updateError } = await supabase
+        .from('follow_requests')
+        .update({ status: 'accepted' })
+        .eq('id', request.id);
+      
+      if (updateError) throw new Error('Failed to accept request: ' + updateError.message);
+      
+      // Step 2: Create follow relationship - trigger creates follow notification
       const { error: followError } = await supabase.from('follows').insert({ 
         follower_id: request.requester_id, 
         following_id: request.target_id 
@@ -272,31 +280,23 @@ export const useAcceptFollowRequest = () => {
       
       if (followError) throw new Error('Failed to create follow: ' + followError.message);
       
-      // Delete the follow request entirely
+      // Step 3: Delete the follow request (cleanup)
       await supabase.from('follow_requests').delete().eq('id', request.id);
       
-      // Delete the follow_request notification
+      // Step 4: Delete the original follow_request notification
       await supabase.from('notifications')
         .delete()
         .eq('actor_id', requesterId)
         .eq('user_id', user.id)
         .eq('type', 'follow_request');
       
-      // Create a "follow_accepted" notification for the requester
-      await supabase.from('notifications').insert({
-        user_id: requesterId,
-        actor_id: user.id,
-        type: 'follow_accepted',
-        message: 'accepted your follow request'
-      });
-      
       return { requesterId };
     },
-    onSuccess: (_, requesterId) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['follow-requests'] });
       queryClient.invalidateQueries({ queryKey: ['followers'] });
       queryClient.invalidateQueries({ queryKey: ['notifications'] });
-      queryClient.invalidateQueries({ queryKey: ['unread-count'] });
+      queryClient.invalidateQueries({ queryKey: ['unread-notifications'] });
       queryClient.invalidateQueries({ queryKey: ['is-following'] });
       queryClient.invalidateQueries({ queryKey: ['profile'] });
       queryClient.invalidateQueries({ queryKey: ['pending-request'] });
