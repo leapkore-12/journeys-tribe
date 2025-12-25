@@ -71,7 +71,7 @@ const Garage = () => {
 
               {/* Specs Line */}
               <p className="text-sm text-muted-foreground px-4 mb-4 leading-relaxed">
-                {vehicle.year} {vehicle.make} {vehicle.model}
+                {vehicle.make}
                 {vehicle.color && ` • ${vehicle.color}`}
               </p>
 
