@@ -160,30 +160,45 @@ const EditUser = () => {
           </div>
         </div>
 
-        {/* Stats */}
-        <div className="grid grid-cols-3 gap-3">
-          <Card className="border-border/50">
-            <CardContent className="p-3 text-center">
-              <Map className="h-5 w-5 mx-auto text-primary mb-1" />
-              <p className="text-lg font-bold">{user.trips_count || 0}</p>
-              <p className="text-xs text-muted-foreground">Trips</p>
+        {/* Admin Account Indicator */}
+        {isAdmin && (
+          <Card className="border-purple-500/30 bg-purple-500/10">
+            <CardContent className="p-4 flex items-center gap-3">
+              <Shield className="h-6 w-6 text-purple-400" />
+              <div>
+                <p className="font-semibold text-purple-400">Admin Account</p>
+                <p className="text-sm text-muted-foreground">This user has administrator privileges</p>
+              </div>
             </CardContent>
           </Card>
-          <Card className="border-border/50">
-            <CardContent className="p-3 text-center">
-              <Car className="h-5 w-5 mx-auto text-primary mb-1" />
-              <p className="text-lg font-bold">{user.vehicles_count || 0}</p>
-              <p className="text-xs text-muted-foreground">Vehicles</p>
-            </CardContent>
-          </Card>
-          <Card className="border-border/50">
-            <CardContent className="p-3 text-center">
-              <Users className="h-5 w-5 mx-auto text-primary mb-1" />
-              <p className="text-lg font-bold">{user.followers_count || 0}</p>
-              <p className="text-xs text-muted-foreground">Followers</p>
-            </CardContent>
-          </Card>
-        </div>
+        )}
+
+        {/* Stats - Only show for regular users */}
+        {!isAdmin && (
+          <div className="grid grid-cols-3 gap-3">
+            <Card className="border-border/50">
+              <CardContent className="p-3 text-center">
+                <Map className="h-5 w-5 mx-auto text-primary mb-1" />
+                <p className="text-lg font-bold">{user.trips_count || 0}</p>
+                <p className="text-xs text-muted-foreground">Trips</p>
+              </CardContent>
+            </Card>
+            <Card className="border-border/50">
+              <CardContent className="p-3 text-center">
+                <Car className="h-5 w-5 mx-auto text-primary mb-1" />
+                <p className="text-lg font-bold">{user.vehicles_count || 0}</p>
+                <p className="text-xs text-muted-foreground">Vehicles</p>
+              </CardContent>
+            </Card>
+            <Card className="border-border/50">
+              <CardContent className="p-3 text-center">
+                <Users className="h-5 w-5 mx-auto text-primary mb-1" />
+                <p className="text-lg font-bold">{user.followers_count || 0}</p>
+                <p className="text-xs text-muted-foreground">Followers</p>
+              </CardContent>
+            </Card>
+          </div>
+        )}
 
         {/* Profile Info */}
         <Card className="border-border/50">
@@ -210,34 +225,36 @@ const EditUser = () => {
           </CardContent>
         </Card>
 
-        {/* Subscription Plan */}
-        <Card className="border-border/50">
-          <CardHeader>
-            <CardTitle className="text-lg">Subscription Plan</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <RadioGroup value={planType} onValueChange={setPlanType} className="space-y-3">
-              <div className="flex items-center space-x-3 p-3 rounded-lg border border-border/50 hover:bg-accent/50 cursor-pointer">
-                <RadioGroupItem value="free" id="free" />
-                <Label htmlFor="free" className="flex-1 cursor-pointer">
-                  <span className="font-medium">Free Plan</span>
-                </Label>
-              </div>
-              <div className="flex items-center space-x-3 p-3 rounded-lg border border-yellow-500/30 bg-yellow-500/5 hover:bg-yellow-500/10 cursor-pointer">
-                <RadioGroupItem value="paid" id="paid" />
-                <Label htmlFor="paid" className="flex-1 cursor-pointer">
-                  <div className="flex items-center gap-2">
-                    <Crown className="h-4 w-4 text-yellow-400" />
-                    <span className="font-medium text-yellow-400">Pro Plan</span>
-                  </div>
-                </Label>
-              </div>
-            </RadioGroup>
-          </CardContent>
-        </Card>
+        {/* Subscription Plan - Only show for regular users */}
+        {!isAdmin && (
+          <Card className="border-border/50">
+            <CardHeader>
+              <CardTitle className="text-lg">Subscription Plan</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <RadioGroup value={planType} onValueChange={setPlanType} className="space-y-3">
+                <div className="flex items-center space-x-3 p-3 rounded-lg border border-border/50 hover:bg-accent/50 cursor-pointer">
+                  <RadioGroupItem value="free" id="free" />
+                  <Label htmlFor="free" className="flex-1 cursor-pointer">
+                    <span className="font-medium">Free Plan</span>
+                  </Label>
+                </div>
+                <div className="flex items-center space-x-3 p-3 rounded-lg border border-yellow-500/30 bg-yellow-500/5 hover:bg-yellow-500/10 cursor-pointer">
+                  <RadioGroupItem value="paid" id="paid" />
+                  <Label htmlFor="paid" className="flex-1 cursor-pointer">
+                    <div className="flex items-center gap-2">
+                      <Crown className="h-4 w-4 text-yellow-400" />
+                      <span className="font-medium text-yellow-400">Pro Plan</span>
+                    </div>
+                  </Label>
+                </div>
+              </RadioGroup>
+            </CardContent>
+          </Card>
+        )}
 
-        {/* Monthly Trips (for Free users) */}
-        {planType === 'free' && (
+        {/* Monthly Trips (for Free users) - Only show for regular users */}
+        {!isAdmin && planType === 'free' && (
           <Card className="border-border/50">
             <CardHeader>
               <CardTitle className="text-lg">Monthly Trip Count</CardTitle>
