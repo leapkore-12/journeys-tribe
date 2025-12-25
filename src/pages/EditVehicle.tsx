@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Plus, Image, X, Loader2 } from 'lucide-react';
+import { ArrowLeft, Plus, Image, X, Loader2, Star, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -11,6 +11,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 import { useCurrentProfile } from '@/hooks/useProfile';
 import { 
   useVehicle, 
@@ -18,6 +29,8 @@ import {
   useUpdateVehicle, 
   useUploadVehicleImage,
   useDeleteVehicleImage,
+  useDeleteVehicle,
+  useSetPrimaryVehicle,
   VehicleImage
 } from '@/hooks/useVehicles';
 import { pickPhotoAsFile } from '@/lib/capacitor-utils';
@@ -41,6 +54,8 @@ const EditVehicle = () => {
   const updateVehicle = useUpdateVehicle();
   const uploadImage = useUploadVehicleImage();
   const deleteImage = useDeleteVehicleImage();
+  const deleteVehicle = useDeleteVehicle();
+  const setPrimaryVehicle = useSetPrimaryVehicle();
   
   // Form state
   const [vehicleType, setVehicleType] = useState<string>('');
@@ -49,20 +64,21 @@ const EditVehicle = () => {
   const [photos, setPhotos] = useState<VehicleImage[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [isSettingPrimary, setIsSettingPrimary] = useState(false);
   const [createdVehicleId, setCreatedVehicleId] = useState<string | null>(null);
 
   // Populate form with existing vehicle data
   useEffect(() => {
     if (existingVehicle) {
       setVehicleType(existingVehicle.color || '');
-      setMakeModel(existingVehicle.name || ''); // name stores "Audi Q7"
-      setDescription(existingVehicle.make || ''); // make stores specs description
+      setMakeModel(existingVehicle.name || '');
+      setDescription(existingVehicle.make || '');
       setPhotos(existingVehicle.vehicle_images || []);
     }
   }, [existingVehicle]);
 
   const handleAddPhoto = async () => {
-    // Check photo limit for free users
     if (!isPaidUser && photos.length >= maxPhotos) {
       toast({
         title: "Photo limit reached",
@@ -77,7 +93,6 @@ const EditVehicle = () => {
       
       let vehicleId = id || createdVehicleId;
 
-      // If no vehicle exists yet, create it first
       if (!vehicleId) {
         if (!makeModel.trim()) {
           toast({
@@ -89,10 +104,9 @@ const EditVehicle = () => {
           return;
         }
         
-        
         const newVehicle = await createVehicle.mutateAsync({
-          name: makeModel, // "Audi Q7" → name field (shown as title)
-          make: description || null, // specs → make field (shown as subtitle)
+          name: makeModel,
+          make: description || null,
           model: null,
           color: vehicleType || null,
         });
@@ -105,7 +119,6 @@ const EditVehicle = () => {
         });
       }
 
-      // Pick photo file
       const file = await pickPhotoAsFile();
       
       if (!file) {
@@ -113,7 +126,6 @@ const EditVehicle = () => {
         return;
       }
 
-      // Upload photo
       await uploadImage.mutateAsync({ vehicleId, file });
       toast({
         title: "Photo uploaded",
@@ -149,10 +161,55 @@ const EditVehicle = () => {
     }
   };
 
+  const handleDeleteVehicle = async () => {
+    if (!id) return;
+    
+    setIsDeleting(true);
+    try {
+      await deleteVehicle.mutateAsync(id);
+      toast({
+        title: "Vehicle deleted",
+        description: "Your vehicle has been removed from your garage.",
+      });
+      navigate('/garage');
+    } catch (error) {
+      console.error('Delete vehicle error:', error);
+      toast({
+        title: "Delete failed",
+        description: "Failed to delete vehicle. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const handleSetPrimary = async () => {
+    const vehicleId = id || createdVehicleId;
+    if (!vehicleId) return;
+    
+    setIsSettingPrimary(true);
+    try {
+      await setPrimaryVehicle.mutateAsync(vehicleId);
+      toast({
+        title: "Primary vehicle set",
+        description: "This vehicle will be auto-selected for new trips.",
+      });
+    } catch (error) {
+      console.error('Set primary error:', error);
+      toast({
+        title: "Failed to set primary",
+        description: "Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSettingPrimary(false);
+    }
+  };
+
   const handleFinish = async () => {
     const existingId = id || createdVehicleId;
 
-    // If vehicle already created via photo upload, just update and navigate
     if (existingId) {
       if (!makeModel.trim()) {
         toast({
@@ -168,8 +225,8 @@ const EditVehicle = () => {
 
         await updateVehicle.mutateAsync({
           id: existingId,
-          name: makeModel, // "Audi Q7" → name field (shown as title)
-          make: description || null, // specs → make field (shown as subtitle)
+          name: makeModel,
+          make: description || null,
           model: null,
           color: vehicleType || null,
         });
@@ -191,7 +248,6 @@ const EditVehicle = () => {
       return;
     }
 
-    // Create new vehicle
     if (!makeModel.trim()) {
       toast({
         title: "Make and model required",
@@ -205,8 +261,8 @@ const EditVehicle = () => {
       setIsSaving(true);
 
       await createVehicle.mutateAsync({
-        name: makeModel, // "Audi Q7" → name field (shown as title)
-        make: description || null, // specs → make field (shown as subtitle)
+        name: makeModel,
+        make: description || null,
         model: null,
         color: vehicleType || null,
       });
@@ -234,6 +290,8 @@ const EditVehicle = () => {
       </div>
     );
   }
+
+  const isPrimary = existingVehicle?.is_primary;
 
   return (
     <div className="flex flex-col min-h-screen bg-background safe-top">
@@ -352,6 +410,56 @@ const EditVehicle = () => {
             </div>
           )}
         </div>
+
+        {/* Set as Primary Button */}
+        {(id || createdVehicleId) && (
+          <Button
+            onClick={handleSetPrimary}
+            variant="outline"
+            className="w-full flex items-center justify-center gap-2"
+            disabled={isPrimary || isSettingPrimary}
+          >
+            {isSettingPrimary ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Star className={isPrimary ? "h-4 w-4 fill-yellow-500 text-yellow-500" : "h-4 w-4"} />
+            )}
+            {isPrimary ? 'Primary Vehicle' : 'Set as Primary'}
+          </Button>
+        )}
+
+        {/* Delete Vehicle Button */}
+        {id && (
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button variant="destructive" className="w-full flex items-center justify-center gap-2">
+                <Trash2 className="h-4 w-4" />
+                Delete Vehicle
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Delete vehicle?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  This action cannot be undone. All photos associated with this vehicle will also be deleted.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction 
+                  onClick={handleDeleteVehicle}
+                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                >
+                  {isDeleting ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    "Delete"
+                  )}
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        )}
       </div>
 
       {/* Finish Button */}
