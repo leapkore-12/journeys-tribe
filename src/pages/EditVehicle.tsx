@@ -49,6 +49,7 @@ const EditVehicle = () => {
   const [photos, setPhotos] = useState<VehicleImage[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [createdVehicleId, setCreatedVehicleId] = useState<string | null>(null);
 
   // Populate form with existing vehicle data
   useEffect(() => {
@@ -73,6 +74,40 @@ const EditVehicle = () => {
 
     try {
       setIsUploading(true);
+      
+      let vehicleId = id || createdVehicleId;
+
+      // If no vehicle exists yet, create it first
+      if (!vehicleId) {
+        if (!makeModel.trim()) {
+          toast({
+            title: "Enter make and model first",
+            description: "Please enter the vehicle make and model before adding photos.",
+            variant: "destructive",
+          });
+          setIsUploading(false);
+          return;
+        }
+        
+        const [make, ...modelParts] = makeModel.trim().split(' ');
+        const model = modelParts.join(' ');
+        
+        const newVehicle = await createVehicle.mutateAsync({
+          name: description || makeModel,
+          make: make || null,
+          model: model || null,
+          color: vehicleType || null,
+        });
+        
+        vehicleId = newVehicle.id;
+        setCreatedVehicleId(vehicleId);
+        toast({
+          title: "Vehicle created",
+          description: "Now uploading your photo...",
+        });
+      }
+
+      // Pick photo file
       const file = await pickPhotoAsFile();
       
       if (!file) {
@@ -80,21 +115,12 @@ const EditVehicle = () => {
         return;
       }
 
-      // If editing existing vehicle, upload directly
-      if (id && existingVehicle) {
-        await uploadImage.mutateAsync({ vehicleId: id, file });
-        toast({
-          title: "Photo uploaded",
-          description: "Your photo has been added to this vehicle.",
-        });
-      } else {
-        // For new vehicle, we need to create it first
-        toast({
-          title: "Save vehicle first",
-          description: "Please save your vehicle before adding photos.",
-          variant: "destructive",
-        });
-      }
+      // Upload photo
+      await uploadImage.mutateAsync({ vehicleId, file });
+      toast({
+        title: "Photo uploaded",
+        description: "Your photo has been added to this vehicle.",
+      });
     } catch (error) {
       console.error('Photo upload error:', error);
       toast({
@@ -126,6 +152,50 @@ const EditVehicle = () => {
   };
 
   const handleFinish = async () => {
+    const existingId = id || createdVehicleId;
+
+    // If vehicle already created via photo upload, just update and navigate
+    if (existingId) {
+      if (!makeModel.trim()) {
+        toast({
+          title: "Make and model required",
+          description: "Please enter the make and model of your vehicle.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      try {
+        setIsSaving(true);
+        const [make, ...modelParts] = makeModel.trim().split(' ');
+        const model = modelParts.join(' ');
+
+        await updateVehicle.mutateAsync({
+          id: existingId,
+          name: description || makeModel,
+          make: make || null,
+          model: model || null,
+          color: vehicleType || null,
+        });
+        toast({
+          title: "Vehicle saved",
+          description: "Your vehicle has been saved successfully.",
+        });
+        navigate('/garage');
+      } catch (error) {
+        console.error('Save vehicle error:', error);
+        toast({
+          title: "Save failed",
+          description: "Failed to save vehicle. Please try again.",
+          variant: "destructive",
+        });
+      } finally {
+        setIsSaving(false);
+      }
+      return;
+    }
+
+    // Create new vehicle
     if (!makeModel.trim()) {
       toast({
         title: "Make and model required",
@@ -140,32 +210,16 @@ const EditVehicle = () => {
       const [make, ...modelParts] = makeModel.trim().split(' ');
       const model = modelParts.join(' ');
 
-      if (id && existingVehicle) {
-        // Update existing vehicle
-        await updateVehicle.mutateAsync({
-          id,
-          name: description || makeModel,
-          make: make || null,
-          model: model || null,
-          color: vehicleType || null,
-        });
-        toast({
-          title: "Vehicle updated",
-          description: "Your vehicle has been updated successfully.",
-        });
-      } else {
-        // Create new vehicle
-        await createVehicle.mutateAsync({
-          name: description || makeModel,
-          make: make || null,
-          model: model || null,
-          color: vehicleType || null,
-        });
-        toast({
-          title: "Vehicle added",
-          description: "Your vehicle has been added to your garage.",
-        });
-      }
+      await createVehicle.mutateAsync({
+        name: description || makeModel,
+        make: make || null,
+        model: model || null,
+        color: vehicleType || null,
+      });
+      toast({
+        title: "Vehicle added",
+        description: "Your vehicle has been added to your garage.",
+      });
       navigate('/garage');
     } catch (error) {
       console.error('Save vehicle error:', error);
@@ -254,7 +308,7 @@ const EditVehicle = () => {
           {/* Photo Upload Area */}
           <button 
             onClick={handleAddPhoto}
-            disabled={isUploading || (!isPaidUser && photos.length >= maxPhotos) || (!id && !existingVehicle)}
+            disabled={isUploading || (!isPaidUser && photos.length >= maxPhotos)}
             className="w-full aspect-[2/1] border-2 border-dashed border-border rounded-xl flex flex-col items-center justify-center gap-2 text-muted-foreground transition-colors hover:border-primary hover:text-primary disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isUploading ? (
@@ -264,9 +318,7 @@ const EditVehicle = () => {
                 <div className="w-12 h-12 rounded-full bg-secondary flex items-center justify-center">
                   <Plus className="h-6 w-6" />
                 </div>
-                <span className="text-sm font-medium">
-                  {!id ? 'Save vehicle first to add photos' : 'Add photos'}
-                </span>
+                <span className="text-sm font-medium">Add photos</span>
                 <span className="text-xs">
                   {isPaidUser ? 'Unlimited photos per vehicle' : `Up to ${maxPhotos} photos per vehicle`}
                 </span>
