@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Flag, BarChart3, Car, ArrowLeft } from 'lucide-react';
+import { Flag, BarChart3, Car, ArrowLeft, Lock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useToast } from '@/hooks/use-toast';
@@ -46,6 +46,10 @@ const UserProfile = () => {
   const followMutation = useFollowUser();
   const unfollowMutation = useUnfollowUser();
   const cancelRequestMutation = useCancelFollowRequest();
+
+  // Determine if this is a private account and viewer can see content
+  const isPrivateAccount = profile?.is_private === true;
+  const canViewContent = !isPrivateAccount || isFollowing;
 
   // Determine button state: 'follow' | 'requested' | 'following'
   const getFollowState = () => {
@@ -155,7 +159,10 @@ const UserProfile = () => {
           <button onClick={() => navigate(-1)} className="text-primary">
             <ArrowLeft className="h-6 w-6" />
           </button>
-          <span className="text-primary font-medium">@{profile?.username || 'user'}</span>
+          <span className="text-primary font-medium flex items-center gap-1">
+            @{profile?.username || 'user'}
+            {isPrivateAccount && <Lock className="h-4 w-4" />}
+          </span>
           <div className="w-6" />
         </div>
       </header>
@@ -212,117 +219,134 @@ const UserProfile = () => {
           >
             {getButtonText()}
           </Button>
-          <Button
-            variant="outline"
-            onClick={() => navigate(`/user/${userId}/garage`)}
-            className="flex-1 h-11 border-primary text-primary font-medium"
-          >
-            <Car className="h-4 w-4 mr-2" />
-            Garage
-          </Button>
+          {canViewContent && (
+            <Button
+              variant="outline"
+              onClick={() => navigate(`/user/${userId}/garage`)}
+              className="flex-1 h-11 border-primary text-primary font-medium"
+            >
+              <Car className="h-4 w-4 mr-2" />
+              Garage
+            </Button>
+          )}
         </div>
       </div>
 
-      {/* Tabs */}
-      <div className="border-b border-border">
-        <div className="flex">
-          <button
-            onClick={() => setActiveTab('trips')}
-            className={`flex-1 flex items-center justify-center gap-2 py-3 border-b-2 transition-colors ${
-              activeTab === 'trips'
-                ? 'border-primary text-primary'
-                : 'border-transparent text-muted-foreground'
-            }`}
-          >
-            <Flag className="h-5 w-5" />
-            <span className="font-medium">Trips</span>
-          </button>
-          <button
-            onClick={() => setActiveTab('stats')}
-            className={`flex-1 flex items-center justify-center gap-2 py-3 border-b-2 transition-colors ${
-              activeTab === 'stats'
-                ? 'border-primary text-primary'
-                : 'border-transparent text-muted-foreground'
-            }`}
-          >
-            <BarChart3 className="h-5 w-5" />
-            <span className="font-medium">Stats</span>
-          </button>
+      {/* Private Account Message OR Tabs */}
+      {!canViewContent ? (
+        <div className="flex-1 flex flex-col items-center justify-center px-4 py-16">
+          <div className="w-20 h-20 rounded-full border-2 border-muted-foreground flex items-center justify-center mb-4">
+            <Lock className="h-10 w-10 text-muted-foreground" />
+          </div>
+          <h3 className="font-semibold text-lg text-foreground">This account is private</h3>
+          <p className="text-sm text-muted-foreground text-center mt-2 max-w-xs">
+            Follow this account to see their trips, stats, and garage
+          </p>
         </div>
-      </div>
+      ) : (
+        <>
+          {/* Tabs */}
+          <div className="border-b border-border">
+            <div className="flex">
+              <button
+                onClick={() => setActiveTab('trips')}
+                className={`flex-1 flex items-center justify-center gap-2 py-3 border-b-2 transition-colors ${
+                  activeTab === 'trips'
+                    ? 'border-primary text-primary'
+                    : 'border-transparent text-muted-foreground'
+                }`}
+              >
+                <Flag className="h-5 w-5" />
+                <span className="font-medium">Trips</span>
+              </button>
+              <button
+                onClick={() => setActiveTab('stats')}
+                className={`flex-1 flex items-center justify-center gap-2 py-3 border-b-2 transition-colors ${
+                  activeTab === 'stats'
+                    ? 'border-primary text-primary'
+                    : 'border-transparent text-muted-foreground'
+                }`}
+              >
+                <BarChart3 className="h-5 w-5" />
+                <span className="font-medium">Stats</span>
+              </button>
+            </div>
+          </div>
 
-      {/* Tab Content */}
-      <div className="flex-1 px-4 py-4">
-        {activeTab === 'trips' && (
-          <div className="space-y-4">
-            {tripsLoading ? (
-              [...Array(2)].map((_, i) => (
-                <div key={i} className="bg-card rounded-lg p-4">
-                  <Skeleton className="h-32 w-full rounded-lg" />
+          {/* Tab Content */}
+          <div className="flex-1 px-4 py-4">
+            {activeTab === 'trips' && (
+              <div className="space-y-4">
+                {tripsLoading ? (
+                  [...Array(2)].map((_, i) => (
+                    <div key={i} className="bg-card rounded-lg p-4">
+                      <Skeleton className="h-32 w-full rounded-lg" />
+                    </div>
+                  ))
+                ) : trips && trips.length > 0 ? (
+                  trips.map((trip) => (
+                    <ProfileTripCard key={trip.id} trip={trip} />
+                  ))
+                ) : (
+                  <div className="text-center py-12">
+                    <Flag className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
+                    <h3 className="font-semibold text-foreground">No trips yet</h3>
+                    <p className="text-sm text-muted-foreground">
+                      {profile?.display_name || 'This user'} hasn't posted any trips
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {activeTab === 'stats' && (
+              <div className="space-y-6">
+                {/* Year to Date */}
+                <div>
+                  <h3 className="text-sm font-semibold text-primary uppercase tracking-wider mb-4">
+                    YEAR-TO-DATE
+                  </h3>
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between py-2 border-b border-border">
+                      <span className="text-foreground">Trips</span>
+                      <span className="text-foreground font-medium">{stats.ytd.trips}</span>
+                    </div>
+                    <div className="flex items-center justify-between py-2 border-b border-border">
+                      <span className="text-foreground">Distance</span>
+                      <span className="text-foreground font-medium">{formatDistance(stats.ytd.distance)}</span>
+                    </div>
+                    <div className="flex items-center justify-between py-2 border-b border-border">
+                      <span className="text-foreground">Time on road</span>
+                      <span className="text-foreground font-medium">{formatStatsTime(stats.ytd.timeOnRoad)}</span>
+                    </div>
+                  </div>
                 </div>
-              ))
-            ) : trips && trips.length > 0 ? (
-              trips.map((trip) => (
-                <ProfileTripCard key={trip.id} trip={trip} />
-              ))
-            ) : (
-              <div className="text-center py-12">
-                <Flag className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
-                <h3 className="font-semibold text-foreground">No trips yet</h3>
-                <p className="text-sm text-muted-foreground">
-                  {profile?.display_name || 'This user'} hasn't posted any trips
-                </p>
+
+                {/* All Time */}
+                <div>
+                  <h3 className="text-sm font-semibold text-primary uppercase tracking-wider mb-4">
+                    ALL TIME
+                  </h3>
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between py-2 border-b border-border">
+                      <span className="text-foreground">Longest Trip</span>
+                      <span className="text-foreground font-medium">{formatDistance(stats.allTime.longestTrip)}</span>
+                    </div>
+                    <div className="flex items-center justify-between py-2 border-b border-border">
+                      <span className="text-foreground">Distance</span>
+                      <span className="text-foreground font-medium">{formatDistance(stats.allTime.distance)}</span>
+                    </div>
+                    <div className="flex items-center justify-between py-2 border-b border-border">
+                      <span className="text-foreground">Time on road</span>
+                      <span className="text-foreground font-medium">{formatStatsTime(stats.allTime.timeOnRoad)}</span>
+                    </div>
+                  </div>
+                </div>
               </div>
             )}
           </div>
-        )}
-
-        {activeTab === 'stats' && (
-          <div className="space-y-6">
-            {/* Year to Date */}
-            <div>
-              <h3 className="text-sm font-semibold text-primary uppercase tracking-wider mb-4">
-                YEAR-TO-DATE
-              </h3>
-              <div className="space-y-4">
-                <div className="flex items-center justify-between py-2 border-b border-border">
-                  <span className="text-foreground">Trips</span>
-                  <span className="text-foreground font-medium">{stats.ytd.trips}</span>
-                </div>
-                <div className="flex items-center justify-between py-2 border-b border-border">
-                  <span className="text-foreground">Distance</span>
-                  <span className="text-foreground font-medium">{formatDistance(stats.ytd.distance)}</span>
-                </div>
-                <div className="flex items-center justify-between py-2 border-b border-border">
-                  <span className="text-foreground">Time on road</span>
-                  <span className="text-foreground font-medium">{formatStatsTime(stats.ytd.timeOnRoad)}</span>
-                </div>
-              </div>
-            </div>
-
-            {/* All Time */}
-            <div>
-              <h3 className="text-sm font-semibold text-primary uppercase tracking-wider mb-4">
-                ALL TIME
-              </h3>
-              <div className="space-y-4">
-                <div className="flex items-center justify-between py-2 border-b border-border">
-                  <span className="text-foreground">Longest Trip</span>
-                  <span className="text-foreground font-medium">{formatDistance(stats.allTime.longestTrip)}</span>
-                </div>
-                <div className="flex items-center justify-between py-2 border-b border-border">
-                  <span className="text-foreground">Distance</span>
-                  <span className="text-foreground font-medium">{formatDistance(stats.allTime.distance)}</span>
-                </div>
-                <div className="flex items-center justify-between py-2 border-b border-border">
-                  <span className="text-foreground">Time on road</span>
-                  <span className="text-foreground font-medium">{formatStatsTime(stats.allTime.timeOnRoad)}</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
+        </>
+      )}
     </div>
   );
 };
