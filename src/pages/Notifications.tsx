@@ -2,7 +2,7 @@ import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Check, X, Bell } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { useNotifications, useMarkAsRead } from '@/hooks/useNotifications';
+import { useNotifications, useMarkAsRead, useRealtimeNotifications } from '@/hooks/useNotifications';
 import { useAcceptFollowRequest, useDeclineFollowRequest } from '@/hooks/useFollows';
 import { cn } from '@/lib/utils';
 import logoWhite from '@/assets/logo-white.svg';
@@ -15,6 +15,9 @@ const Notifications = () => {
   const markAsRead = useMarkAsRead();
   const acceptRequest = useAcceptFollowRequest();
   const declineRequest = useDeclineFollowRequest();
+  
+  // Enable real-time updates
+  useRealtimeNotifications();
 
   const handleMarkAsRead = (id: string) => {
     markAsRead.mutate(id);
