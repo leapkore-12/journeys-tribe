@@ -29,6 +29,7 @@ import Garage from "./pages/Garage";
 import EditVehicle from "./pages/EditVehicle";
 import Settings from "./pages/Settings";
 import ManageConnections from "./pages/ManageConnections";
+import ManageTribe from "./pages/ManageTribe";
 import EditProfile from "./pages/EditProfile";
 import ChangeCredentials from "./pages/ChangeCredentials";
 import ForgotPassword from "./pages/ForgotPassword";
@@ -87,6 +88,7 @@ const App = () => {
                   <Route path="/garage" element={<ProtectedRoute><Garage /></ProtectedRoute>} />
                   <Route path="/garage/edit/:id?" element={<ProtectedRoute><EditVehicle /></ProtectedRoute>} />
                   <Route path="/manage-followers" element={<ProtectedRoute><ManageConnections /></ProtectedRoute>} />
+                  <Route path="/manage-tribe" element={<ProtectedRoute><ManageTribe /></ProtectedRoute>} />
                   <Route path="/edit-profile" element={<ProtectedRoute><EditProfile /></ProtectedRoute>} />
                   <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
                   <Route path="/settings/credentials" element={<ProtectedRoute><ChangeCredentials /></ProtectedRoute>} />
