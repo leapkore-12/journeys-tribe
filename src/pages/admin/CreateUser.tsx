@@ -6,8 +6,9 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { ArrowLeft, Loader2, Eye, EyeOff, Crown } from 'lucide-react';
+import { ArrowLeft, Home, Loader2, Eye, EyeOff, Crown } from 'lucide-react';
 import { toast } from 'sonner';
+import AdminBottomNav from '@/components/admin/AdminBottomNav';
 
 const CreateUser = () => {
   const navigate = useNavigate();
@@ -49,12 +50,15 @@ const CreateUser = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background pb-20">
       {/* Header */}
       <header className="sticky top-0 z-50 border-b border-border/50 bg-background/95 backdrop-blur">
-        <div className="flex items-center gap-3 p-4">
-          <Button variant="ghost" size="icon" onClick={() => navigate('/admin/users')}>
+        <div className="flex items-center gap-2 p-4">
+          <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
             <ArrowLeft className="h-5 w-5" />
+          </Button>
+          <Button variant="ghost" size="icon" onClick={() => navigate('/admin/dashboard')}>
+            <Home className="h-5 w-5" />
           </Button>
           <h1 className="text-lg font-semibold">Create New User</h1>
         </div>
@@ -187,6 +191,8 @@ const CreateUser = () => {
           </Button>
         </form>
       </main>
+
+      <AdminBottomNav />
     </div>
   );
 };

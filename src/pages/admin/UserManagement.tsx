@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { 
   ArrowLeft, 
+  Home,
   Search, 
   UserPlus, 
   Crown, 
@@ -15,6 +16,7 @@ import {
   ChevronRight,
   Loader2 
 } from 'lucide-react';
+import AdminBottomNav from '@/components/admin/AdminBottomNav';
 
 const UserManagement = () => {
   const navigate = useNavigate();
@@ -30,13 +32,16 @@ const UserManagement = () => {
   });
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background pb-20">
       {/* Header */}
       <header className="sticky top-0 z-50 border-b border-border/50 bg-background/95 backdrop-blur">
         <div className="flex items-center justify-between p-4">
-          <div className="flex items-center gap-3">
-            <Button variant="ghost" size="icon" onClick={() => navigate('/admin/dashboard')}>
+          <div className="flex items-center gap-2">
+            <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
               <ArrowLeft className="h-5 w-5" />
+            </Button>
+            <Button variant="ghost" size="icon" onClick={() => navigate('/admin/dashboard')}>
+              <Home className="h-5 w-5" />
             </Button>
             <h1 className="text-lg font-semibold">User Management</h1>
           </div>
@@ -125,6 +130,8 @@ const UserManagement = () => {
           </div>
         )}
       </main>
+
+      <AdminBottomNav />
     </div>
   );
 };
