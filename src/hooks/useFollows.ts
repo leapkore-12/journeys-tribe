@@ -262,13 +262,15 @@ export const useAcceptFollowRequest = () => {
         .eq('status', 'pending')
         .maybeSingle();
       
-      if (findError || !request) throw new Error('Request not found');
+      if (findError || !request) throw new Error('Follow request not found');
       
-      // Create follow relationship
-      await supabase.from('follows').insert({ 
+      // Create follow relationship - check for error
+      const { error: followError } = await supabase.from('follows').insert({ 
         follower_id: request.requester_id, 
         following_id: request.target_id 
       });
+      
+      if (followError) throw new Error('Failed to create follow: ' + followError.message);
       
       // Delete the follow request entirely
       await supabase.from('follow_requests').delete().eq('id', request.id);
@@ -279,6 +281,8 @@ export const useAcceptFollowRequest = () => {
         .eq('actor_id', requesterId)
         .eq('user_id', user.id)
         .eq('type', 'follow_request');
+      
+      return { requesterId };
     },
     onSuccess: (_, requesterId) => {
       queryClient.invalidateQueries({ queryKey: ['follow-requests'] });
@@ -287,6 +291,7 @@ export const useAcceptFollowRequest = () => {
       queryClient.invalidateQueries({ queryKey: ['unread-count'] });
       queryClient.invalidateQueries({ queryKey: ['is-following'] });
       queryClient.invalidateQueries({ queryKey: ['profile'] });
+      queryClient.invalidateQueries({ queryKey: ['pending-request'] });
     },
   });
 };
