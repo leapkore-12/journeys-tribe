@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
-  Crosshair, Flag, Search, ChevronDown, Check, Plus, MapPin, Navigation, Loader2, Star
+  Crosshair, Flag, Search, ChevronDown, Check, Plus, MapPin, Navigation, Loader2, Star, Crown, Lock
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -19,6 +19,7 @@ import { useTribe } from '@/hooks/useTribe';
 import { useGeolocation } from '@/hooks/useGeolocation';
 import { useMapboxGeocoding, GeocodingResult } from '@/hooks/useMapboxGeocoding';
 import { useMapboxRoute } from '@/hooks/useMapboxRoute';
+import { useFeatureAccess } from '@/hooks/useSubscription';
 import { User } from '@/lib/mock-data';
 
 const TripPlanner = () => {
@@ -49,6 +50,7 @@ const TripPlanner = () => {
   const { getCurrentPosition, position: currentPosition } = useGeolocation({ enableHighAccuracy: true });
   const { reverseGeocode } = useMapboxGeocoding();
   const { route, getRoute, isLoading: routeLoading } = useMapboxRoute();
+  const { canCreateConvoy } = useFeatureAccess();
 
   // Tab state for convoy selection
   const [convoyTab, setConvoyTab] = useState('tribe');
@@ -527,92 +529,122 @@ const TripPlanner = () => {
               exit={{ opacity: 0, x: -20 }}
               className="space-y-4"
             >
-              <div className="space-y-2">
-                <label className="text-sm text-muted-foreground">Invite friends to convoy (optional)</label>
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-                  <Input
-                    value={searchFriends}
-                    onChange={(e) => setSearchFriends(e.target.value)}
-                    placeholder="Search for your friends"
-                    className="pl-11 h-12 bg-secondary border-0 text-foreground placeholder:text-muted-foreground"
-                  />
+              {!canCreateConvoy ? (
+                /* Free user - show upgrade prompt */
+                <div className="text-center py-8 space-y-4">
+                  <div className="w-16 h-16 bg-secondary rounded-full flex items-center justify-center mx-auto">
+                    <Lock className="h-8 w-8 text-muted-foreground" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-foreground flex items-center justify-center gap-2">
+                      <Crown className="h-5 w-5 text-yellow-500" />
+                      Convoy is a Pro Feature
+                    </h3>
+                    <p className="text-sm text-muted-foreground mt-2">
+                      Upgrade to Pro to create convoys with live location sharing
+                    </p>
+                  </div>
+                  <Button
+                    onClick={() => navigate('/settings')}
+                    className="bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600 text-white"
+                  >
+                    Upgrade to Pro
+                  </Button>
+                  <p className="text-xs text-muted-foreground">
+                    Skip this step to continue without a convoy
+                  </p>
                 </div>
-              </div>
-
-              {/* Tabs for Tribe/Following */}
-              <Tabs value={convoyTab} onValueChange={setConvoyTab} className="w-full">
-                <TabsList className="w-full bg-secondary">
-                  <TabsTrigger value="tribe" className="flex-1 gap-1">
-                    <Star className="h-3 w-3" />
-                    Tribe
-                  </TabsTrigger>
-                  <TabsTrigger value="following" className="flex-1">
-                    Following
-                  </TabsTrigger>
-                </TabsList>
-
-                <TabsContent value="tribe" className="mt-4 space-y-2">
-                  {tribeLoading || followingLoading ? (
-                    <div className="flex items-center justify-center py-8">
-                      <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-                    </div>
-                  ) : tribeFriends.length === 0 ? (
-                    <div className="text-center py-8">
-                      <Star className="h-8 w-8 text-muted-foreground/30 mx-auto mb-2" />
-                      <p className="text-muted-foreground">No tribe members yet</p>
-                      <p className="text-sm text-muted-foreground/70 mt-1">
-                        Add close friends to your tribe in Settings
-                      </p>
-                    </div>
-                  ) : (
-                    tribeFriends.map(friend => (
-                      <FriendSelectItem
-                        key={friend.id}
-                        friend={friend}
-                        isSelected={selectedFriends.includes(friend.id)}
-                        isTribe={true}
-                        onToggle={() => handleToggleFriend(friend.id)}
+              ) : (
+                /* Paid user - show convoy selection */
+                <>
+                  <div className="space-y-2">
+                    <label className="text-sm text-muted-foreground">Invite friends to convoy (optional)</label>
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                      <Input
+                        value={searchFriends}
+                        onChange={(e) => setSearchFriends(e.target.value)}
+                        placeholder="Search for your friends"
+                        className="pl-11 h-12 bg-secondary border-0 text-foreground placeholder:text-muted-foreground"
                       />
-                    ))
-                  )}
-                </TabsContent>
-
-                <TabsContent value="following" className="mt-4 space-y-2">
-                  {followingLoading ? (
-                    <div className="flex items-center justify-center py-8">
-                      <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
                     </div>
-                  ) : allFollowing.length === 0 ? (
-                    <div className="text-center py-8">
-                      <p className="text-muted-foreground">You're not following anyone yet</p>
-                      <Button
-                        variant="link"
-                        size="sm"
-                        onClick={() => navigate('/search')}
-                        className="text-primary"
-                      >
-                        Find people to follow
-                      </Button>
-                    </div>
-                  ) : (
-                    allFollowing.map(friend => (
-                      <FriendSelectItem
-                        key={friend.id}
-                        friend={friend}
-                        isSelected={selectedFriends.includes(friend.id)}
-                        isTribe={friend.isTribe}
-                        onToggle={() => handleToggleFriend(friend.id)}
-                      />
-                    ))
-                  )}
-                </TabsContent>
-              </Tabs>
+                  </div>
 
-              {selectedFriends.length > 0 && (
-                <p className="text-sm text-muted-foreground text-center">
-                  {selectedFriends.length} friend{selectedFriends.length > 1 ? 's' : ''} selected for convoy
-                </p>
+                  {/* Tabs for Tribe/Following */}
+                  <Tabs value={convoyTab} onValueChange={setConvoyTab} className="w-full">
+                    <TabsList className="w-full bg-secondary">
+                      <TabsTrigger value="tribe" className="flex-1 gap-1">
+                        <Star className="h-3 w-3" />
+                        Tribe
+                      </TabsTrigger>
+                      <TabsTrigger value="following" className="flex-1">
+                        Following
+                      </TabsTrigger>
+                    </TabsList>
+
+                    <TabsContent value="tribe" className="mt-4 space-y-2">
+                      {tribeLoading || followingLoading ? (
+                        <div className="flex items-center justify-center py-8">
+                          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                        </div>
+                      ) : tribeFriends.length === 0 ? (
+                        <div className="text-center py-8">
+                          <Star className="h-8 w-8 text-muted-foreground/30 mx-auto mb-2" />
+                          <p className="text-muted-foreground">No tribe members yet</p>
+                          <p className="text-sm text-muted-foreground/70 mt-1">
+                            Add close friends to your tribe in Settings
+                          </p>
+                        </div>
+                      ) : (
+                        tribeFriends.map(friend => (
+                          <FriendSelectItem
+                            key={friend.id}
+                            friend={friend}
+                            isSelected={selectedFriends.includes(friend.id)}
+                            isTribe={true}
+                            onToggle={() => handleToggleFriend(friend.id)}
+                          />
+                        ))
+                      )}
+                    </TabsContent>
+
+                    <TabsContent value="following" className="mt-4 space-y-2">
+                      {followingLoading ? (
+                        <div className="flex items-center justify-center py-8">
+                          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                        </div>
+                      ) : allFollowing.length === 0 ? (
+                        <div className="text-center py-8">
+                          <p className="text-muted-foreground">You're not following anyone yet</p>
+                          <Button
+                            variant="link"
+                            size="sm"
+                            onClick={() => navigate('/search')}
+                            className="text-primary"
+                          >
+                            Find people to follow
+                          </Button>
+                        </div>
+                      ) : (
+                        allFollowing.map(friend => (
+                          <FriendSelectItem
+                            key={friend.id}
+                            friend={friend}
+                            isSelected={selectedFriends.includes(friend.id)}
+                            isTribe={friend.isTribe}
+                            onToggle={() => handleToggleFriend(friend.id)}
+                          />
+                        ))
+                      )}
+                    </TabsContent>
+                  </Tabs>
+
+                  {selectedFriends.length > 0 && (
+                    <p className="text-sm text-muted-foreground text-center">
+                      {selectedFriends.length} friend{selectedFriends.length > 1 ? 's' : ''} selected for convoy
+                    </p>
+                  )}
+                </>
               )}
             </motion.div>
           )}

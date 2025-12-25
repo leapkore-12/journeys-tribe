@@ -1,7 +1,7 @@
 import { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Image, ChevronDown, Trash2, X, Plus } from 'lucide-react';
+import { Image, ChevronDown, Trash2, X, Lock, Crown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -12,6 +12,8 @@ import { useToast } from '@/hooks/use-toast';
 import { useCreateTrip } from '@/hooks/useTrips';
 import { useUploadTripPhotos } from '@/hooks/useTripPhotos';
 import { generateStaticMapUrl, generateSimpleMapUrl } from '@/lib/mapbox-static';
+import { useFeatureAccess } from '@/hooks/useSubscription';
+import { useCurrentProfile } from '@/hooks/useProfile';
 
 const MAX_PHOTOS = 5;
 
@@ -22,13 +24,23 @@ const PostTrip = () => {
   const createTrip = useCreateTrip();
   const uploadPhotos = useUploadTripPhotos();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const { canUsePerTripVisibility } = useFeatureAccess();
+  const { data: profile } = useCurrentProfile();
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [visibility, setVisibility] = useState('Everyone');
+  const [visibility, setVisibility] = useState<'public' | 'followers' | 'tribe' | 'private'>('public');
   const [showVisibilityDropdown, setShowVisibilityDropdown] = useState(false);
   const [isPosting, setIsPosting] = useState('');
 
-  const visibilityOptions = ['Everyone', 'Friends only', 'Only me'];
+  // Visibility options - paid users get all, free users get default based on profile
+  const paidVisibilityOptions = [
+    { value: 'public', label: 'Everyone', icon: '🌐' },
+    { value: 'followers', label: 'Followers only', icon: '👥' },
+    { value: 'tribe', label: 'Your Tribe', icon: '⭐' },
+    { value: 'private', label: 'Only me', icon: '🔒' },
+  ] as const;
+
+  const freeVisibilityLabel = profile?.is_private ? 'Followers only' : 'Everyone';
 
   // Generate map preview URL from route coordinates
   const mapPreviewUrl = tripState.routeCoordinates && tripState.routeCoordinates.length >= 2
@@ -104,8 +116,12 @@ const PostTrip = () => {
         );
       }
 
-      // Determine visibility
-      const isPublic = visibility === 'Everyone';
+      // Determine visibility for DB
+      const tripVisibility = canUsePerTripVisibility 
+        ? visibility 
+        : (profile?.is_private ? 'followers' : 'public');
+      
+      const isPublic = tripVisibility === 'public';
 
       // Create the trip in the database
       const createdTrip = await createTrip.mutateAsync({
@@ -125,6 +141,7 @@ const PostTrip = () => {
           : null,
         map_image_url: mapImageUrl,
         is_public: isPublic,
+        visibility: tripVisibility,
         vehicle_id: tripState.vehicle?.id || null,
         status: 'completed',
         started_at: new Date().toISOString(),
@@ -349,36 +366,56 @@ const PostTrip = () => {
           transition={{ delay: 0.6 }}
           className="relative"
         >
-          <button
-            onClick={() => setShowVisibilityDropdown(!showVisibilityDropdown)}
-            className="w-full h-12 px-4 bg-secondary rounded-lg flex items-center justify-between"
-          >
-            <span className="text-muted-foreground">Who can view this trip</span>
-            <div className="flex items-center gap-2">
-              <span className="text-foreground">{visibility}</span>
-              <ChevronDown className={`h-5 w-5 text-muted-foreground transition-transform ${showVisibilityDropdown ? 'rotate-180' : ''}`} />
-            </div>
-          </button>
-          
-          {showVisibilityDropdown && (
-            <motion.div
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="absolute top-full left-0 right-0 mt-1 bg-secondary rounded-lg border border-border overflow-hidden z-50"
-            >
-              {visibilityOptions.map(option => (
-                <button
-                  key={option}
-                  onClick={() => {
-                    setVisibility(option);
-                    setShowVisibilityDropdown(false);
-                  }}
-                  className="w-full px-4 py-3 text-left hover:bg-muted/50 transition-colors text-foreground"
+          {canUsePerTripVisibility ? (
+            <>
+              <button
+                onClick={() => setShowVisibilityDropdown(!showVisibilityDropdown)}
+                className="w-full h-12 px-4 bg-secondary rounded-lg flex items-center justify-between"
+              >
+                <span className="text-muted-foreground">Who can view this trip</span>
+                <div className="flex items-center gap-2">
+                  <span className="text-foreground">
+                    {paidVisibilityOptions.find(o => o.value === visibility)?.icon}{' '}
+                    {paidVisibilityOptions.find(o => o.value === visibility)?.label}
+                  </span>
+                  <ChevronDown className={`h-5 w-5 text-muted-foreground transition-transform ${showVisibilityDropdown ? 'rotate-180' : ''}`} />
+                </div>
+              </button>
+              
+              {showVisibilityDropdown && (
+                <motion.div
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="absolute top-full left-0 right-0 mt-1 bg-secondary rounded-lg border border-border overflow-hidden z-50"
                 >
-                  {option}
-                </button>
-              ))}
-            </motion.div>
+                  {paidVisibilityOptions.map(option => (
+                    <button
+                      key={option.value}
+                      onClick={() => {
+                        setVisibility(option.value);
+                        setShowVisibilityDropdown(false);
+                      }}
+                      className={`w-full px-4 py-3 text-left hover:bg-muted/50 transition-colors text-foreground flex items-center gap-2 ${visibility === option.value ? 'bg-muted/30' : ''}`}
+                    >
+                      <span>{option.icon}</span>
+                      <span>{option.label}</span>
+                      {option.value === 'tribe' && (
+                        <span className="ml-auto text-xs text-primary">⭐</span>
+                      )}
+                    </button>
+                  ))}
+                </motion.div>
+              )}
+            </>
+          ) : (
+            <div className="w-full h-12 px-4 bg-secondary rounded-lg flex items-center justify-between">
+              <span className="text-muted-foreground">Who can view this trip</span>
+              <div className="flex items-center gap-2">
+                <Lock className="h-4 w-4 text-muted-foreground" />
+                <span className="text-foreground">{freeVisibilityLabel}</span>
+                <Crown className="h-4 w-4 text-yellow-500" />
+              </div>
+            </div>
           )}
         </motion.div>
       </div>
