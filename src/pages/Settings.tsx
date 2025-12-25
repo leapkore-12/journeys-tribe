@@ -37,7 +37,7 @@ const Settings = () => {
     }
   }, [profile]);
 
-  const tribeCount = following?.length || 0;
+  const tribeCount = profile?.tribe_count || 0;
 
   const handleLogout = async () => {
     await signOut();
@@ -119,7 +119,7 @@ const Settings = () => {
     {
       label: 'Edit your Tribe',
       rightContent: <span className="text-primary font-medium">{tribeCount}</span>,
-      onClick: () => navigate('/manage-followers'),
+      onClick: () => navigate('/manage-tribe'),
     },
     {
       label: 'Change email or password',

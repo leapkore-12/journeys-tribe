@@ -280,6 +280,7 @@ export type Database = {
           is_private: boolean | null
           total_distance_km: number | null
           total_duration_minutes: number | null
+          tribe_count: number | null
           trips_count: number | null
           updated_at: string | null
           username: string | null
@@ -296,6 +297,7 @@ export type Database = {
           is_private?: boolean | null
           total_distance_km?: number | null
           total_duration_minutes?: number | null
+          tribe_count?: number | null
           trips_count?: number | null
           updated_at?: string | null
           username?: string | null
@@ -312,10 +314,32 @@ export type Database = {
           is_private?: boolean | null
           total_distance_km?: number | null
           total_duration_minutes?: number | null
+          tribe_count?: number | null
           trips_count?: number | null
           updated_at?: string | null
           username?: string | null
           vehicles_count?: number | null
+        }
+        Relationships: []
+      }
+      tribe_members: {
+        Row: {
+          created_at: string | null
+          id: string
+          member_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          member_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          member_id?: string
+          user_id?: string
         }
         Relationships: []
       }
@@ -579,6 +603,10 @@ export type Database = {
         Returns: boolean
       }
       is_profile_private: { Args: { _user_id: string }; Returns: boolean }
+      is_tribe_member: {
+        Args: { _member_id: string; _user_id: string }
+        Returns: boolean
+      }
     }
     Enums: {
       app_role: "admin" | "moderator" | "user"
