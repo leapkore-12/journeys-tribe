@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -34,10 +35,17 @@ import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
 import JoinConvoy from "./pages/JoinConvoy";
 import NotFound from "./pages/NotFound";
+import { initCapacitor } from "@/lib/capacitor-init";
 
 const queryClient = new QueryClient();
 
-const App = () => (
+const App = () => {
+  // Initialize Capacitor plugins (StatusBar for iOS safe area)
+  useEffect(() => {
+    initCapacitor();
+  }, []);
+
+  return (
   <QueryClientProvider client={queryClient}>
     <BrowserRouter>
       <TooltipProvider>
@@ -92,6 +100,7 @@ const App = () => (
       </TooltipProvider>
     </BrowserRouter>
   </QueryClientProvider>
-);
+  );
+};
 
 export default App;
