@@ -9,6 +9,7 @@ import MainLayout from "./components/layout/MainLayout";
 import { TripProvider } from "./context/TripContext";
 import { AuthProvider } from "./context/AuthContext";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
+import AdminRoute from "./components/auth/AdminRoute";
 import Splash from "./pages/Splash";
 import Login from "./pages/Login";
 import Feed from "./pages/Feed";
@@ -36,6 +37,11 @@ import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
 import JoinConvoy from "./pages/JoinConvoy";
 import NotFound from "./pages/NotFound";
+import AdminLogin from "./pages/admin/AdminLogin";
+import AdminDashboard from "./pages/admin/AdminDashboard";
+import UserManagement from "./pages/admin/UserManagement";
+import CreateUser from "./pages/admin/CreateUser";
+import EditUser from "./pages/admin/EditUser";
 import { initCapacitor } from "@/lib/capacitor-init";
 
 const queryClient = new QueryClient();
@@ -92,6 +98,13 @@ const App = () => {
                   <Route path="/edit-profile" element={<ProtectedRoute><EditProfile /></ProtectedRoute>} />
                   <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
                   <Route path="/settings/credentials" element={<ProtectedRoute><ChangeCredentials /></ProtectedRoute>} />
+                  
+                  {/* Admin Routes */}
+                  <Route path="/admin" element={<AdminLogin />} />
+                  <Route path="/admin/dashboard" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
+                  <Route path="/admin/users" element={<AdminRoute><UserManagement /></AdminRoute>} />
+                  <Route path="/admin/users/new" element={<AdminRoute><CreateUser /></AdminRoute>} />
+                  <Route path="/admin/users/:id" element={<AdminRoute><EditUser /></AdminRoute>} />
                   
                   <Route path="*" element={<NotFound />} />
                 </Routes>
