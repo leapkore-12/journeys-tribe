@@ -168,9 +168,36 @@ export const useLikeTrip = () => {
       if (!user?.id) throw new Error('Not authenticated');
 
       if (isLiked) {
+        // Unlike - remove the like
         await supabase.from('trip_likes').delete().eq('trip_id', tripId).eq('user_id', user.id);
+        
+        // Delete the like notification
+        await supabase.from('notifications')
+          .delete()
+          .eq('actor_id', user.id)
+          .eq('trip_id', tripId)
+          .eq('type', 'like');
       } else {
+        // Get trip owner first
+        const { data: trip } = await supabase
+          .from('trips')
+          .select('user_id')
+          .eq('id', tripId)
+          .single();
+        
+        // Create like
         await supabase.from('trip_likes').insert({ trip_id: tripId, user_id: user.id });
+        
+        // Create notification (only if not liking your own trip)
+        if (trip && trip.user_id !== user.id) {
+          await supabase.from('notifications').insert({
+            user_id: trip.user_id,
+            actor_id: user.id,
+            type: 'like',
+            trip_id: tripId,
+            message: 'liked your trip'
+          });
+        }
       }
     },
     onSuccess: () => {

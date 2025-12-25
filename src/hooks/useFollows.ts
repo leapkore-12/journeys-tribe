@@ -275,12 +275,20 @@ export const useAcceptFollowRequest = () => {
       // Delete the follow request entirely
       await supabase.from('follow_requests').delete().eq('id', request.id);
       
-      // Delete the notification
+      // Delete the follow_request notification
       await supabase.from('notifications')
         .delete()
         .eq('actor_id', requesterId)
         .eq('user_id', user.id)
         .eq('type', 'follow_request');
+      
+      // Create a "follow_accepted" notification for the requester
+      await supabase.from('notifications').insert({
+        user_id: requesterId,
+        actor_id: user.id,
+        type: 'follow_accepted',
+        message: 'accepted your follow request'
+      });
       
       return { requesterId };
     },
