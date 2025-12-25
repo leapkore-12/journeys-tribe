@@ -1,6 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Clock, Route } from 'lucide-react';
+import { Clock, Route, Globe, Users, Star, Lock } from 'lucide-react';
 import { TripWithDetails } from '@/hooks/useTrips';
 import { formatDistanceToNow } from 'date-fns';
 
@@ -22,6 +22,21 @@ const formatDuration = (minutes: number | null) => {
   return `${hours}h ${mins}m`;
 };
 
+const getVisibilityIcon = (visibility: string) => {
+  switch (visibility) {
+    case 'public':
+      return { icon: Globe, label: 'Public', color: 'text-green-500' };
+    case 'followers':
+      return { icon: Users, label: 'Followers', color: 'text-blue-500' };
+    case 'tribe':
+      return { icon: Star, label: 'Tribe', color: 'text-yellow-500' };
+    case 'private':
+      return { icon: Lock, label: 'Private', color: 'text-muted-foreground' };
+    default:
+      return { icon: Globe, label: 'Public', color: 'text-green-500' };
+  }
+};
+
 const ProfileTripCard = ({ trip }: ProfileTripCardProps) => {
   const navigate = useNavigate();
 
@@ -29,6 +44,8 @@ const ProfileTripCard = ({ trip }: ProfileTripCardProps) => {
   const timeAgo = trip.created_at 
     ? formatDistanceToNow(new Date(trip.created_at), { addSuffix: true })
     : '';
+  const visibilityInfo = getVisibilityIcon(trip.visibility || 'public');
+  const VisibilityIcon = visibilityInfo.icon;
 
   return (
     <motion.div
@@ -77,8 +94,14 @@ const ProfileTripCard = ({ trip }: ProfileTripCardProps) => {
           </div>
         </div>
 
-        {/* Timestamp */}
-        <p className="text-xs text-muted-foreground">{timeAgo}</p>
+        {/* Timestamp & Visibility */}
+        <div className="flex items-center justify-between">
+          <p className="text-xs text-muted-foreground">{timeAgo}</p>
+          <div className={`flex items-center gap-1 text-xs ${visibilityInfo.color}`}>
+            <VisibilityIcon className="h-3 w-3" />
+            <span>{visibilityInfo.label}</span>
+          </div>
+        </div>
       </div>
     </motion.div>
   );
