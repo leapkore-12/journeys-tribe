@@ -42,24 +42,14 @@ export const useFeedTrips = () => {
         followedIds = follows?.map(f => f.following_id) || [];
       }
 
-      // Fetch trips - from followed users OR public trips
-      let query = supabase
+      // Fetch trips - RLS handles visibility filtering via can_view_trip function
+      // The DB function checks: public, followers (if following), tribe (if in tribe), private (owner only)
+      const { data: trips, error } = await supabase
         .from('trips')
         .select('*, trip_photos(*)')
         .eq('status', 'completed')
         .order('created_at', { ascending: false })
         .range(pageParam * PAGE_SIZE, (pageParam + 1) * PAGE_SIZE - 1);
-
-      // If user is logged in, show trips from followed users + public trips
-      // If not logged in, show only public trips
-      if (followedIds.length > 0) {
-        // Show trips from followed users (regardless of public status) OR public trips from anyone
-        query = query.or(`user_id.in.(${followedIds.join(',')}),is_public.eq.true`);
-      } else {
-        query = query.eq('is_public', true);
-      }
-
-      const { data: trips, error } = await query;
 
       if (error || !trips) {
         console.error('Error fetching feed trips:', error);

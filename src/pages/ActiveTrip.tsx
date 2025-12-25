@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
   ChevronLeft, Phone, ArrowUp, Mic, Compass,
   Search, X, AlertTriangle, LocateFixed, Route,
-  Share2, Users, Pause, WifiOff, Loader2
+  Share2, Users, Pause, WifiOff, Loader2, Crown
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useTrip } from '@/context/TripContext';
@@ -12,9 +12,11 @@ import { useGeolocation } from '@/hooks/useGeolocation';
 import { useMapboxRoute } from '@/hooks/useMapboxRoute';
 import { useConvoyPresence } from '@/hooks/useConvoyPresence';
 import { useConvoyInvites } from '@/hooks/useConvoyInvites';
+import { useConvoyMembers, useTransferLeadership, useIsConvoyLeader } from '@/hooks/useConvoyMembers';
 import { useOfflineTracking } from '@/hooks/useOfflineTracking';
 import { useActiveTrip } from '@/hooks/useActiveTrip';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/context/AuthContext';
 import LiveTrackingMap from '@/components/map/LiveTrackingMap';
 import ConvoyPanel from '@/components/convoy/ConvoyPanel';
 import ConvoyStatusBar from '@/components/convoy/ConvoyStatusBar';

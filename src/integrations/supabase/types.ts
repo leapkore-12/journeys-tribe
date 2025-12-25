@@ -141,6 +141,7 @@ export type Database = {
         Row: {
           id: string
           invite_id: string | null
+          is_leader: boolean | null
           joined_at: string | null
           status: string | null
           trip_id: string
@@ -149,6 +150,7 @@ export type Database = {
         Insert: {
           id?: string
           invite_id?: string | null
+          is_leader?: boolean | null
           joined_at?: string | null
           status?: string | null
           trip_id: string
@@ -157,6 +159,7 @@ export type Database = {
         Update: {
           id?: string
           invite_id?: string | null
+          is_leader?: boolean | null
           joined_at?: string | null
           status?: string | null
           trip_id?: string
@@ -278,6 +281,9 @@ export type Database = {
           following_count: number | null
           id: string
           is_private: boolean | null
+          monthly_trip_count: number | null
+          monthly_trip_reset_at: string | null
+          plan_type: string
           total_distance_km: number | null
           total_duration_minutes: number | null
           tribe_count: number | null
@@ -295,6 +301,9 @@ export type Database = {
           following_count?: number | null
           id: string
           is_private?: boolean | null
+          monthly_trip_count?: number | null
+          monthly_trip_reset_at?: string | null
+          plan_type?: string
           total_distance_km?: number | null
           total_duration_minutes?: number | null
           tribe_count?: number | null
@@ -312,6 +321,9 @@ export type Database = {
           following_count?: number | null
           id?: string
           is_private?: boolean | null
+          monthly_trip_count?: number | null
+          monthly_trip_reset_at?: string | null
+          plan_type?: string
           total_distance_km?: number | null
           total_duration_minutes?: number | null
           tribe_count?: number | null
@@ -431,6 +443,7 @@ export type Database = {
           updated_at: string | null
           user_id: string
           vehicle_id: string | null
+          visibility: string
         }
         Insert: {
           comments_count?: number | null
@@ -455,6 +468,7 @@ export type Database = {
           updated_at?: string | null
           user_id: string
           vehicle_id?: string | null
+          visibility?: string
         }
         Update: {
           comments_count?: number | null
@@ -479,6 +493,7 @@ export type Database = {
           updated_at?: string | null
           user_id?: string
           vehicle_id?: string | null
+          visibility?: string
         }
         Relationships: [
           {
@@ -590,6 +605,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      can_view_trip: {
+        Args: { _trip_user_id: string; _viewer_id: string; _visibility: string }
+        Returns: boolean
+      }
       generate_invite_code: { Args: never; Returns: string }
       has_role: {
         Args: {
@@ -606,6 +625,10 @@ export type Database = {
       is_tribe_member: {
         Args: { _member_id: string; _user_id: string }
         Returns: boolean
+      }
+      transfer_convoy_leadership: {
+        Args: { _new_leader_id: string; _trip_id: string }
+        Returns: undefined
       }
     }
     Enums: {
