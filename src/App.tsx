@@ -37,7 +37,7 @@ import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
 import JoinConvoy from "./pages/JoinConvoy";
 import NotFound from "./pages/NotFound";
-import AdminLogin from "./pages/admin/AdminLogin";
+
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import UserManagement from "./pages/admin/UserManagement";
 import CreateUser from "./pages/admin/CreateUser";
@@ -100,7 +100,7 @@ const App = () => {
                   <Route path="/settings/credentials" element={<ProtectedRoute><ChangeCredentials /></ProtectedRoute>} />
                   
                   {/* Admin Routes */}
-                  <Route path="/admin" element={<AdminLogin />} />
+                  <Route path="/admin" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
                   <Route path="/admin/dashboard" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
                   <Route path="/admin/users" element={<AdminRoute><UserManagement /></AdminRoute>} />
                   <Route path="/admin/users/new" element={<AdminRoute><CreateUser /></AdminRoute>} />

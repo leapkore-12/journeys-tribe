@@ -6,23 +6,29 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/AuthContext';
+import { useIsAdmin } from '@/hooks/useAdmin';
 import logoWhiteTagline from '@/assets/logo-white-tagline.svg';
 
 const Login = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { signIn, user, isLoading: authLoading } = useAuth();
+  const { data: isAdmin, isLoading: adminLoading, refetch: refetchAdmin } = useIsAdmin();
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
-  // Redirect if already logged in
+  // Redirect if already logged in based on role
   useEffect(() => {
-    if (user && !authLoading) {
-      navigate('/feed', { replace: true });
+    if (user && !authLoading && !adminLoading) {
+      if (isAdmin) {
+        navigate('/admin/dashboard', { replace: true });
+      } else {
+        navigate('/feed', { replace: true });
+      }
     }
-  }, [user, authLoading, navigate]);
+  }, [user, authLoading, adminLoading, isAdmin, navigate]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -60,13 +66,21 @@ const Login = () => {
       return;
     }
     
+    // Refetch admin status and redirect based on role
+    const { data: adminStatus } = await refetchAdmin();
+    
     toast({
       title: "Welcome back!",
       description: "Successfully logged in to RoadTribe",
     });
     
     setIsLoading(false);
-    navigate('/feed');
+    
+    if (adminStatus) {
+      navigate('/admin/dashboard');
+    } else {
+      navigate('/feed');
+    }
   };
 
   return (
