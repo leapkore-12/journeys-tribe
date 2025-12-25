@@ -46,16 +46,16 @@ const ManageConnections = () => {
     }
   };
 
-  const handleAcceptRequest = (requestId: string, username?: string) => {
-    acceptMutation.mutate(requestId, {
+  const handleAcceptRequest = (requesterId: string, username?: string) => {
+    acceptMutation.mutate(requesterId, {
       onSuccess: () => {
         toast({ description: `Accepted @${username || 'user'}'s follow request` });
       }
     });
   };
 
-  const handleDeclineRequest = (requestId: string, username?: string) => {
-    declineMutation.mutate(requestId, {
+  const handleDeclineRequest = (requesterId: string, username?: string) => {
+    declineMutation.mutate(requesterId, {
       onSuccess: () => {
         toast({ description: `Declined @${username || 'user'}'s follow request` });
       }
@@ -245,7 +245,8 @@ const ManageConnections = () => {
                         <Button
                           size="sm"
                           className="bg-primary text-primary-foreground hover:bg-primary/90"
-                          onClick={() => handleAcceptRequest(req.id, req.profile.username || undefined)}
+                          disabled={acceptMutation.isPending}
+                          onClick={() => handleAcceptRequest(req.requester_id, req.profile?.username || undefined)}
                         >
                           Accept
                         </Button>
@@ -253,7 +254,8 @@ const ManageConnections = () => {
                           variant="outline"
                           size="sm"
                           className="border-muted-foreground text-muted-foreground hover:bg-muted"
-                          onClick={() => handleDeclineRequest(req.id, req.profile.username || undefined)}
+                          disabled={declineMutation.isPending}
+                          onClick={() => handleDeclineRequest(req.requester_id, req.profile?.username || undefined)}
                         >
                           Decline
                         </Button>

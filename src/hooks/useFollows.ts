@@ -247,28 +247,76 @@ export const useCancelFollowRequest = () => {
 
 export const useAcceptFollowRequest = () => {
   const queryClient = useQueryClient();
+  const { user } = useAuth();
+  
   return useMutation({
-    mutationFn: async (requestId: string) => {
-      const { data: request } = await supabase.from('follow_requests').select('*').eq('id', requestId).single();
-      if (!request) throw new Error('Request not found');
-      await supabase.from('follow_requests').update({ status: 'accepted' }).eq('id', requestId);
-      await supabase.from('follows').insert({ follower_id: request.requester_id, following_id: request.target_id });
+    mutationFn: async (requesterId: string) => {
+      if (!user?.id) throw new Error('Not authenticated');
+      
+      // Find the pending follow request by requester_id and target_id
+      const { data: request, error: findError } = await supabase
+        .from('follow_requests')
+        .select('*')
+        .eq('requester_id', requesterId)
+        .eq('target_id', user.id)
+        .eq('status', 'pending')
+        .maybeSingle();
+      
+      if (findError || !request) throw new Error('Request not found');
+      
+      // Create follow relationship
+      await supabase.from('follows').insert({ 
+        follower_id: request.requester_id, 
+        following_id: request.target_id 
+      });
+      
+      // Delete the follow request entirely
+      await supabase.from('follow_requests').delete().eq('id', request.id);
+      
+      // Delete the notification
+      await supabase.from('notifications')
+        .delete()
+        .eq('actor_id', requesterId)
+        .eq('user_id', user.id)
+        .eq('type', 'follow_request');
     },
-    onSuccess: () => {
+    onSuccess: (_, requesterId) => {
       queryClient.invalidateQueries({ queryKey: ['follow-requests'] });
       queryClient.invalidateQueries({ queryKey: ['followers'] });
+      queryClient.invalidateQueries({ queryKey: ['notifications'] });
+      queryClient.invalidateQueries({ queryKey: ['unread-count'] });
+      queryClient.invalidateQueries({ queryKey: ['is-following'] });
+      queryClient.invalidateQueries({ queryKey: ['profile'] });
     },
   });
 };
 
 export const useDeclineFollowRequest = () => {
   const queryClient = useQueryClient();
+  const { user } = useAuth();
+  
   return useMutation({
-    mutationFn: async (requestId: string) => {
-      await supabase.from('follow_requests').update({ status: 'declined' }).eq('id', requestId);
+    mutationFn: async (requesterId: string) => {
+      if (!user?.id) throw new Error('Not authenticated');
+      
+      // Delete the follow request entirely so the person can request again
+      await supabase.from('follow_requests')
+        .delete()
+        .eq('requester_id', requesterId)
+        .eq('target_id', user.id)
+        .eq('status', 'pending');
+      
+      // Delete the notification too
+      await supabase.from('notifications')
+        .delete()
+        .eq('actor_id', requesterId)
+        .eq('user_id', user.id)
+        .eq('type', 'follow_request');
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['follow-requests'] });
+      queryClient.invalidateQueries({ queryKey: ['notifications'] });
+      queryClient.invalidateQueries({ queryKey: ['unread-count'] });
     },
   });
 };

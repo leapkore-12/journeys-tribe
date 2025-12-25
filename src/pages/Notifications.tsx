@@ -20,12 +20,12 @@ const Notifications = () => {
     markAsRead.mutate(id);
   };
 
-  const handleAccept = (id: string) => {
-    acceptRequest.mutate(id);
+  const handleAccept = (actorId: string) => {
+    acceptRequest.mutate(actorId);
   };
 
-  const handleDecline = (id: string) => {
-    declineRequest.mutate(id);
+  const handleDecline = (actorId: string) => {
+    declineRequest.mutate(actorId);
   };
 
   const getNotificationContent = (notification: typeof notifications extends (infer T)[] | undefined ? T : never) => {
@@ -49,9 +49,10 @@ const Notifications = () => {
             <Button
               size="sm"
               className="bg-primary hover:bg-primary/90 text-primary-foreground h-8 px-4"
+              disabled={acceptRequest.isPending}
               onClick={(e) => {
                 e.stopPropagation();
-                handleAccept(notification.id);
+                if (notification.actor_id) handleAccept(notification.actor_id);
               }}
             >
               <Check className="h-4 w-4 mr-1" />
@@ -61,9 +62,10 @@ const Notifications = () => {
               size="sm"
               variant="outline"
               className="border-border text-foreground h-8 px-4"
+              disabled={declineRequest.isPending}
               onClick={(e) => {
                 e.stopPropagation();
-                handleDecline(notification.id);
+                if (notification.actor_id) handleDecline(notification.actor_id);
               }}
             >
               <X className="h-4 w-4 mr-1" />
