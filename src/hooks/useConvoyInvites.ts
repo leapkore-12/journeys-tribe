@@ -1,0 +1,258 @@
+import { useState, useCallback } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/context/AuthContext';
+import { useToast } from '@/hooks/use-toast';
+
+interface ConvoyInvite {
+  id: string;
+  trip_id: string;
+  inviter_id: string;
+  invitee_id: string | null;
+  invite_code: string;
+  status: 'pending' | 'accepted' | 'declined' | 'expired';
+  expires_at: string;
+  created_at: string;
+  trip?: {
+    id: string;
+    title: string;
+    start_location: string | null;
+    end_location: string | null;
+  };
+  inviter?: {
+    id: string;
+    display_name: string | null;
+    avatar_url: string | null;
+  };
+}
+
+interface CreateInviteParams {
+  tripId: string;
+}
+
+interface AcceptInviteParams {
+  inviteCode: string;
+}
+
+export const useConvoyInvites = () => {
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [isLoading, setIsLoading] = useState(false);
+
+  // Generate a unique invite code
+  const generateInviteCode = useCallback((): string => {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    let result = '';
+    for (let i = 0; i < 6; i++) {
+      result += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return result;
+  }, []);
+
+  // Create a new invite for a trip
+  const createInvite = useMutation({
+    mutationFn: async ({ tripId }: CreateInviteParams) => {
+      if (!user) throw new Error('Not authenticated');
+
+      const inviteCode = generateInviteCode();
+      const expiresAt = new Date();
+      expiresAt.setHours(expiresAt.getHours() + 24);
+
+      const { data, error } = await supabase
+        .from('convoy_invites')
+        .insert({
+          trip_id: tripId,
+          inviter_id: user.id,
+          invite_code: inviteCode,
+          expires_at: expiresAt.toISOString(),
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['convoy-invites'] });
+    },
+    onError: (error) => {
+      toast({
+        title: 'Failed to create invite',
+        description: error.message,
+        variant: 'destructive',
+      });
+    },
+  });
+
+  // Get invite by code (for join page)
+  const useInviteByCode = (inviteCode: string | null) => {
+    return useQuery({
+      queryKey: ['convoy-invite', inviteCode],
+      queryFn: async () => {
+        if (!inviteCode) return null;
+
+        const { data, error } = await supabase
+          .from('convoy_invites')
+          .select(`
+            *,
+            trip:trips(id, title, start_location, end_location),
+            inviter:profiles!convoy_invites_inviter_id_fkey(id, display_name, avatar_url)
+          `)
+          .eq('invite_code', inviteCode.toUpperCase())
+          .single();
+
+        if (error) throw error;
+        return data as unknown as ConvoyInvite;
+      },
+      enabled: !!inviteCode,
+    });
+  };
+
+  // Accept an invite
+  const acceptInvite = useMutation({
+    mutationFn: async ({ inviteCode }: AcceptInviteParams) => {
+      if (!user) throw new Error('Not authenticated');
+
+      // Get the invite
+      const { data: invite, error: fetchError } = await supabase
+        .from('convoy_invites')
+        .select('*')
+        .eq('invite_code', inviteCode.toUpperCase())
+        .single();
+
+      if (fetchError) throw fetchError;
+      if (!invite) throw new Error('Invite not found');
+
+      // Check if expired
+      if (new Date(invite.expires_at) < new Date()) {
+        throw new Error('Invite has expired');
+      }
+
+      // Check if already accepted
+      if (invite.status === 'accepted') {
+        throw new Error('Invite has already been used');
+      }
+
+      // Update invite status
+      const { error: updateError } = await supabase
+        .from('convoy_invites')
+        .update({
+          status: 'accepted',
+          invitee_id: user.id,
+        })
+        .eq('id', invite.id);
+
+      if (updateError) throw updateError;
+
+      // Add user to convoy_members
+      const { error: memberError } = await supabase
+        .from('convoy_members')
+        .insert({
+          trip_id: invite.trip_id,
+          user_id: user.id,
+          status: 'active',
+          invite_id: invite.id,
+        });
+
+      if (memberError) throw memberError;
+
+      return invite;
+    },
+    onSuccess: (invite) => {
+      queryClient.invalidateQueries({ queryKey: ['convoy-invites'] });
+      queryClient.invalidateQueries({ queryKey: ['convoy-members', invite.trip_id] });
+      toast({
+        title: 'Joined convoy!',
+        description: 'You are now part of this trip convoy.',
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: 'Failed to join convoy',
+        description: error.message,
+        variant: 'destructive',
+      });
+    },
+  });
+
+  // Get invites for a trip (for trip owner)
+  const useTripInvites = (tripId: string | null) => {
+    return useQuery({
+      queryKey: ['convoy-invites', tripId],
+      queryFn: async () => {
+        if (!tripId) return [];
+
+        const { data, error } = await supabase
+          .from('convoy_invites')
+          .select('*')
+          .eq('trip_id', tripId)
+          .order('created_at', { ascending: false });
+
+        if (error) throw error;
+        return data as ConvoyInvite[];
+      },
+      enabled: !!tripId,
+    });
+  };
+
+  // Get convoy members for a trip
+  const useConvoyMembers = (tripId: string | null) => {
+    return useQuery({
+      queryKey: ['convoy-members', tripId],
+      queryFn: async () => {
+        if (!tripId) return [];
+
+        const { data, error } = await supabase
+          .from('convoy_members')
+          .select(`
+            *,
+            profile:profiles(id, display_name, avatar_url)
+          `)
+          .eq('trip_id', tripId)
+          .eq('status', 'active');
+
+        if (error) throw error;
+        return data;
+      },
+      enabled: !!tripId,
+    });
+  };
+
+  // Generate share link
+  const getShareLink = useCallback((inviteCode: string) => {
+    const baseUrl = window.location.origin;
+    return `${baseUrl}/join-convoy/${inviteCode}`;
+  }, []);
+
+  // Copy invite link to clipboard
+  const copyInviteLink = useCallback(async (inviteCode: string) => {
+    const link = getShareLink(inviteCode);
+    try {
+      await navigator.clipboard.writeText(link);
+      toast({
+        title: 'Link copied!',
+        description: 'Share this link with your convoy members.',
+      });
+      return true;
+    } catch {
+      toast({
+        title: 'Failed to copy',
+        description: 'Please copy the link manually.',
+        variant: 'destructive',
+      });
+      return false;
+    }
+  }, [getShareLink, toast]);
+
+  return {
+    createInvite,
+    acceptInvite,
+    useInviteByCode,
+    useTripInvites,
+    useConvoyMembers,
+    getShareLink,
+    copyInviteLink,
+    isLoading,
+  };
+};

@@ -32,6 +32,7 @@ import EditProfile from "./pages/EditProfile";
 import ChangeCredentials from "./pages/ChangeCredentials";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
+import JoinConvoy from "./pages/JoinConvoy";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -69,6 +70,7 @@ const App = () => (
                   <Route path="/trip/complete" element={<ProtectedRoute><TripComplete /></ProtectedRoute>} />
                   
                   {/* Protected Routes - Standalone Pages */}
+                  <Route path="/join-convoy/:inviteCode" element={<ProtectedRoute><JoinConvoy /></ProtectedRoute>} />
                   <Route path="/search" element={<ProtectedRoute><Search /></ProtectedRoute>} />
                   <Route path="/notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
                   <Route path="/comments/:postId" element={<ProtectedRoute><Comments /></ProtectedRoute>} />
