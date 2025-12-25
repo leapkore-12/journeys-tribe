@@ -2,19 +2,14 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import { MAPBOX_TOKEN, MAP_STYLES } from '@/lib/mapbox';
-
-interface ConvoyMember {
-  id: string;
-  name: string;
-  avatar?: string;
-  position: [number, number];
-}
+import { ConvoyMemberPresence } from '@/hooks/useConvoyPresence';
+import { createConvoyMarkerElement, getMemberStatus, getStatusColor } from '@/components/convoy/ConvoyMemberMarker';
 
 interface LiveTrackingMapProps {
   userPosition: [number, number] | null;
   destination?: [number, number];
   routeCoordinates?: [number, number][];
-  convoyMembers?: ConvoyMember[];
+  convoyMembers?: ConvoyMemberPresence[];
   onRecenter?: () => void;
   className?: string;
 }
@@ -215,7 +210,10 @@ const LiveTrackingMap = ({
     }
   }, [routeCoordinates, isLoaded]);
 
-  // Update convoy member markers
+  // Track previous member states for smart updates
+  const prevMemberStates = useRef<Map<string, { status: string; speed?: number; heading?: number }>>(new Map());
+
+  // Update convoy member markers with enhanced visuals
   useEffect(() => {
     if (!map.current || !isLoaded) return;
 
@@ -225,34 +223,63 @@ const LiveTrackingMap = ({
       if (!currentIds.has(id)) {
         marker.remove();
         convoyMarkers.current.delete(id);
+        prevMemberStates.current.delete(id);
       }
     });
 
     // Add or update convoy member markers
     convoyMembers.forEach((member) => {
       const existingMarker = convoyMarkers.current.get(member.id);
+      const prevState = prevMemberStates.current.get(member.id);
+      const currentStatus = getMemberStatus(member);
+      
+      // Check if we need to recreate the marker (status, speed, or heading changed significantly)
+      const needsRecreate = prevState && (
+        prevState.status !== currentStatus ||
+        Math.abs((prevState.speed || 0) - (member.speed || 0)) > 5 ||
+        Math.abs((prevState.heading || 0) - (member.heading || 0)) > 30
+      );
 
-      if (existingMarker) {
+      if (existingMarker && !needsRecreate) {
+        // Just update position
         existingMarker.setLngLat(member.position);
       } else {
-        const el = document.createElement('div');
-        el.innerHTML = `
-          <div style="
-            width: 36px;
-            height: 36px;
-            border-radius: 50%;
-            border: 2px solid #22c55e;
-            overflow: hidden;
-            background: #1a1a2e;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
-          ">
-            ${
-              member.avatar
-                ? `<img src="${member.avatar}" style="width: 100%; height: 100%; object-fit: cover;" />`
-                : `<div style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold;">${member.name[0]}</div>`
-            }
-          </div>
-        `;
+        // Remove old marker if exists
+        if (existingMarker) {
+          existingMarker.remove();
+          convoyMarkers.current.delete(member.id);
+        }
+
+        // Create enhanced marker element
+        const el = createConvoyMarkerElement(member);
+        
+        // Add click handler for popup
+        el.addEventListener('click', () => {
+          const status = getMemberStatus(member);
+          const statusColor = getStatusColor(status);
+          const timeSinceUpdate = Math.round((Date.now() - member.lastUpdate) / 1000);
+          
+          new mapboxgl.Popup({ offset: 25, closeButton: true })
+            .setLngLat(member.position)
+            .setHTML(`
+              <div style="padding: 8px; min-width: 150px;">
+                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+                  ${member.avatar 
+                    ? `<img src="${member.avatar}" style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover;" />`
+                    : `<div style="width: 32px; height: 32px; border-radius: 50%; background: #6366f1; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold;">${member.name[0].toUpperCase()}</div>`
+                  }
+                  <div>
+                    <div style="font-weight: 600;">${member.name}</div>
+                    <div style="font-size: 12px; color: ${statusColor}; text-transform: capitalize;">${status}</div>
+                  </div>
+                </div>
+                ${member.vehicleType ? `<div style="font-size: 12px; color: #666; margin-bottom: 4px;">🚗 ${member.vehicleType}</div>` : ''}
+                ${member.speed ? `<div style="font-size: 12px; color: #666; margin-bottom: 4px;">⚡ ${Math.round(member.speed)} km/h</div>` : ''}
+                <div style="font-size: 11px; color: #999;">Updated ${timeSinceUpdate}s ago</div>
+              </div>
+            `)
+            .addTo(map.current!);
+        });
 
         const marker = new mapboxgl.Marker({ element: el, anchor: 'center' })
           .setLngLat(member.position)
@@ -260,6 +287,13 @@ const LiveTrackingMap = ({
 
         convoyMarkers.current.set(member.id, marker);
       }
+
+      // Update previous state
+      prevMemberStates.current.set(member.id, {
+        status: currentStatus,
+        speed: member.speed,
+        heading: member.heading,
+      });
     });
   }, [convoyMembers, isLoaded]);
 
