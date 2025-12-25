@@ -103,6 +103,19 @@ const Notifications = () => {
       );
     }
 
+    // Comment notification
+    if (notification.type === 'comment') {
+      return (
+        <div className="flex-1 min-w-0">
+          <p className="text-foreground text-sm">
+            <span className="font-semibold">{actorName}</span>{' '}
+            <span className="text-muted-foreground">commented on your trip</span>
+          </p>
+          <p className="text-xs text-muted-foreground mt-1">{timeAgo}</p>
+        </div>
+      );
+    }
+
     // Default - follow and other types
     return (
       <div className="flex-1 min-w-0">
@@ -155,8 +168,9 @@ const Notifications = () => {
                 if (notification.type === 'follow' || notification.type === 'follow_accepted') {
                   if (notification.actor_id) navigate(`/user/${notification.actor_id}`);
                 } else if (notification.type === 'like' && notification.trip_id) {
-                  // Could navigate to trip detail if you have that route
                   if (notification.actor_id) navigate(`/user/${notification.actor_id}`);
+                } else if (notification.type === 'comment' && notification.trip_id) {
+                  navigate(`/comments/${notification.trip_id}`);
                 }
               }}
               className={cn(
