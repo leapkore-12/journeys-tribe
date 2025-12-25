@@ -69,11 +69,6 @@ const Login = () => {
     // Refetch admin status and redirect based on role
     const { data: adminStatus } = await refetchAdmin();
     
-    toast({
-      title: "Welcome back!",
-      description: "Successfully logged in to RoadTribe",
-    });
-    
     setIsLoading(false);
     
     if (adminStatus) {
