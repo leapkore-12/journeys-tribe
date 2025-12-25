@@ -54,9 +54,9 @@ const EditVehicle = () => {
   // Populate form with existing vehicle data
   useEffect(() => {
     if (existingVehicle) {
-      setVehicleType(existingVehicle.color || ''); // Using color field for type temporarily
-      setMakeModel(`${existingVehicle.make || ''} ${existingVehicle.model || ''}`.trim());
-      setDescription(existingVehicle.name || '');
+      setVehicleType(existingVehicle.color || '');
+      setMakeModel(existingVehicle.name || ''); // name stores "Audi Q7"
+      setDescription(existingVehicle.make || ''); // make stores specs description
       setPhotos(existingVehicle.vehicle_images || []);
     }
   }, [existingVehicle]);
@@ -89,13 +89,11 @@ const EditVehicle = () => {
           return;
         }
         
-        const [make, ...modelParts] = makeModel.trim().split(' ');
-        const model = modelParts.join(' ');
         
         const newVehicle = await createVehicle.mutateAsync({
-          name: description || makeModel,
-          make: make || null,
-          model: model || null,
+          name: makeModel, // "Audi Q7" → name field (shown as title)
+          make: description || null, // specs → make field (shown as subtitle)
+          model: null,
           color: vehicleType || null,
         });
         
@@ -167,14 +165,12 @@ const EditVehicle = () => {
 
       try {
         setIsSaving(true);
-        const [make, ...modelParts] = makeModel.trim().split(' ');
-        const model = modelParts.join(' ');
 
         await updateVehicle.mutateAsync({
           id: existingId,
-          name: description || makeModel,
-          make: make || null,
-          model: model || null,
+          name: makeModel, // "Audi Q7" → name field (shown as title)
+          make: description || null, // specs → make field (shown as subtitle)
+          model: null,
           color: vehicleType || null,
         });
         toast({
@@ -207,13 +203,11 @@ const EditVehicle = () => {
 
     try {
       setIsSaving(true);
-      const [make, ...modelParts] = makeModel.trim().split(' ');
-      const model = modelParts.join(' ');
 
       await createVehicle.mutateAsync({
-        name: description || makeModel,
-        make: make || null,
-        model: model || null,
+        name: makeModel, // "Audi Q7" → name field (shown as title)
+        make: description || null, // specs → make field (shown as subtitle)
+        model: null,
         color: vehicleType || null,
       });
       toast({
