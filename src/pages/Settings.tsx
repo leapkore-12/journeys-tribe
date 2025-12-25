@@ -3,8 +3,10 @@ import { ArrowLeft, ChevronRight, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
+import { useCurrentProfile } from '@/hooks/useProfile';
+import { useFollowing } from '@/hooks/useFollows';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -20,25 +22,57 @@ import { supabase } from '@/integrations/supabase/client';
 const Settings = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { signOut } = useAuth();
+  const { signOut, user } = useAuth();
+  const { data: profile } = useCurrentProfile();
+  const { data: following } = useFollowing();
   const [isPrivate, setIsPrivate] = useState(false);
+  const [isUpdatingPrivacy, setIsUpdatingPrivacy] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
-  const tribeCount = 20; // Mock data
+
+  // Sync privacy state with profile
+  useEffect(() => {
+    if (profile) {
+      setIsPrivate(profile.is_private || false);
+    }
+  }, [profile]);
+
+  const tribeCount = following?.length || 0;
 
   const handleLogout = async () => {
     await signOut();
     toast({ title: "Logged out", description: "See you on the road!" });
   };
 
-  const handlePrivateToggle = (checked: boolean) => {
-    setIsPrivate(checked);
-    toast({
-      title: checked ? "Account is now private" : "Account is now public",
-      description: checked 
-        ? "Only approved followers can see your content" 
-        : "Anyone can see your content",
-    });
+  const handlePrivateToggle = async (checked: boolean) => {
+    if (!user?.id) return;
+    
+    setIsUpdatingPrivacy(true);
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ is_private: checked })
+        .eq('id', user.id);
+      
+      if (error) throw error;
+      
+      setIsPrivate(checked);
+      toast({
+        title: checked ? "Account is now private" : "Account is now public",
+        description: checked 
+          ? "Only approved followers can see your content" 
+          : "Anyone can see your content",
+      });
+    } catch (error) {
+      console.error('Error updating privacy:', error);
+      toast({
+        title: "Failed to update privacy",
+        description: "Please try again",
+        variant: "destructive",
+      });
+    } finally {
+      setIsUpdatingPrivacy(false);
+    }
   };
 
   const handleDeleteAccount = async () => {
@@ -141,6 +175,7 @@ const Settings = () => {
           <Switch 
             checked={isPrivate} 
             onCheckedChange={handlePrivateToggle}
+            disabled={isUpdatingPrivacy}
           />
         </div>
 

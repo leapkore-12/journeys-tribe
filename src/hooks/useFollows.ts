@@ -99,16 +99,108 @@ export const useIsFollowing = (targetUserId: string) => {
   });
 };
 
+// Check if current user has a pending follow request to target
+export const usePendingRequest = (targetUserId: string) => {
+  const { user } = useAuth();
+  return useQuery({
+    queryKey: ['pending-request', user?.id, targetUserId],
+    queryFn: async () => {
+      if (!user?.id || !targetUserId) return null;
+      const { data } = await supabase
+        .from('follow_requests')
+        .select('id')
+        .eq('requester_id', user.id)
+        .eq('target_id', targetUserId)
+        .eq('status', 'pending')
+        .maybeSingle();
+      return data;
+    },
+    enabled: !!user?.id && !!targetUserId,
+  });
+};
+
+// Get mutual followers (followers of target that current user also follows)
+export const useMutualFollowers = (targetUserId: string) => {
+  const { user } = useAuth();
+  return useQuery({
+    queryKey: ['mutual-followers', user?.id, targetUserId],
+    queryFn: async (): Promise<{ profiles: Array<{ id: string; username: string | null; display_name: string | null; avatar_url: string | null }>; totalCount: number }> => {
+      if (!user?.id || !targetUserId || user.id === targetUserId) {
+        return { profiles: [], totalCount: 0 };
+      }
+      
+      // Get target's followers
+      const { data: targetFollowers } = await supabase
+        .from('follows')
+        .select('follower_id')
+        .eq('following_id', targetUserId);
+      
+      if (!targetFollowers || targetFollowers.length === 0) {
+        return { profiles: [], totalCount: 0 };
+      }
+      
+      // Get users that current user follows
+      const { data: myFollowing } = await supabase
+        .from('follows')
+        .select('following_id')
+        .eq('follower_id', user.id);
+      
+      if (!myFollowing) {
+        return { profiles: [], totalCount: 0 };
+      }
+      
+      const myFollowingIds = new Set(myFollowing.map(f => f.following_id));
+      const mutualIds = targetFollowers
+        .map(f => f.follower_id)
+        .filter(id => myFollowingIds.has(id));
+      
+      if (mutualIds.length === 0) {
+        return { profiles: [], totalCount: 0 };
+      }
+      
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('id, username, display_name, avatar_url')
+        .in('id', mutualIds)
+        .limit(3);
+      
+      return { profiles: profiles || [], totalCount: mutualIds.length };
+    },
+    enabled: !!user?.id && !!targetUserId && user.id !== targetUserId,
+  });
+};
+
 export const useFollowUser = () => {
   const queryClient = useQueryClient();
   const { user } = useAuth();
   return useMutation({
     mutationFn: async (targetUserId: string) => {
       if (!user?.id) throw new Error('Not authenticated');
-      await supabase.from('follows').insert({ follower_id: user.id, following_id: targetUserId });
+      
+      // Check if target is a private account
+      const { data: targetProfile } = await supabase
+        .from('profiles')
+        .select('is_private')
+        .eq('id', targetUserId)
+        .single();
+      
+      if (targetProfile?.is_private) {
+        // Create a follow request instead of direct follow
+        await supabase.from('follow_requests').insert({
+          requester_id: user.id,
+          target_id: targetUserId,
+          status: 'pending'
+        });
+        return { type: 'request' };
+      } else {
+        // Direct follow for public accounts
+        await supabase.from('follows').insert({ follower_id: user.id, following_id: targetUserId });
+        return { type: 'follow' };
+      }
     },
-    onSuccess: (_, targetUserId) => {
+    onSuccess: (result, targetUserId) => {
       queryClient.invalidateQueries({ queryKey: ['is-following', user?.id, targetUserId] });
+      queryClient.invalidateQueries({ queryKey: ['pending-request', user?.id, targetUserId] });
       queryClient.invalidateQueries({ queryKey: ['following'] });
       queryClient.invalidateQueries({ queryKey: ['followers'] });
       queryClient.invalidateQueries({ queryKey: ['profile'] });
@@ -133,9 +225,28 @@ export const useUnfollowUser = () => {
   });
 };
 
-export const useAcceptFollowRequest = () => {
+export const useCancelFollowRequest = () => {
   const queryClient = useQueryClient();
   const { user } = useAuth();
+  return useMutation({
+    mutationFn: async (targetUserId: string) => {
+      if (!user?.id) throw new Error('Not authenticated');
+      await supabase
+        .from('follow_requests')
+        .delete()
+        .eq('requester_id', user.id)
+        .eq('target_id', targetUserId)
+        .eq('status', 'pending');
+    },
+    onSuccess: (_, targetUserId) => {
+      queryClient.invalidateQueries({ queryKey: ['pending-request', user?.id, targetUserId] });
+      queryClient.invalidateQueries({ queryKey: ['follow-requests'] });
+    },
+  });
+};
+
+export const useAcceptFollowRequest = () => {
+  const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (requestId: string) => {
       const { data: request } = await supabase.from('follow_requests').select('*').eq('id', requestId).single();

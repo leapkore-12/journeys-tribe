@@ -1,12 +1,19 @@
 import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Search, Settings, Flag, BarChart3, Car, ArrowLeft } from 'lucide-react';
+import { Flag, BarChart3, Car, ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useToast } from '@/hooks/use-toast';
 import { useProfile } from '@/hooks/useProfile';
 import { useUserTrips } from '@/hooks/useTrips';
-import { useIsFollowing, useFollowUser, useUnfollowUser } from '@/hooks/useFollows';
+import { 
+  useIsFollowing, 
+  useFollowUser, 
+  useUnfollowUser, 
+  usePendingRequest, 
+  useCancelFollowRequest,
+  useMutualFollowers 
+} from '@/hooks/useFollows';
 import ProfileTripCard from '@/components/ProfileTripCard';
 import { Skeleton } from '@/components/ui/skeleton';
 
@@ -34,13 +41,25 @@ const UserProfile = () => {
   const { data: profile, isLoading: profileLoading } = useProfile(userId);
   const { data: trips, isLoading: tripsLoading } = useUserTrips(userId);
   const { data: isFollowing } = useIsFollowing(userId || '');
+  const { data: pendingRequest } = usePendingRequest(userId || '');
+  const { data: mutualFollowers } = useMutualFollowers(userId || '');
   const followMutation = useFollowUser();
   const unfollowMutation = useUnfollowUser();
+  const cancelRequestMutation = useCancelFollowRequest();
 
-  const handleFollow = () => {
+  // Determine button state: 'follow' | 'requested' | 'following'
+  const getFollowState = () => {
+    if (isFollowing) return 'following';
+    if (pendingRequest) return 'requested';
+    return 'follow';
+  };
+
+  const followState = getFollowState();
+
+  const handleFollowAction = () => {
     if (!userId) return;
     
-    if (isFollowing) {
+    if (followState === 'following') {
       unfollowMutation.mutate(userId, {
         onSuccess: () => {
           toast({
@@ -49,16 +68,44 @@ const UserProfile = () => {
           });
         }
       });
-    } else {
-      followMutation.mutate(userId, {
+    } else if (followState === 'requested') {
+      cancelRequestMutation.mutate(userId, {
         onSuccess: () => {
           toast({
-            title: "Following",
-            description: `You are now following ${profile?.display_name || 'this user'}`,
+            title: "Request cancelled",
+            description: "Your follow request has been cancelled",
           });
         }
       });
+    } else {
+      followMutation.mutate(userId, {
+        onSuccess: (result) => {
+          if (result.type === 'request') {
+            toast({
+              title: "Request sent",
+              description: `Follow request sent to ${profile?.display_name || 'this user'}`,
+            });
+          } else {
+            toast({
+              title: "Following",
+              description: `You are now following ${profile?.display_name || 'this user'}`,
+            });
+          }
+        }
+      });
     }
+  };
+
+  const getButtonText = () => {
+    if (followState === 'following') return 'Following';
+    if (followState === 'requested') return 'Requested';
+    return 'Follow';
+  };
+
+  const getButtonStyle = () => {
+    if (followState === 'following') return 'bg-secondary text-foreground';
+    if (followState === 'requested') return 'bg-muted text-muted-foreground';
+    return 'bg-primary text-primary-foreground';
   };
 
   const stats = {
@@ -133,12 +180,25 @@ const UserProfile = () => {
                 <span className="text-sm text-muted-foreground">followers</span>
               </div>
               <div className="flex flex-col">
-                <span className="text-xl font-bold text-foreground">{profile?.vehicles_count || 0}</span>
-                <span className="text-sm text-muted-foreground">vehicles</span>
+                <span className="text-xl font-bold text-foreground">{profile?.following_count || 0}</span>
+                <span className="text-sm text-muted-foreground">following</span>
               </div>
             </div>
           </div>
         </div>
+
+        {/* Mutual Followers */}
+        {mutualFollowers && mutualFollowers.profiles && mutualFollowers.profiles.length > 0 && (
+          <p className="text-sm text-muted-foreground mt-2">
+            Followed by{' '}
+            <span className="text-foreground">
+              {mutualFollowers.profiles.map(p => p.display_name || p.username).join(', ')}
+            </span>
+            {mutualFollowers.totalCount > 3 && (
+              <span> and {mutualFollowers.totalCount - 3} others</span>
+            )}
+          </p>
+        )}
 
         {/* Bio */}
         <p className="text-foreground mt-4">{profile?.bio || 'No bio yet'}</p>
@@ -146,15 +206,11 @@ const UserProfile = () => {
         {/* Action Buttons */}
         <div className="mt-6 flex gap-3">
           <Button
-            onClick={handleFollow}
-            disabled={followMutation.isPending || unfollowMutation.isPending}
-            className={`flex-1 h-11 font-medium ${
-              isFollowing
-                ? 'bg-secondary text-foreground'
-                : 'bg-primary text-primary-foreground'
-            }`}
+            onClick={handleFollowAction}
+            disabled={followMutation.isPending || unfollowMutation.isPending || cancelRequestMutation.isPending}
+            className={`flex-1 h-11 font-medium ${getButtonStyle()}`}
           >
-            {isFollowing ? 'Following' : 'Follow'}
+            {getButtonText()}
           </Button>
           <Button
             variant="outline"
