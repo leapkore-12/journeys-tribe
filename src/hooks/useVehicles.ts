@@ -166,3 +166,31 @@ export const useUploadVehicleImage = () => {
     },
   });
 };
+
+export const useDeleteVehicleImage = () => {
+  const queryClient = useQueryClient();
+  const { user } = useAuth();
+
+  return useMutation({
+    mutationFn: async ({ imageId, imageUrl }: { imageId: string; imageUrl: string }) => {
+      // Extract path from URL and delete from storage
+      const pathMatch = imageUrl.match(/vehicle-images\/(.+)$/);
+      if (pathMatch) {
+        const path = decodeURIComponent(pathMatch[1]);
+        await supabase.storage.from('vehicle-images').remove([path]);
+      }
+      
+      // Delete from database
+      const { error } = await supabase
+        .from('vehicle_images')
+        .delete()
+        .eq('id', imageId);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['vehicles', user?.id] });
+      queryClient.invalidateQueries({ queryKey: ['vehicle'] });
+    },
+  });
+};
