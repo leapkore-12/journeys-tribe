@@ -21,7 +21,7 @@ const Feed = () => {
   };
 
   return (
-    <div className="flex flex-col bg-background safe-top">
+    <div className="flex flex-col bg-background">
       {/* Header - Search Left, Logo Center, Bell Right */}
       <header className="sticky top-0 z-40 bg-background border-b border-border">
         <div className="flex items-center justify-between px-4 h-14">

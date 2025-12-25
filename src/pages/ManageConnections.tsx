@@ -66,17 +66,17 @@ const ManageConnections = () => {
     <div className="min-h-screen bg-background">
       {/* Header */}
       <header className="sticky top-0 z-50 bg-background/95 backdrop-blur-sm border-b border-border">
-        <div className="flex items-center justify-between px-4 py-4">
+        <div className="flex items-center justify-between px-4 h-14">
           <button 
             onClick={() => navigate(-1)}
-            className="w-6 h-6 flex items-center justify-center"
+            className="w-10 h-10 flex items-center justify-center"
           >
             <ArrowLeft className="h-6 w-6 text-primary" />
           </button>
           <h1 className="flex-1 text-center text-lg font-semibold text-foreground">
             Manage connections
           </h1>
-          <div className="w-6" />
+          <div className="w-10" />
         </div>
       </header>
 

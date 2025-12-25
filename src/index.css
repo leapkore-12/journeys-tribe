@@ -107,9 +107,14 @@
   body {
     @apply bg-background text-foreground antialiased;
     font-family: 'Inter', sans-serif;
+    /* iOS Safe Area - apply to body for proper touch handling */
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
   }
 
-  /* Safe area handling for iOS */
+  /* Safe area handling for iOS - utility classes */
   .safe-top {
     padding-top: env(safe-area-inset-top);
   }
@@ -124,6 +129,16 @@
 
   .safe-right {
     padding-right: env(safe-area-inset-right);
+  }
+
+  /* Fix for sticky/fixed headers on iOS */
+  .sticky-header-ios {
+    top: env(safe-area-inset-top);
+  }
+
+  /* Fix for fixed bottom elements on iOS */
+  .fixed-bottom-ios {
+    bottom: env(safe-area-inset-bottom);
   }
 }
 
