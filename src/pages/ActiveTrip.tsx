@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
   ChevronLeft, Phone, ArrowUp, Mic, Compass,
   Search, X, AlertTriangle, LocateFixed, Route,
-  Share2, Users, Pause
+  Share2, Users, Pause, WifiOff, Loader2
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useTrip } from '@/context/TripContext';
@@ -12,6 +12,8 @@ import { useGeolocation } from '@/hooks/useGeolocation';
 import { useMapboxRoute } from '@/hooks/useMapboxRoute';
 import { useConvoyPresence } from '@/hooks/useConvoyPresence';
 import { useConvoyInvites } from '@/hooks/useConvoyInvites';
+import { useOfflineTracking } from '@/hooks/useOfflineTracking';
+import { useActiveTrip } from '@/hooks/useActiveTrip';
 import { useToast } from '@/hooks/use-toast';
 import LiveTrackingMap from '@/components/map/LiveTrackingMap';
 import ConvoyPanel from '@/components/convoy/ConvoyPanel';
@@ -43,6 +45,18 @@ const ActiveTrip = () => {
   // Route fetching
   const { route, getRoute } = useMapboxRoute();
 
+  // Offline tracking support
+  const {
+    isOnline,
+    isSyncing,
+    bufferedCount,
+    handlePositionUpdate,
+    syncBufferedPoints,
+  } = useOfflineTracking(activeTripId);
+
+  // Active trip DB persistence
+  const { updatePosition: updateTripPosition } = useActiveTrip();
+
   // Real-time convoy presence tracking
   const { 
     members: convoyMembers, 
@@ -52,7 +66,7 @@ const ActiveTrip = () => {
     leaveConvoy,
   } = useConvoyPresence({ 
     tripId: activeTripId, 
-    enabled: tripState.isActive,
+    enabled: tripState.isActive && isOnline,
     onMemberJoin: (member) => {
       toast({
         title: 'Rider joined',
@@ -74,12 +88,40 @@ const ActiveTrip = () => {
   // Convoy invites
   const { createInvite, copyInviteLink, getShareLink } = useConvoyInvites();
 
-  // Update convoy position when user moves
+  // Update convoy position when user moves (handles online/offline)
   useEffect(() => {
-    if (userPosition && isConvoyConnected) {
-      updatePosition(userPosition, heading, speed);
+    if (userPosition) {
+      handlePositionUpdate(
+        userPosition,
+        heading,
+        speed,
+        // This callback is called when online
+        () => {
+          if (isConvoyConnected) {
+            updatePosition(userPosition, heading, speed);
+          }
+        }
+      );
     }
-  }, [userPosition, heading, speed, isConvoyConnected, updatePosition]);
+  }, [userPosition, heading, speed, isConvoyConnected, updatePosition, handlePositionUpdate]);
+
+  // Auto-sync buffered points when back online
+  useEffect(() => {
+    if (isOnline && bufferedCount > 0) {
+      syncBufferedPoints(async (points) => {
+        // Update last position in active_trips table
+        const lastPoint = points[points.length - 1];
+        if (lastPoint) {
+          await updateTripPosition.mutateAsync({
+            activeTripId,
+            position: lastPoint.position,
+            heading: lastPoint.heading,
+            speed: lastPoint.speed,
+          });
+        }
+      });
+    }
+  }, [isOnline, bufferedCount, syncBufferedPoints, updateTripPosition, activeTripId]);
 
   // Start GPS tracking on mount
   useEffect(() => {
@@ -205,8 +247,51 @@ const ActiveTrip = () => {
         </div>
       </div>
 
+      {/* Offline Status Banner */}
+      <AnimatePresence>
+        {!isOnline && (
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            className="absolute top-16 left-4 right-4 z-30"
+          >
+            <div className="bg-yellow-600 rounded-lg px-4 py-2 flex items-center gap-2 shadow-lg">
+              <WifiOff className="h-4 w-4 text-white flex-shrink-0" />
+              <span className="text-white text-sm font-medium flex-1">
+                Offline - Recording continues
+              </span>
+              {bufferedCount > 0 && (
+                <span className="text-white/80 text-xs bg-white/20 px-2 py-0.5 rounded-full">
+                  {bufferedCount} points buffered
+                </span>
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Syncing Status Banner */}
+      <AnimatePresence>
+        {isSyncing && (
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            className="absolute top-16 left-4 right-4 z-30"
+          >
+            <div className="bg-primary rounded-lg px-4 py-2 flex items-center gap-2 shadow-lg">
+              <Loader2 className="h-4 w-4 text-primary-foreground animate-spin" />
+              <span className="text-primary-foreground text-sm font-medium">
+                Syncing {bufferedCount} location points...
+              </span>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Direction Banner */}
-      <div className="absolute top-20 left-4 right-4 z-10">
+      <div className={`absolute ${!isOnline || isSyncing ? 'top-32' : 'top-20'} left-4 right-4 z-10 transition-all`}>
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -248,14 +333,15 @@ const ActiveTrip = () => {
 
       {/* Re-centre Button and Convoy Status */}
       <div className="absolute left-4 bottom-56 z-10 space-y-2">
-        {isConvoyConnected && activeMembers.length > 0 && (
+        {(isConvoyConnected && activeMembers.length > 0) || !isOnline ? (
           <ConvoyStatusBar
             members={activeMembers}
             isConnected={isConvoyConnected}
-            isOnline={true}
+            isOnline={isOnline}
+            bufferedCount={bufferedCount}
             onShareInvite={handleShareInvite}
           />
-        )}
+        ) : null}
         <button 
           onClick={() => getCurrentPosition()}
           className="px-4 py-2 bg-card rounded-full flex items-center gap-2 shadow-lg"

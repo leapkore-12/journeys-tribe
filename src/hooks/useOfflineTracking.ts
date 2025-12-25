@@ -1,20 +1,24 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
+import { useToast } from '@/hooks/use-toast';
 
 interface LocationPoint {
   position: [number, number];
   heading?: number;
   speed?: number;
   timestamp: number;
+  tripId?: string;
 }
 
 const DB_NAME = 'roadtribe_offline';
 const STORE_NAME = 'location_buffer';
 const DB_VERSION = 1;
 
-export const useOfflineTracking = () => {
+export const useOfflineTracking = (tripId?: string) => {
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [bufferedPoints, setBufferedPoints] = useState<LocationPoint[]>([]);
+  const [isSyncing, setIsSyncing] = useState(false);
   const dbRef = useRef<IDBDatabase | null>(null);
+  const { toast } = useToast();
 
   // Initialize IndexedDB
   useEffect(() => {
@@ -28,7 +32,8 @@ export const useOfflineTracking = () => {
         request.onupgradeneeded = (event) => {
           const db = (event.target as IDBOpenDBRequest).result;
           if (!db.objectStoreNames.contains(STORE_NAME)) {
-            db.createObjectStore(STORE_NAME, { keyPath: 'timestamp' });
+            const store = db.createObjectStore(STORE_NAME, { keyPath: 'timestamp' });
+            store.createIndex('tripId', 'tripId', { unique: false });
           }
         };
       });
@@ -46,8 +51,24 @@ export const useOfflineTracking = () => {
 
   // Track online/offline status
   useEffect(() => {
-    const handleOnline = () => setIsOnline(true);
-    const handleOffline = () => setIsOnline(false);
+    const handleOnline = () => {
+      setIsOnline(true);
+      toast({
+        title: 'Back online',
+        description: bufferedPoints.length > 0 
+          ? `Syncing ${bufferedPoints.length} buffered points...`
+          : 'Connection restored',
+      });
+    };
+    
+    const handleOffline = () => {
+      setIsOnline(false);
+      toast({
+        title: 'You are offline',
+        description: 'Trip recording continues - data will sync when reconnected',
+        variant: 'destructive',
+      });
+    };
 
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
@@ -56,7 +77,7 @@ export const useOfflineTracking = () => {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
     };
-  }, []);
+  }, [bufferedPoints.length, toast]);
 
   // Load buffered points from IndexedDB
   const loadBufferedPoints = useCallback(async () => {
@@ -64,33 +85,61 @@ export const useOfflineTracking = () => {
 
     const transaction = dbRef.current.transaction(STORE_NAME, 'readonly');
     const store = transaction.objectStore(STORE_NAME);
-    const request = store.getAll();
-
-    request.onsuccess = () => {
-      setBufferedPoints(request.result);
-    };
-  }, []);
+    
+    // If tripId provided, filter by it
+    if (tripId) {
+      const index = store.index('tripId');
+      const request = index.getAll(tripId);
+      request.onsuccess = () => {
+        setBufferedPoints(request.result);
+      };
+    } else {
+      const request = store.getAll();
+      request.onsuccess = () => {
+        setBufferedPoints(request.result);
+      };
+    }
+  }, [tripId]);
 
   // Buffer a location point when offline
-  const bufferPoint = useCallback(async (point: LocationPoint) => {
+  const bufferPoint = useCallback(async (point: Omit<LocationPoint, 'tripId'>) => {
     if (!dbRef.current) return;
+
+    const pointWithTrip: LocationPoint = {
+      ...point,
+      tripId,
+    };
 
     const transaction = dbRef.current.transaction(STORE_NAME, 'readwrite');
     const store = transaction.objectStore(STORE_NAME);
-    store.add(point);
+    store.add(pointWithTrip);
 
-    setBufferedPoints((prev) => [...prev, point]);
-  }, []);
+    setBufferedPoints((prev) => [...prev, pointWithTrip]);
+  }, [tripId]);
 
   // Clear buffered points after sync
-  const clearBuffer = useCallback(async () => {
+  const clearBuffer = useCallback(async (specificTripId?: string) => {
     if (!dbRef.current) return;
 
     const transaction = dbRef.current.transaction(STORE_NAME, 'readwrite');
     const store = transaction.objectStore(STORE_NAME);
-    store.clear();
-
-    setBufferedPoints([]);
+    
+    if (specificTripId) {
+      // Clear only points for specific trip
+      const index = store.index('tripId');
+      const request = index.openCursor(specificTripId);
+      request.onsuccess = (event) => {
+        const cursor = (event.target as IDBRequest<IDBCursorWithValue>).result;
+        if (cursor) {
+          cursor.delete();
+          cursor.continue();
+        }
+      };
+      setBufferedPoints((prev) => prev.filter(p => p.tripId !== specificTripId));
+    } else {
+      store.clear();
+      setBufferedPoints([]);
+    }
   }, []);
 
   // Get all buffered points for syncing
@@ -98,7 +147,7 @@ export const useOfflineTracking = () => {
     return bufferedPoints;
   }, [bufferedPoints]);
 
-  // Handle position update (buffers if offline)
+  // Handle position update (buffers if offline, calls callback if online)
   const handlePositionUpdate = useCallback(
     async (
       position: [number, number],
@@ -111,34 +160,50 @@ export const useOfflineTracking = () => {
         heading,
         speed,
         timestamp: Date.now(),
+        tripId,
       };
 
       if (isOnline && onlineCallback) {
         onlineCallback(point);
-      } else {
+      } else if (!isOnline) {
         await bufferPoint(point);
       }
     },
-    [isOnline, bufferPoint]
+    [isOnline, bufferPoint, tripId]
   );
 
   // Sync buffered points when back online
   const syncBufferedPoints = useCallback(
     async (syncCallback: (points: LocationPoint[]) => Promise<void>) => {
-      if (!isOnline || bufferedPoints.length === 0) return;
+      if (!isOnline || bufferedPoints.length === 0 || isSyncing) return false;
 
+      setIsSyncing(true);
       try {
         await syncCallback(bufferedPoints);
-        await clearBuffer();
+        await clearBuffer(tripId);
+        toast({
+          title: 'Sync complete',
+          description: `Synced ${bufferedPoints.length} location points`,
+        });
+        return true;
       } catch (error) {
         console.error('Failed to sync buffered points:', error);
+        toast({
+          title: 'Sync failed',
+          description: 'Will retry when connection is stable',
+          variant: 'destructive',
+        });
+        return false;
+      } finally {
+        setIsSyncing(false);
       }
     },
-    [isOnline, bufferedPoints, clearBuffer]
+    [isOnline, bufferedPoints, clearBuffer, tripId, isSyncing, toast]
   );
 
   return {
     isOnline,
+    isSyncing,
     bufferedPoints,
     bufferPoint,
     clearBuffer,
