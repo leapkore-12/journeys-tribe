@@ -8,6 +8,7 @@ interface ConvoyStatusBarProps {
   members: ConvoyMemberPresence[];
   isConnected: boolean;
   isOnline: boolean;
+  bufferedCount?: number;
   onShareInvite?: () => void;
   className?: string;
 }
@@ -16,6 +17,7 @@ const ConvoyStatusBar: React.FC<ConvoyStatusBarProps> = ({
   members,
   isConnected,
   isOnline,
+  bufferedCount = 0,
   onShareInvite,
   className = '',
 }) => {
@@ -42,6 +44,8 @@ const ConvoyStatusBar: React.FC<ConvoyStatusBarProps> = ({
         className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium shadow-lg ${
           isConnected && isOnline
             ? 'bg-primary text-primary-foreground'
+            : !isOnline
+            ? 'bg-yellow-600 text-white'
             : 'bg-destructive text-destructive-foreground'
         }`}
       >
@@ -50,15 +54,22 @@ const ConvoyStatusBar: React.FC<ConvoyStatusBarProps> = ({
         ) : (
           <WifiOff className="h-3 w-3" />
         )}
-        {isConnected ? (
+        {!isOnline ? (
+          <>
+            <span>Offline</span>
+            {bufferedCount > 0 && (
+              <span className="bg-white/20 px-1.5 py-0.5 rounded text-[10px]">
+                {bufferedCount} buffered
+              </span>
+            )}
+          </>
+        ) : isConnected ? (
           <>
             <div className="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse" />
             <span>{members.length} in convoy</span>
           </>
-        ) : isOnline ? (
-          <span>Connecting...</span>
         ) : (
-          <span>Offline</span>
+          <span>Connecting...</span>
         )}
       </div>
 
