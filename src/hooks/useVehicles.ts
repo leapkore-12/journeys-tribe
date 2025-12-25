@@ -222,3 +222,31 @@ export const useSetPrimaryVehicle = () => {
     },
   });
 };
+
+// Set a specific image as primary for a vehicle
+export const useSetPrimaryImage = () => {
+  const queryClient = useQueryClient();
+  const { user } = useAuth();
+
+  return useMutation({
+    mutationFn: async ({ vehicleId, imageId }: { vehicleId: string; imageId: string }) => {
+      // Unset all primary flags for this vehicle's images
+      await supabase
+        .from('vehicle_images')
+        .update({ is_primary: false })
+        .eq('vehicle_id', vehicleId);
+      
+      // Set selected image as primary
+      const { error } = await supabase
+        .from('vehicle_images')
+        .update({ is_primary: true })
+        .eq('id', imageId);
+
+      if (error) throw error;
+    },
+    onSuccess: (_, { vehicleId }) => {
+      queryClient.invalidateQueries({ queryKey: ['vehicle', vehicleId] });
+      queryClient.invalidateQueries({ queryKey: ['vehicles', user?.id] });
+    },
+  });
+};
