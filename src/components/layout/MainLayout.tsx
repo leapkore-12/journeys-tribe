@@ -2,6 +2,7 @@ import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { Menu, CircleDot, CreditCard } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
+import { useRealtimeNotifications } from '@/hooks/useNotifications';
 
 const tabs = [
   { path: '/feed', icon: Menu, label: 'Feed' },
@@ -12,6 +13,9 @@ const tabs = [
 const MainLayout = () => {
   const location = useLocation();
   const navigate = useNavigate();
+  
+  // Enable real-time notification updates across the app
+  useRealtimeNotifications();
   
   // Hide bottom nav on certain pages
   const hideBottomNav = ['/trip/active', '/trip/complete'].some(p => location.pathname.startsWith(p));

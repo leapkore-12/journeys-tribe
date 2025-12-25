@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/context/AuthContext';
 import { Tables } from '@/integrations/supabase/types';
@@ -86,4 +87,34 @@ export const useDeleteNotification = () => {
       queryClient.invalidateQueries({ queryKey: ['notifications', user?.id] });
     },
   });
+};
+
+export const useRealtimeNotifications = () => {
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
+
+  useEffect(() => {
+    if (!user?.id) return;
+
+    const channel = supabase
+      .channel('notifications-realtime')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'notifications',
+          filter: `user_id=eq.${user.id}`,
+        },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ['notifications', user.id] });
+          queryClient.invalidateQueries({ queryKey: ['unread-notifications', user.id] });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user?.id, queryClient]);
 };
