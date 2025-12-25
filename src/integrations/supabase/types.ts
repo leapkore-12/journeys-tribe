@@ -14,6 +14,50 @@ export type Database = {
   }
   public: {
     Tables: {
+      active_trips: {
+        Row: {
+          created_at: string | null
+          id: string
+          last_position: Json | null
+          paused_at: string | null
+          started_at: string | null
+          status: string
+          trip_id: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          last_position?: Json | null
+          paused_at?: string | null
+          started_at?: string | null
+          status?: string
+          trip_id: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          last_position?: Json | null
+          paused_at?: string | null
+          started_at?: string | null
+          status?: string
+          trip_id?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "active_trips_trip_id_fkey"
+            columns: ["trip_id"]
+            isOneToOne: false
+            referencedRelation: "trips"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       comments: {
         Row: {
           content: string
@@ -49,26 +93,83 @@ export type Database = {
           },
         ]
       }
+      convoy_invites: {
+        Row: {
+          created_at: string | null
+          expires_at: string
+          id: string
+          invite_code: string
+          invitee_id: string | null
+          inviter_id: string
+          status: string
+          trip_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          expires_at?: string
+          id?: string
+          invite_code: string
+          invitee_id?: string | null
+          inviter_id: string
+          status?: string
+          trip_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          expires_at?: string
+          id?: string
+          invite_code?: string
+          invitee_id?: string | null
+          inviter_id?: string
+          status?: string
+          trip_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "convoy_invites_trip_id_fkey"
+            columns: ["trip_id"]
+            isOneToOne: false
+            referencedRelation: "trips"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       convoy_members: {
         Row: {
           id: string
+          invite_id: string | null
           joined_at: string | null
+          status: string | null
           trip_id: string
           user_id: string
         }
         Insert: {
           id?: string
+          invite_id?: string | null
           joined_at?: string | null
+          status?: string | null
           trip_id: string
           user_id: string
         }
         Update: {
           id?: string
+          invite_id?: string | null
           joined_at?: string | null
+          status?: string | null
           trip_id?: string
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "convoy_members_invite_id_fkey"
+            columns: ["invite_id"]
+            isOneToOne: false
+            referencedRelation: "convoy_invites"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "convoy_members_trip_id_fkey"
             columns: ["trip_id"]
@@ -465,6 +566,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      generate_invite_code: { Args: never; Returns: string }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
