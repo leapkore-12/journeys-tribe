@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Plus, Image, X, Loader2, Star, Trash2 } from 'lucide-react';
+import { ArrowLeft, Plus, X, Loader2, Star, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -30,10 +30,10 @@ import {
   useUploadVehicleImage,
   useDeleteVehicleImage,
   useDeleteVehicle,
-  useSetPrimaryVehicle,
+  useSetPrimaryImage,
   VehicleImage
 } from '@/hooks/useVehicles';
-import { pickPhotoAsFile } from '@/lib/capacitor-utils';
+import { pickMultiplePhotosAsFiles } from '@/lib/capacitor-utils';
 import { useToast } from '@/hooks/use-toast';
 
 const EditVehicle = () => {
@@ -42,7 +42,7 @@ const EditVehicle = () => {
   const { toast } = useToast();
   
   // Get existing vehicle if editing
-  const { data: existingVehicle, isLoading: isLoadingVehicle } = useVehicle(id || '');
+  const { data: existingVehicle, isLoading: isLoadingVehicle, refetch: refetchVehicle } = useVehicle(id || '');
   
   // Get user profile to check plan type
   const { data: profile } = useCurrentProfile();
@@ -55,18 +55,19 @@ const EditVehicle = () => {
   const uploadImage = useUploadVehicleImage();
   const deleteImage = useDeleteVehicleImage();
   const deleteVehicle = useDeleteVehicle();
-  const setPrimaryVehicle = useSetPrimaryVehicle();
+  const setPrimaryImage = useSetPrimaryImage();
   
   // Form state
   const [vehicleType, setVehicleType] = useState<string>('');
   const [makeModel, setMakeModel] = useState('');
   const [description, setDescription] = useState('');
-  const [photos, setPhotos] = useState<VehicleImage[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
-  const [isSettingPrimary, setIsSettingPrimary] = useState(false);
   const [createdVehicleId, setCreatedVehicleId] = useState<string | null>(null);
+
+  // Use photos from existingVehicle data for real-time updates
+  const photos: VehicleImage[] = existingVehicle?.vehicle_images || [];
 
   // Populate form with existing vehicle data
   useEffect(() => {
@@ -74,12 +75,13 @@ const EditVehicle = () => {
       setVehicleType(existingVehicle.color || '');
       setMakeModel(existingVehicle.name || '');
       setDescription(existingVehicle.make || '');
-      setPhotos(existingVehicle.vehicle_images || []);
     }
   }, [existingVehicle]);
 
   const handleAddPhoto = async () => {
-    if (!isPaidUser && photos.length >= maxPhotos) {
+    const currentPhotoCount = photos.length;
+    
+    if (!isPaidUser && currentPhotoCount >= maxPhotos) {
       toast({
         title: "Photo limit reached",
         description: `Free users can upload up to ${maxPhotos} photos per vehicle. Upgrade to Pro for unlimited photos.`,
@@ -115,27 +117,47 @@ const EditVehicle = () => {
         setCreatedVehicleId(vehicleId);
         toast({
           title: "Vehicle created",
-          description: "Now uploading your photo...",
+          description: "Now uploading your photos...",
         });
       }
 
-      const file = await pickPhotoAsFile();
+      // Pick multiple photos
+      const files = await pickMultiplePhotosAsFiles();
       
-      if (!file) {
+      if (!files.length) {
         setIsUploading(false);
         return;
       }
 
-      await uploadImage.mutateAsync({ vehicleId, file });
+      // Check limit for bulk upload
+      const allowedCount = isPaidUser ? files.length : Math.min(files.length, maxPhotos - currentPhotoCount);
+      
+      if (allowedCount < files.length) {
+        toast({
+          title: "Some photos skipped",
+          description: `Only ${allowedCount} photo(s) will be uploaded due to the free plan limit.`,
+        });
+      }
+
+      // Upload all allowed photos
+      for (let i = 0; i < allowedCount; i++) {
+        await uploadImage.mutateAsync({ vehicleId, file: files[i] });
+      }
+
+      // Refetch to show new photos
+      if (id) {
+        await refetchVehicle();
+      }
+
       toast({
-        title: "Photo uploaded",
-        description: "Your photo has been added to this vehicle.",
+        title: `${allowedCount} photo(s) uploaded`,
+        description: "Your photos have been added to this vehicle.",
       });
     } catch (error) {
       console.error('Photo upload error:', error);
       toast({
         title: "Upload failed",
-        description: "Failed to upload photo. Please try again.",
+        description: "Failed to upload photos. Please try again.",
         variant: "destructive",
       });
     } finally {
@@ -146,7 +168,6 @@ const EditVehicle = () => {
   const handleDeletePhoto = async (imageId: string, imageUrl: string) => {
     try {
       await deleteImage.mutateAsync({ imageId, imageUrl });
-      setPhotos(prev => prev.filter(p => p.id !== imageId));
       toast({
         title: "Photo deleted",
         description: "The photo has been removed.",
@@ -156,6 +177,26 @@ const EditVehicle = () => {
       toast({
         title: "Delete failed",
         description: "Failed to delete photo. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleSetPrimaryPhoto = async (imageId: string) => {
+    const vehicleId = id || createdVehicleId;
+    if (!vehicleId) return;
+
+    try {
+      await setPrimaryImage.mutateAsync({ vehicleId, imageId });
+      toast({
+        title: "Primary photo set",
+        description: "This photo will be used when posting trips.",
+      });
+    } catch (error) {
+      console.error('Set primary photo error:', error);
+      toast({
+        title: "Failed to set primary",
+        description: "Please try again.",
         variant: "destructive",
       });
     }
@@ -181,29 +222,6 @@ const EditVehicle = () => {
       });
     } finally {
       setIsDeleting(false);
-    }
-  };
-
-  const handleSetPrimary = async () => {
-    const vehicleId = id || createdVehicleId;
-    if (!vehicleId) return;
-    
-    setIsSettingPrimary(true);
-    try {
-      await setPrimaryVehicle.mutateAsync(vehicleId);
-      toast({
-        title: "Primary vehicle set",
-        description: "This vehicle will be auto-selected for new trips.",
-      });
-    } catch (error) {
-      console.error('Set primary error:', error);
-      toast({
-        title: "Failed to set primary",
-        description: "Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsSettingPrimary(false);
     }
   };
 
@@ -291,8 +309,6 @@ const EditVehicle = () => {
     );
   }
 
-  const isPrimary = existingVehicle?.is_primary;
-
   return (
     <div className="flex flex-col min-h-screen bg-background safe-top">
       {/* Header */}
@@ -378,10 +394,10 @@ const EditVehicle = () => {
             )}
           </button>
 
-          {/* Existing Photos Grid */}
+          {/* Photo Preview Grid with Primary Selection */}
           {photos.length > 0 && (
             <div className="grid grid-cols-3 gap-2 mt-4">
-              {photos.slice(0, 6).map((photo) => (
+              {photos.map((photo) => (
                 <div 
                   key={photo.id} 
                   className="aspect-square rounded-lg overflow-hidden bg-secondary relative group"
@@ -391,42 +407,41 @@ const EditVehicle = () => {
                     alt="Vehicle photo"
                     className="w-full h-full object-cover"
                   />
+                  
+                  {/* Primary badge/button */}
+                  <button
+                    onClick={() => handleSetPrimaryPhoto(photo.id)}
+                    className="absolute top-1 left-1 bg-black/60 rounded-full p-1.5 transition-opacity"
+                    title={photo.is_primary ? "Primary photo" : "Set as primary"}
+                  >
+                    <Star 
+                      className={`h-4 w-4 ${
+                        photo.is_primary 
+                          ? 'fill-yellow-500 text-yellow-500' 
+                          : 'text-white/70 hover:text-white'
+                      }`} 
+                    />
+                  </button>
+                  
+                  {/* Delete button */}
                   <button
                     onClick={() => handleDeletePhoto(photo.id, photo.image_url)}
-                    className="absolute top-1 right-1 bg-black/60 rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                    className="absolute top-1 right-1 bg-black/60 rounded-full p-1.5 opacity-0 group-hover:opacity-100 transition-opacity"
                   >
                     <X className="h-4 w-4 text-white" />
                   </button>
                 </div>
               ))}
-              {photos.length > 6 && (
-                <div className="aspect-square rounded-lg bg-secondary flex items-center justify-center">
-                  <div className="text-center">
-                    <Image className="h-5 w-5 text-muted-foreground mx-auto mb-1" />
-                    <span className="text-xs text-muted-foreground">+{photos.length - 6}</span>
-                  </div>
-                </div>
-              )}
             </div>
           )}
-        </div>
 
-        {/* Set as Primary Button */}
-        {(id || createdVehicleId) && (
-          <Button
-            onClick={handleSetPrimary}
-            variant="outline"
-            className="w-full flex items-center justify-center gap-2"
-            disabled={isPrimary || isSettingPrimary}
-          >
-            {isSettingPrimary ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <Star className={isPrimary ? "h-4 w-4 fill-yellow-500 text-yellow-500" : "h-4 w-4"} />
-            )}
-            {isPrimary ? 'Primary Vehicle' : 'Set as Primary'}
-          </Button>
-        )}
+          {/* Help text for primary photo */}
+          {photos.length > 0 && (
+            <p className="text-xs text-muted-foreground">
+              Tap the star to set a primary photo for trip posts
+            </p>
+          )}
+        </div>
 
         {/* Delete Vehicle Button */}
         {id && (

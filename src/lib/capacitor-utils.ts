@@ -81,3 +81,42 @@ export async function pickPhotoAsFile(): Promise<File | null> {
     });
   }
 }
+
+// Pick multiple photos - returns array of File objects
+export async function pickMultiplePhotosAsFiles(): Promise<File[]> {
+  if (Capacitor.isNativePlatform()) {
+    // Native: Camera plugin doesn't support true multi-select, pick one at a time
+    try {
+      const { Camera, CameraResultType, CameraSource } = await import('@capacitor/camera');
+      const image = await Camera.getPhoto({
+        quality: 80,
+        allowEditing: false,
+        resultType: CameraResultType.Base64,
+        source: CameraSource.Photos, // Gallery only
+      });
+      
+      if (image.base64String) {
+        const format = image.format || 'jpeg';
+        const blob = base64ToBlob(image.base64String, `image/${format}`);
+        return [new File([blob], `photo_${Date.now()}.${format}`, { type: `image/${format}` })];
+      }
+      return [];
+    } catch (error) {
+      console.error('Camera error:', error);
+      return [];
+    }
+  } else {
+    // Web: Multi-file input for bulk selection
+    return new Promise((resolve) => {
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept = 'image/*';
+      input.multiple = true;
+      input.onchange = (e) => {
+        const files = Array.from((e.target as HTMLInputElement).files || []);
+        resolve(files);
+      };
+      input.click();
+    });
+  }
+}
