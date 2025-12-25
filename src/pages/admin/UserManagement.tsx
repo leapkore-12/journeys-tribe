@@ -97,22 +97,31 @@ const UserManagement = () => {
                         {user.display_name || user.username}
                       </p>
                       <div className="flex items-center gap-2 mt-1">
-                        <Badge 
-                          variant={user.plan_type === 'paid' ? 'default' : 'secondary'}
-                          className={user.plan_type === 'paid' ? 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30' : ''}
-                        >
-                          {user.plan_type === 'paid' ? (
-                            <>
-                              <Crown className="h-3 w-3 mr-1" />
-                              PRO
-                            </>
-                          ) : (
-                            'FREE'
-                          )}
-                        </Badge>
-                        <span className="text-xs text-muted-foreground">
-                          {user.trips_count} trips
-                        </span>
+                        {user.roles?.includes('admin') ? (
+                          <Badge className="bg-purple-500/20 text-purple-400 border-purple-500/30">
+                            <Shield className="h-3 w-3 mr-1" />
+                            ADMIN
+                          </Badge>
+                        ) : (
+                          <>
+                            <Badge 
+                              variant={user.plan_type === 'paid' ? 'default' : 'secondary'}
+                              className={user.plan_type === 'paid' ? 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30' : ''}
+                            >
+                              {user.plan_type === 'paid' ? (
+                                <>
+                                  <Crown className="h-3 w-3 mr-1" />
+                                  PRO
+                                </>
+                              ) : (
+                                'FREE'
+                              )}
+                            </Badge>
+                            <span className="text-xs text-muted-foreground">
+                              {user.trips_count} trips
+                            </span>
+                          </>
+                        )}
                       </div>
                     </div>
                     

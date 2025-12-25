@@ -269,6 +269,16 @@ export const useAdminStats = () => {
   return useQuery({
     queryKey: ['adminStats'],
     queryFn: async () => {
+      // Get admin user IDs first
+      const { data: adminRoles, error: adminError } = await supabase
+        .from('user_roles')
+        .select('user_id')
+        .eq('role', 'admin');
+      
+      if (adminError) throw adminError;
+      
+      const adminUserIds = new Set(adminRoles?.map(r => r.user_id) || []);
+      
       // Get user counts
       const { data: profiles, error: profilesError } = await supabase
         .from('profiles')
@@ -276,8 +286,10 @@ export const useAdminStats = () => {
       
       if (profilesError) throw profilesError;
       
-      const totalUsers = profiles?.length || 0;
-      const paidUsers = profiles?.filter(p => p.plan_type === 'paid').length || 0;
+      // Filter out admin users from regular user counts
+      const regularUsers = profiles?.filter(p => !adminUserIds.has(p.id)) || [];
+      const totalUsers = regularUsers.length;
+      const paidUsers = regularUsers.filter(p => p.plan_type === 'paid').length;
       const freeUsers = totalUsers - paidUsers;
       
       // Get trip count
@@ -286,14 +298,6 @@ export const useAdminStats = () => {
         .select('*', { count: 'exact', head: true });
       
       if (tripsError) throw tripsError;
-      
-      // Get admin count
-      const { data: adminRoles, error: adminError } = await supabase
-        .from('user_roles')
-        .select('user_id')
-        .eq('role', 'admin');
-      
-      if (adminError) throw adminError;
       
       return {
         totalUsers,
