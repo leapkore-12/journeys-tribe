@@ -194,3 +194,31 @@ export const useDeleteVehicleImage = () => {
     },
   });
 };
+
+export const useSetPrimaryVehicle = () => {
+  const queryClient = useQueryClient();
+  const { user } = useAuth();
+
+  return useMutation({
+    mutationFn: async (vehicleId: string) => {
+      if (!user?.id) throw new Error('Not authenticated');
+      
+      // First, unset all primary flags for this user
+      await supabase
+        .from('vehicles')
+        .update({ is_primary: false })
+        .eq('user_id', user.id);
+      
+      // Then set the selected vehicle as primary
+      const { error } = await supabase
+        .from('vehicles')
+        .update({ is_primary: true })
+        .eq('id', vehicleId);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['vehicles', user?.id] });
+    },
+  });
+};

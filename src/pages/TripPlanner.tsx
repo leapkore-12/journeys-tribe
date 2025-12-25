@@ -58,6 +58,16 @@ const TripPlanner = () => {
   // Create a set of tribe member IDs for quick lookup
   const tribeMemberIds = new Set(tribe.map(m => m.member_id));
 
+  // Auto-select primary vehicle on mount
+  useEffect(() => {
+    if (vehicles.length > 0 && !selectedVehicle) {
+      const primaryVehicle = vehicles.find(v => v.is_primary);
+      if (primaryVehicle) {
+        setSelectedVehicle(primaryVehicle);
+      }
+    }
+  }, [vehicles, selectedVehicle]);
+
   // Convert following to User format for convoy with tribe flag
   const friends: (User & { isTribe: boolean })[] = following.map(f => ({
     id: f.profile?.id || f.following_id,

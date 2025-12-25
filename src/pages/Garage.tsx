@@ -1,6 +1,7 @@
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
-import { ArrowLeft, MoreHorizontal, Plus, Car } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { ArrowLeft, MoreHorizontal, Plus, Car, Star, ChevronUp } from 'lucide-react';
 import { useVehicles } from '@/hooks/useVehicles';
 import { useCurrentProfile } from '@/hooks/useProfile';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -10,6 +11,11 @@ const Garage = () => {
   const navigate = useNavigate();
   const { data: vehicles, isLoading } = useVehicles();
   const { data: profile } = useCurrentProfile();
+  const [expandedVehicleId, setExpandedVehicleId] = useState<string | null>(null);
+
+  const toggleExpand = (vehicleId: string) => {
+    setExpandedVehicleId(prev => prev === vehicleId ? null : vehicleId);
+  };
 
   return (
     <div className="flex flex-col min-h-screen bg-background safe-top pb-24">
@@ -50,73 +56,107 @@ const Garage = () => {
             ))}
           </div>
         ) : vehicles && vehicles.length > 0 ? (
-          vehicles.map((vehicle, index) => (
-            <motion.div
-              key={vehicle.id}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.1 }}
-              className="py-6"
-            >
-              {/* Vehicle Header - Name + Edit */}
-              <div className="flex items-center justify-between px-4 mb-2">
-                <h2 className="text-2xl font-bold text-foreground">{vehicle.name}</h2>
-                <button 
-                  onClick={() => navigate(`/garage/edit/${vehicle.id}`)}
-                  className="text-primary font-medium text-base"
-                >
-                  Edit
-                </button>
-              </div>
+          vehicles.map((vehicle, index) => {
+            const isExpanded = expandedVehicleId === vehicle.id;
+            const hasMoreThan5 = vehicle.vehicle_images && vehicle.vehicle_images.length > 5;
+            const displayPhotos = isExpanded 
+              ? vehicle.vehicle_images 
+              : vehicle.vehicle_images?.slice(0, 5) || [];
 
-              {/* Specs Line */}
-              <p className="text-sm text-muted-foreground px-4 mb-4 leading-relaxed">
-                {vehicle.make}
-                {vehicle.color && ` • ${vehicle.color}`}
-              </p>
-
-              {/* Image Grid - 3 columns x 2 rows */}
-              <div className="grid grid-cols-3 gap-1 px-4">
-                {vehicle.vehicle_images && vehicle.vehicle_images.length > 0 ? (
-                  <>
-                    {vehicle.vehicle_images.slice(0, 5).map((img, i) => (
-                      <div 
-                        key={img.id} 
-                        className="aspect-square rounded-lg overflow-hidden bg-secondary"
-                      >
-                        <img 
-                          src={img.image_url} 
-                          alt={`${vehicle.name} photo ${i + 1}`}
-                          className="w-full h-full object-cover"
-                        />
-                      </div>
-                    ))}
-                    
-                    {/* View More Button - 6th slot */}
-                    <button 
-                      className="aspect-square rounded-lg bg-primary flex flex-col items-center justify-center gap-1"
-                      onClick={() => {/* TODO: Open full gallery */}}
-                    >
-                      <MoreHorizontal className="h-6 w-6 text-primary-foreground" />
-                      <span className="text-xs text-primary-foreground font-medium">View more</span>
-                    </button>
-                  </>
-                ) : (
-                  <div className="col-span-3 aspect-video rounded-lg bg-secondary flex items-center justify-center">
-                    <div className="text-center">
-                      <Car className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
-                      <p className="text-sm text-muted-foreground">No photos yet</p>
-                    </div>
+            return (
+              <motion.div
+                key={vehicle.id}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: index * 0.1 }}
+                className="py-6"
+              >
+                {/* Vehicle Header - Name + Edit */}
+                <div className="flex items-center justify-between px-4 mb-2">
+                  <div className="flex items-center gap-2">
+                    <h2 className="text-2xl font-bold text-foreground">{vehicle.name}</h2>
+                    {vehicle.is_primary && (
+                      <Star className="h-5 w-5 fill-yellow-500 text-yellow-500" />
+                    )}
                   </div>
-                )}
-              </div>
+                  <button 
+                    onClick={() => navigate(`/garage/edit/${vehicle.id}`)}
+                    className="text-primary font-medium text-base"
+                  >
+                    Edit
+                  </button>
+                </div>
 
-              {/* Separator between vehicles */}
-              {vehicles && index < vehicles.length - 1 && (
-                <div className="border-b border-border mt-6 mx-4" />
-              )}
-            </motion.div>
-          ))
+                {/* Specs Line */}
+                <p className="text-sm text-muted-foreground px-4 mb-4 leading-relaxed">
+                  {vehicle.make}
+                  {vehicle.color && ` • ${vehicle.color}`}
+                </p>
+
+                {/* Image Grid */}
+                <div className="px-4">
+                  {vehicle.vehicle_images && vehicle.vehicle_images.length > 0 ? (
+                    <>
+                      <AnimatePresence mode="wait">
+                        <motion.div 
+                          key={isExpanded ? 'expanded' : 'collapsed'}
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          exit={{ opacity: 0 }}
+                          className="grid grid-cols-3 gap-1"
+                        >
+                          {displayPhotos.map((img, i) => (
+                            <div 
+                              key={img.id} 
+                              className="aspect-square rounded-lg overflow-hidden bg-secondary"
+                            >
+                              <img 
+                                src={img.image_url} 
+                                alt={`${vehicle.name} photo ${i + 1}`}
+                                className="w-full h-full object-cover"
+                              />
+                            </div>
+                          ))}
+                          
+                          {/* View More/Less Button - only show if more than 5 photos */}
+                          {hasMoreThan5 && (
+                            <button 
+                              className="aspect-square rounded-lg bg-primary flex flex-col items-center justify-center gap-1"
+                              onClick={() => toggleExpand(vehicle.id)}
+                            >
+                              {isExpanded ? (
+                                <>
+                                  <ChevronUp className="h-6 w-6 text-primary-foreground" />
+                                  <span className="text-xs text-primary-foreground font-medium">View less</span>
+                                </>
+                              ) : (
+                                <>
+                                  <MoreHorizontal className="h-6 w-6 text-primary-foreground" />
+                                  <span className="text-xs text-primary-foreground font-medium">View more</span>
+                                </>
+                              )}
+                            </button>
+                          )}
+                        </motion.div>
+                      </AnimatePresence>
+                    </>
+                  ) : (
+                    <div className="col-span-3 aspect-video rounded-lg bg-secondary flex items-center justify-center">
+                      <div className="text-center">
+                        <Car className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
+                        <p className="text-sm text-muted-foreground">No photos yet</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Separator between vehicles */}
+                {vehicles && index < vehicles.length - 1 && (
+                  <div className="border-b border-border mt-6 mx-4" />
+                )}
+              </motion.div>
+            );
+          })
         ) : (
           <div className="flex flex-col items-center justify-center py-16 px-4">
             <div className="w-16 h-16 bg-secondary rounded-full flex items-center justify-center mb-4">
