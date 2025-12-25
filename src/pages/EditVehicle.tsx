@@ -12,6 +12,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { mockVehicles } from '@/lib/mock-data';
+import { useCurrentProfile } from '@/hooks/useProfile';
 
 const EditVehicle = () => {
   const navigate = useNavigate();
@@ -19,6 +20,11 @@ const EditVehicle = () => {
   
   // Find existing vehicle if editing
   const existingVehicle = id ? mockVehicles.find(v => v.id === id) : null;
+  
+  // Get user profile to check plan type
+  const { data: profile } = useCurrentProfile();
+  const isPaidUser = profile?.plan_type === 'paid';
+  const maxPhotos = isPaidUser ? 100 : 5;
   
   const [vehicleType, setVehicleType] = useState<string>(existingVehicle?.type || '');
   const [makeModel, setMakeModel] = useState(
@@ -91,16 +97,23 @@ const EditVehicle = () => {
         <div className="space-y-3">
           <div className="flex items-center justify-between">
             <Label className="text-base text-foreground">Photos</Label>
-            <span className="text-sm text-muted-foreground">{photos.length}/10</span>
+            <span className="text-sm text-muted-foreground">
+              {isPaidUser ? `${photos.length} photos` : `${photos.length}/${maxPhotos}`}
+            </span>
           </div>
           
           {/* Photo Upload Area */}
-          <button className="w-full aspect-[2/1] border-2 border-dashed border-border rounded-xl flex flex-col items-center justify-center gap-2 text-muted-foreground hover:border-primary hover:text-primary transition-colors">
+          <button 
+            className="w-full aspect-[2/1] border-2 border-dashed border-border rounded-xl flex flex-col items-center justify-center gap-2 text-muted-foreground transition-colors"
+            disabled={!isPaidUser && photos.length >= maxPhotos}
+          >
             <div className="w-12 h-12 rounded-full bg-secondary flex items-center justify-center">
               <Plus className="h-6 w-6" />
             </div>
             <span className="text-sm font-medium">Add photos</span>
-            <span className="text-xs">Up to 10 photos per vehicle</span>
+            <span className="text-xs">
+              {isPaidUser ? 'Unlimited photos per vehicle' : `Up to ${maxPhotos} photos per vehicle`}
+            </span>
           </button>
 
           {/* Existing Photos Grid */}
