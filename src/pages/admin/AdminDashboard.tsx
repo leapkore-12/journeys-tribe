@@ -1,29 +1,21 @@
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '@/context/AuthContext';
 import { useAdminStats } from '@/hooks/useAdmin';
-import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import { 
   Users, 
   Crown, 
   Map, 
   Shield, 
-  UserPlus, 
-  Settings, 
-  LogOut,
+  UserPlus,
   Loader2 
 } from 'lucide-react';
 import logoWhite from '@/assets/logo-white.svg';
+import AdminBottomNav from '@/components/admin/AdminBottomNav';
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
-  const { signOut } = useAuth();
   const { data: stats, isLoading } = useAdminStats();
-
-  const handleLogout = async () => {
-    await signOut();
-    navigate('/admin', { replace: true });
-  };
 
   const statCards = [
     { 
@@ -64,7 +56,7 @@ const AdminDashboard = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background pb-20">
       {/* Header */}
       <header className="sticky top-0 z-50 border-b border-border/50 bg-background/95 backdrop-blur">
         <div className="flex items-center justify-between p-4">
@@ -75,10 +67,6 @@ const AdminDashboard = () => {
               <span className="text-xs font-medium uppercase tracking-wider">Admin</span>
             </div>
           </div>
-          <Button variant="ghost" size="sm" onClick={handleLogout}>
-            <LogOut className="h-4 w-4 mr-2" />
-            Logout
-          </Button>
         </div>
       </header>
 
@@ -140,6 +128,8 @@ const AdminDashboard = () => {
           </CardContent>
         </Card>
       </main>
+
+      <AdminBottomNav />
     </div>
   );
 };
