@@ -6,7 +6,7 @@ export interface FollowerWithProfile {
   id: string;
   follower_id: string;
   following_id: string;
-  profile?: { id: string; username: string | null; display_name: string | null; avatar_url: string | null; } | null;
+  profile?: { id: string; username: string | null; display_name: string | null; avatar_url: string | null; plan_type?: string } | null;
   is_following_back: boolean;
 }
 
@@ -55,7 +55,7 @@ export const useFollowing = (userId?: string) => {
       if (!following) return [];
 
       const ids = following.map(f => f.following_id);
-      const { data: profiles } = await supabase.from('profiles').select('id, username, display_name, avatar_url').in('id', ids);
+      const { data: profiles } = await supabase.from('profiles').select('id, username, display_name, avatar_url, plan_type').in('id', ids);
       const profileMap = new Map(profiles?.map(p => [p.id, p]) || []);
 
       const { data: followers } = user?.id ? await supabase.from('follows').select('follower_id').eq('following_id', user.id) : { data: [] };
