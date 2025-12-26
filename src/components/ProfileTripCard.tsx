@@ -52,7 +52,7 @@ const ProfileTripCard = ({ trip }: ProfileTripCardProps) => {
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       className="bg-card rounded-xl overflow-hidden border border-border cursor-pointer"
-      onClick={() => navigate(`/comments/${trip.id}`)}
+      onClick={() => navigate(`/trip/${trip.id}`)}
     >
       {/* Trip Image */}
       <div className="aspect-video bg-secondary relative">

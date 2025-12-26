@@ -201,3 +201,65 @@ export const useCreateTrip = () => {
     },
   });
 };
+
+export const useTripById = (tripId: string | undefined) => {
+  const { user } = useAuth();
+
+  return useQuery({
+    queryKey: ['trip', tripId],
+    queryFn: async () => {
+      if (!tripId) return null;
+
+      // Fetch trip with photos
+      const { data: trip, error } = await supabase
+        .from('trips')
+        .select('*, trip_photos(*)')
+        .eq('id', tripId)
+        .maybeSingle();
+
+      if (error || !trip) return null;
+
+      // Fetch profile
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('id, username, display_name, avatar_url')
+        .eq('id', trip.user_id)
+        .maybeSingle();
+
+      // Fetch vehicle
+      let vehicle = null;
+      if (trip.vehicle_id) {
+        const { data: vehicleData } = await supabase
+          .from('vehicles')
+          .select('*, vehicle_images(image_url)')
+          .eq('id', trip.vehicle_id)
+          .maybeSingle();
+        
+        if (vehicleData) {
+          vehicle = {
+            id: vehicleData.id,
+            name: vehicleData.name,
+            make: vehicleData.make,
+            model: vehicleData.model,
+            images: (vehicleData.vehicle_images as { image_url: string }[] | null)?.map(vi => vi.image_url) || []
+          };
+        }
+      }
+
+      // Check if liked
+      let isLiked = false;
+      if (user?.id) {
+        const { data: like } = await supabase
+          .from('trip_likes')
+          .select('id')
+          .eq('trip_id', tripId)
+          .eq('user_id', user.id)
+          .maybeSingle();
+        isLiked = !!like;
+      }
+
+      return { ...trip, profile, vehicle, is_liked: isLiked } as TripWithDetails;
+    },
+    enabled: !!tripId,
+  });
+};
