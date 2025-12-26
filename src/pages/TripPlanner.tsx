@@ -257,48 +257,25 @@ const TripPlanner = () => {
     isTribe: boolean;
     onToggle: () => void;
   }) => {
-    const isPaidUser = friend.isPaid;
-    
     return (
       <button
-        onClick={isPaidUser ? onToggle : undefined}
-        disabled={!isPaidUser}
-        className={cn(
-          "w-full flex items-center gap-3 p-3 rounded-lg transition-colors",
-          isPaidUser 
-            ? "bg-secondary hover:bg-muted/50" 
-            : "bg-secondary/50 opacity-60 cursor-not-allowed"
-        )}
+        onClick={onToggle}
+        className="w-full flex items-center gap-3 p-3 rounded-lg transition-colors bg-secondary hover:bg-muted/50"
       >
         <Avatar className="h-10 w-10">
           <AvatarImage src={friend.avatar} alt={friend.name} />
           <AvatarFallback>{friend.name[0]}</AvatarFallback>
         </Avatar>
         <div className="flex-1 text-left flex items-center gap-2">
-          <span className={cn("text-foreground", !isPaidUser && "text-muted-foreground")}>
-            {friend.name}
-          </span>
+          <span className="text-foreground">{friend.name}</span>
           {isTribe && (
             <Star className="h-3 w-3 text-yellow-500 fill-yellow-500" />
           )}
-          {isPaidUser && (
-            <Crown className="h-3 w-3 text-yellow-500" />
-          )}
-          {!isPaidUser && (
-            <span className="flex items-center gap-1 text-xs text-muted-foreground">
-              <Lock className="h-3 w-3" />
-              Free
-            </span>
-          )}
         </div>
-        {isPaidUser ? (
-          <Checkbox 
-            checked={isSelected}
-            className="border-muted-foreground data-[state=checked]:bg-primary data-[state=checked]:border-primary"
-          />
-        ) : (
-          <Lock className="h-4 w-4 text-muted-foreground" />
-        )}
+        <Checkbox 
+          checked={isSelected}
+          className="border-muted-foreground data-[state=checked]:bg-primary data-[state=checked]:border-primary"
+        />
       </button>
     );
   };
@@ -597,10 +574,6 @@ const TripPlanner = () => {
                 <>
                   <div className="space-y-2">
                     <label className="text-sm text-muted-foreground">Invite friends to convoy (optional)</label>
-                    <p className="text-xs text-muted-foreground flex items-center gap-1">
-                      <Crown className="h-3 w-3 text-yellow-500" />
-                      Only Pro users can join convoys
-                    </p>
                     <div className="relative">
                       <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
                       <Input
