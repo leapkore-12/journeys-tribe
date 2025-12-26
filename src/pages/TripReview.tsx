@@ -15,7 +15,7 @@ import { useToast } from '@/hooks/use-toast';
 
 const TripReview = () => {
   const navigate = useNavigate();
-  const { tripState, startTrip, resetTrip } = useTrip();
+  const { tripState, startTrip, resetTrip, setActiveTripId } = useTrip();
   const { createBulkInvites } = useConvoyInvites();
   const { user } = useAuth();
   const { toast } = useToast();
@@ -53,6 +53,9 @@ const TripReview = () => {
       }
       
       const tripId = trip.id;
+      
+      // Store the trip ID in context for later use when finishing the trip
+      setActiveTripId(tripId);
       
       // Add the current user as convoy leader
       const { error: leaderError } = await supabase
