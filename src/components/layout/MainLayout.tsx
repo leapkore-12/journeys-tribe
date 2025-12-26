@@ -1,8 +1,9 @@
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { Menu, CircleDot, CreditCard } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { useRealtimeNotifications } from '@/hooks/useNotifications';
+import ActiveTripBar from '@/components/trip/ActiveTripBar';
 
 const tabs = [
   { path: '/feed', icon: Menu, label: 'Feed' },
@@ -26,6 +27,11 @@ const MainLayout = () => {
       <main className="flex-1 pb-20 overflow-y-auto scrollbar-hide">
         <Outlet />
       </main>
+
+      {/* Active Trip Floating Bar */}
+      <AnimatePresence>
+        <ActiveTripBar />
+      </AnimatePresence>
 
       {/* Bottom Tab Navigation */}
       {!hideBottomNav && (
