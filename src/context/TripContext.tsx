@@ -30,6 +30,8 @@ export interface TripState {
   eta: number; // in minutes
   // Trip photos (staged before upload)
   tripPhotos: File[];
+  // Database trip ID for tracking active trip
+  activeTripId: string | null;
 }
 
 interface TripContextType {
@@ -53,6 +55,7 @@ interface TripContextType {
   setTripPhotos: (photos: File[]) => void;
   addTripPhoto: (photo: File) => void;
   removeTripPhoto: (index: number) => void;
+  setActiveTripId: (tripId: string | null) => void;
 }
 
 const initialState: TripState = {
@@ -75,6 +78,7 @@ const initialState: TripState = {
   timeElapsed: 0,
   eta: 0,
   tripPhotos: [],
+  activeTripId: null,
 };
 
 const TripContext = createContext<TripContextType | undefined>(undefined);
@@ -205,6 +209,10 @@ export const TripProvider = ({ children }: { children: ReactNode }) => {
     }));
   };
 
+  const setActiveTripId = (tripId: string | null) => {
+    setTripState(prev => ({ ...prev, activeTripId: tripId }));
+  };
+
   return (
     <TripContext.Provider
       value={{
@@ -228,6 +236,7 @@ export const TripProvider = ({ children }: { children: ReactNode }) => {
         setTripPhotos,
         addTripPhoto,
         removeTripPhoto,
+        setActiveTripId,
       }}
     >
       {children}

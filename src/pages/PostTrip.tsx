@@ -9,11 +9,13 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import TripHeader from '@/components/trip/TripHeader';
 import { useTrip } from '@/context/TripContext';
 import { useToast } from '@/hooks/use-toast';
-import { useCreateTrip } from '@/hooks/useTrips';
 import { useUploadTripPhotos } from '@/hooks/useTripPhotos';
 import { generateStaticMapUrl, generateSimpleMapUrl } from '@/lib/mapbox-static';
 import { useFeatureAccess } from '@/hooks/useSubscription';
 import { useCurrentProfile } from '@/hooks/useProfile';
+import { supabase } from '@/integrations/supabase/client';
+import { useQueryClient } from '@tanstack/react-query';
+import { useAuth } from '@/context/AuthContext';
 
 const MAX_PHOTOS = 5;
 
@@ -21,11 +23,12 @@ const PostTrip = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { tripState, resetTrip, addTripPhoto, removeTripPhoto } = useTrip();
-  const createTrip = useCreateTrip();
   const uploadPhotos = useUploadTripPhotos();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { canUsePerTripVisibility } = useFeatureAccess();
   const { data: profile } = useCurrentProfile();
+  const queryClient = useQueryClient();
+  const { user } = useAuth();
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [visibility, setVisibility] = useState<'public' | 'followers' | 'tribe' | 'private'>('public');
@@ -76,7 +79,29 @@ const PostTrip = () => {
     fileInputRef.current?.click();
   };
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
+    // If there's an active trip, mark it as cancelled in the database
+    if (tripState.activeTripId && user) {
+      try {
+        // Update trip status to cancelled
+        await supabase
+          .from('trips')
+          .update({ status: 'cancelled' })
+          .eq('id', tripState.activeTripId);
+        
+        // Update convoy members status to left
+        await supabase
+          .from('convoy_members')
+          .update({ status: 'left' })
+          .eq('trip_id', tripState.activeTripId);
+        
+        // Invalidate active-convoy query to hide the Active Trip bar
+        queryClient.invalidateQueries({ queryKey: ['active-convoy'] });
+      } catch (error) {
+        console.error('Error cleaning up trip:', error);
+      }
+    }
+    
     resetTrip();
     toast({
       title: "Trip deleted",
@@ -123,40 +148,92 @@ const PostTrip = () => {
       
       const isPublic = tripVisibility === 'public';
 
-      // Create the trip in the database
-      const createdTrip = await createTrip.mutateAsync({
-        title: title.trim(),
-        description: description.trim() || null,
-        start_location: tripState.startLocation || null,
-        end_location: tripState.destinationAddress || tripState.destination || null,
-        start_lat: tripState.startCoordinates?.[1] || null,
-        start_lng: tripState.startCoordinates?.[0] || null,
-        end_lat: tripState.destinationCoordinates?.[1] || null,
-        end_lng: tripState.destinationCoordinates?.[0] || null,
-        distance_km: tripState.routeDistance 
-          ? Math.round(tripState.routeDistance * 10) / 10 
-          : null,
-        duration_minutes: tripState.routeDuration 
-          ? Math.round(tripState.routeDuration) 
-          : null,
-        map_image_url: mapImageUrl,
-        is_public: isPublic,
-        visibility: tripVisibility,
-        vehicle_id: tripState.vehicle?.id || null,
-        status: 'completed',
-        started_at: new Date().toISOString(),
-        completed_at: new Date().toISOString(),
-      });
+      let tripId: string;
+
+      // If we have an active trip ID, update it instead of creating a new one
+      if (tripState.activeTripId) {
+        const { error: updateError } = await supabase
+          .from('trips')
+          .update({
+            title: title.trim(),
+            description: description.trim() || null,
+            map_image_url: mapImageUrl,
+            is_public: isPublic,
+            visibility: tripVisibility,
+            status: 'completed',
+            completed_at: new Date().toISOString(),
+          })
+          .eq('id', tripState.activeTripId);
+        
+        if (updateError) {
+          console.error('Failed to update trip:', updateError);
+          throw new Error('Failed to update trip');
+        }
+        
+        tripId = tripState.activeTripId;
+        
+        // Update convoy members status to 'completed'
+        await supabase
+          .from('convoy_members')
+          .update({ status: 'completed' })
+          .eq('trip_id', tripId);
+        
+        // Delete any active_trips entries
+        await supabase
+          .from('active_trips')
+          .delete()
+          .eq('trip_id', tripId);
+      } else {
+        // Fallback: Create a new trip if no active trip ID exists
+        const { data: createdTrip, error: createError } = await supabase
+          .from('trips')
+          .insert({
+            user_id: user!.id,
+            title: title.trim(),
+            description: description.trim() || null,
+            start_location: tripState.startLocation || null,
+            end_location: tripState.destinationAddress || tripState.destination || null,
+            start_lat: tripState.startCoordinates?.[1] || null,
+            start_lng: tripState.startCoordinates?.[0] || null,
+            end_lat: tripState.destinationCoordinates?.[1] || null,
+            end_lng: tripState.destinationCoordinates?.[0] || null,
+            distance_km: tripState.routeDistance 
+              ? Math.round(tripState.routeDistance * 10) / 10 
+              : null,
+            duration_minutes: tripState.routeDuration 
+              ? Math.round(tripState.routeDuration) 
+              : null,
+            map_image_url: mapImageUrl,
+            is_public: isPublic,
+            visibility: tripVisibility,
+            vehicle_id: tripState.vehicle?.id || null,
+            status: 'completed',
+            started_at: new Date().toISOString(),
+            completed_at: new Date().toISOString(),
+          })
+          .select()
+          .single();
+
+        if (createError || !createdTrip) {
+          console.error('Failed to create trip:', createError);
+          throw new Error('Failed to create trip');
+        }
+        
+        tripId = createdTrip.id;
+      }
 
       // Upload trip photos if any
       const photos = tripState.tripPhotos || [];
       if (photos.length > 0) {
         setIsPosting('Uploading photos...');
         await uploadPhotos.mutateAsync({
-          tripId: createdTrip.id,
+          tripId: tripId,
           photos: photos,
         });
       }
+
+      // Invalidate active-convoy query to hide the Active Trip bar
+      queryClient.invalidateQueries({ queryKey: ['active-convoy'] });
 
       toast({
         title: "Trip Posted! 🏁",
@@ -433,10 +510,10 @@ const PostTrip = () => {
           </Button>
           <Button
             onClick={handlePost}
-            disabled={!!isPosting || createTrip.isPending}
+            disabled={!!isPosting}
             className="flex-1 h-14 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold"
           >
-            {isPosting || createTrip.isPending ? (isPosting || 'Posting...') : 'Post trip'}
+            {isPosting ? isPosting : 'Post trip'}
           </Button>
         </div>
       </div>
