@@ -6,6 +6,16 @@ import { Tables, TablesInsert, TablesUpdate } from '@/integrations/supabase/type
 export type Trip = Tables<'trips'>;
 export type TripPhoto = Tables<'trip_photos'>;
 
+export interface ConvoyMemberProfile {
+  user_id: string;
+  is_leader: boolean;
+  profile: {
+    id: string;
+    display_name: string | null;
+    avatar_url: string | null;
+  } | null;
+}
+
 export interface TripWithDetails extends Trip {
   trip_photos: TripPhoto[];
   profile?: {
@@ -22,6 +32,7 @@ export interface TripWithDetails extends Trip {
     images: string[];
   } | null;
   is_liked?: boolean;
+  convoy_members?: ConvoyMemberProfile[];
 }
 
 const PAGE_SIZE = 10;
@@ -91,11 +102,44 @@ export const useFeedTrips = () => {
         likedIds = new Set(likes?.map(l => l.trip_id) || []);
       }
 
+      // Fetch convoy members for all trips
+      const tripIds = trips.map(t => t.id);
+      const { data: convoyMembers } = tripIds.length > 0
+        ? await supabase
+            .from('convoy_members')
+            .select('trip_id, user_id, is_leader')
+            .in('trip_id', tripIds)
+            .eq('status', 'active')
+        : { data: [] };
+
+      // Get profiles for convoy members (excluding trip owners to avoid duplicates)
+      const convoyUserIds = [...new Set(convoyMembers?.map(cm => cm.user_id).filter(id => !profileMap.has(id)) || [])];
+      const { data: convoyProfiles } = convoyUserIds.length > 0
+        ? await supabase.from('profiles').select('id, display_name, avatar_url').in('id', convoyUserIds)
+        : { data: [] };
+      convoyProfiles?.forEach(p => profileMap.set(p.id, { ...p, username: null }));
+
+      // Group convoy members by trip_id
+      const convoyMemberMap = new Map<string, ConvoyMemberProfile[]>();
+      convoyMembers?.forEach(cm => {
+        const profile = profileMap.get(cm.user_id);
+        const member: ConvoyMemberProfile = {
+          user_id: cm.user_id,
+          is_leader: cm.is_leader || false,
+          profile: profile ? { id: profile.id, display_name: profile.display_name, avatar_url: profile.avatar_url } : null,
+        };
+        if (!convoyMemberMap.has(cm.trip_id)) {
+          convoyMemberMap.set(cm.trip_id, []);
+        }
+        convoyMemberMap.get(cm.trip_id)!.push(member);
+      });
+
       const tripsWithDetails: TripWithDetails[] = trips.map(trip => ({
         ...trip,
         profile: profileMap.get(trip.user_id) || null,
         vehicle: trip.vehicle_id ? vehicleMap.get(trip.vehicle_id) : null,
         is_liked: likedIds.has(trip.id),
+        convoy_members: convoyMemberMap.get(trip.id)?.filter(cm => cm.user_id !== trip.user_id) || [],
       }));
 
       return {
