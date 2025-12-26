@@ -50,7 +50,7 @@ const Notifications = () => {
           onSuccess: () => {
             deleteNotification.mutate(notificationId);
             // Navigate to the active trip page
-            navigate('/active-trip');
+            navigate('/trip/active');
           }
         }
       );
