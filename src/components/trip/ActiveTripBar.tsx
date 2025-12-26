@@ -29,7 +29,7 @@ const ActiveTripBar = () => {
       className="fixed bottom-20 left-4 right-4 z-50"
     >
       <button
-        onClick={() => navigate('/active-trip')}
+        onClick={() => navigate('/trip/active')}
         className="w-full bg-primary text-primary-foreground px-4 py-3 rounded-full shadow-lg flex items-center gap-3 hover:bg-primary/90 transition-colors"
       >
         <div className="w-10 h-10 bg-primary-foreground/20 rounded-full flex items-center justify-center flex-shrink-0">
