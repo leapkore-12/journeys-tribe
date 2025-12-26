@@ -27,6 +27,7 @@ interface TripCardProps {
   onComment: () => void;
   onShare: () => void;
   onUserClick: () => void;
+  context?: 'feed' | 'profile' | 'detail';
 }
 
 const formatDistance = (km: number | null) => {
@@ -43,7 +44,7 @@ const formatDuration = (minutes: number | null) => {
   return `${hours}h ${mins}m`;
 };
 
-const TripCard = ({ trip, index, onLike, onComment, onShare, onUserClick }: TripCardProps) => {
+const TripCard = ({ trip, index, onLike, onComment, onShare, onUserClick, context = 'feed' }: TripCardProps) => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
@@ -72,7 +73,7 @@ const TripCard = ({ trip, index, onLike, onComment, onShare, onUserClick }: Trip
   }, [carouselApi, onCarouselSelect]);
 
   const handleEdit = () => {
-    console.log('Edit trip:', trip.id);
+    navigate(`/trip/${trip.id}/edit`);
     setMenuOpen(false);
   };
 
@@ -127,7 +128,9 @@ const TripCard = ({ trip, index, onLike, onComment, onShare, onUserClick }: Trip
             {isOwnPost ? (
               <>
                 <DropdownMenuItem onClick={handleEdit} className="cursor-pointer">Edit trip</DropdownMenuItem>
-                <DropdownMenuItem onClick={handleDelete} className="cursor-pointer text-destructive">Delete trip</DropdownMenuItem>
+                {context !== 'feed' && (
+                  <DropdownMenuItem onClick={handleDelete} className="cursor-pointer text-destructive">Delete trip</DropdownMenuItem>
+                )}
               </>
             ) : (
               <DropdownMenuItem onClick={handleReport} className="cursor-pointer text-destructive">Report trip</DropdownMenuItem>
