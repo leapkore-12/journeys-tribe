@@ -263,3 +263,43 @@ export const useTripById = (tripId: string | undefined) => {
     enabled: !!tripId,
   });
 };
+
+export const useUpdateTrip = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ tripId, updates }: { tripId: string; updates: TablesUpdate<'trips'> }) => {
+      const { data, error } = await supabase
+        .from('trips')
+        .update(updates)
+        .eq('id', tripId)
+        .select()
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (_, { tripId }) => {
+      queryClient.invalidateQueries({ queryKey: ['trip', tripId] });
+      queryClient.invalidateQueries({ queryKey: ['feed-trips'] });
+      queryClient.invalidateQueries({ queryKey: ['user-trips'] });
+    },
+  });
+};
+
+export const useDeleteTrip = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (tripId: string) => {
+      const { error } = await supabase
+        .from('trips')
+        .delete()
+        .eq('id', tripId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['feed-trips'] });
+      queryClient.invalidateQueries({ queryKey: ['user-trips'] });
+    },
+  });
+};

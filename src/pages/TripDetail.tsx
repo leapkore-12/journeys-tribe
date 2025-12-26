@@ -5,11 +5,12 @@ import { motion } from 'framer-motion';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useTripById, useLikeTrip } from '@/hooks/useTrips';
+import { useTripById, useLikeTrip, useDeleteTrip } from '@/hooks/useTrips';
 import { useComments, useCreateComment } from '@/hooks/useComments';
 import { useAuth } from '@/context/AuthContext';
 import { cn } from '@/lib/utils';
 import logoWhite from '@/assets/logo-white.svg';
+import { useToast } from '@/hooks/use-toast';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -22,6 +23,16 @@ import {
   CarouselItem,
   type CarouselApi,
 } from '@/components/ui/carousel';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { formatDistanceToNow } from 'date-fns';
 
 const formatDistance = (km: number | null) => {
@@ -42,8 +53,10 @@ const TripDetail = () => {
   const navigate = useNavigate();
   const { tripId } = useParams();
   const { user } = useAuth();
+  const { toast } = useToast();
   const [newComment, setNewComment] = useState('');
   const [menuOpen, setMenuOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [carouselApi, setCarouselApi] = useState<CarouselApi>();
   const [currentSlide, setCurrentSlide] = useState(0);
 
@@ -51,6 +64,7 @@ const TripDetail = () => {
   const { data: comments, isLoading: commentsLoading } = useComments(tripId || '');
   const createComment = useCreateComment();
   const likeTrip = useLikeTrip();
+  const deleteTrip = useDeleteTrip();
 
   const isOwnPost = trip?.user_id === user?.id;
 
@@ -104,13 +118,24 @@ const TripDetail = () => {
   };
 
   const handleEdit = () => {
-    console.log('Edit trip:', trip?.id);
     setMenuOpen(false);
+    navigate(`/trip/${trip?.id}/edit`);
   };
 
   const handleDelete = () => {
-    console.log('Delete trip:', trip?.id);
     setMenuOpen(false);
+    setDeleteDialogOpen(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!trip) return;
+    try {
+      await deleteTrip.mutateAsync(trip.id);
+      toast({ title: "Trip deleted", description: "Your trip has been removed" });
+      navigate('/profile');
+    } catch (error) {
+      toast({ title: "Failed to delete", description: "Please try again", variant: "destructive" });
+    }
   };
 
   const handleReport = () => {
@@ -393,6 +418,28 @@ const TripDetail = () => {
           </button>
         </form>
       </div>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent className="bg-card border-border">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Trip?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete your trip
+              and all associated photos and comments.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={confirmDelete}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
