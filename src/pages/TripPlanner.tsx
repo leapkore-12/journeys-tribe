@@ -202,8 +202,7 @@ const TripPlanner = () => {
 
   const handleToggleFriend = (userId: string) => {
     const user = friends.find(u => u.id === userId);
-    // Only allow toggling paid users
-    if (user && user.isPaid) {
+    if (user) {
       toggleConvoyMember(user);
       setSelectedFriends(prev => 
         prev.includes(userId) 
