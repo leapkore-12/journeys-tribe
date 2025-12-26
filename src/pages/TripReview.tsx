@@ -26,8 +26,33 @@ const TripReview = () => {
     
     setIsStarting(true);
     try {
-      // Generate a trip ID for convoy tracking
-      const tripId = crypto.randomUUID();
+      // First, create the trip in the database
+      const { data: trip, error: tripError } = await supabase
+        .from('trips')
+        .insert({
+          user_id: user.id,
+          title: `Trip to ${tripState.destination || 'Destination'}`,
+          start_location: tripState.startLocation,
+          start_lat: tripState.startCoordinates?.[1],
+          start_lng: tripState.startCoordinates?.[0],
+          end_location: tripState.destination,
+          end_lat: tripState.destinationCoordinates?.[1],
+          end_lng: tripState.destinationCoordinates?.[0],
+          distance_km: tripState.routeDistance,
+          duration_minutes: tripState.routeDuration,
+          vehicle_id: tripState.vehicle?.id,
+          status: 'active',
+          started_at: new Date().toISOString(),
+        })
+        .select()
+        .single();
+      
+      if (tripError || !trip) {
+        console.error('Failed to create trip:', tripError);
+        throw new Error('Failed to create trip');
+      }
+      
+      const tripId = trip.id;
       
       // Add the current user as convoy leader
       const { error: leaderError } = await supabase
