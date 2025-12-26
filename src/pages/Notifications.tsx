@@ -1,9 +1,10 @@
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Check, X, Bell } from 'lucide-react';
+import { ArrowLeft, Check, X, Bell, Users } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { useNotifications, useMarkAsRead, useRealtimeNotifications } from '@/hooks/useNotifications';
+import { useNotifications, useMarkAsRead, useRealtimeNotifications, useDeleteNotification } from '@/hooks/useNotifications';
 import { useAcceptFollowRequest, useDeclineFollowRequest } from '@/hooks/useFollows';
+import { useConvoyInvites } from '@/hooks/useConvoyInvites';
 import { cn } from '@/lib/utils';
 import logoWhite from '@/assets/logo-white.svg';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -13,8 +14,11 @@ const Notifications = () => {
   const navigate = useNavigate();
   const { data: notifications, isLoading } = useNotifications();
   const markAsRead = useMarkAsRead();
+  const deleteNotification = useDeleteNotification();
   const acceptRequest = useAcceptFollowRequest();
   const declineRequest = useDeclineFollowRequest();
+  const { acceptConvoyInvite, declineConvoyInvite, useMyPendingConvoyInvites } = useConvoyInvites();
+  const { data: pendingConvoyInvites = [] } = useMyPendingConvoyInvites();
   
   // Enable real-time updates
   useRealtimeNotifications();
@@ -29,6 +33,40 @@ const Notifications = () => {
 
   const handleDecline = (actorId: string) => {
     declineRequest.mutate(actorId);
+  };
+
+  // Find convoy invite by trip_id to get the invite id
+  const findConvoyInvite = (tripId: string | null) => {
+    if (!tripId) return null;
+    return pendingConvoyInvites.find(invite => invite.trip_id === tripId);
+  };
+
+  const handleAcceptConvoyInvite = (tripId: string | null, notificationId: string) => {
+    const invite = findConvoyInvite(tripId);
+    if (invite) {
+      acceptConvoyInvite.mutate(
+        { inviteId: invite.id, tripId: invite.trip_id },
+        {
+          onSuccess: () => {
+            deleteNotification.mutate(notificationId);
+          }
+        }
+      );
+    }
+  };
+
+  const handleDeclineConvoyInvite = (tripId: string | null, notificationId: string) => {
+    const invite = findConvoyInvite(tripId);
+    if (invite) {
+      declineConvoyInvite.mutate(
+        { inviteId: invite.id },
+        {
+          onSuccess: () => {
+            deleteNotification.mutate(notificationId);
+          }
+        }
+      );
+    }
   };
 
   const getNotificationContent = (notification: typeof notifications extends (infer T)[] | undefined ? T : never) => {
@@ -115,6 +153,54 @@ const Notifications = () => {
             <span className="text-muted-foreground">commented on your trip</span>
           </p>
           <p className="text-xs text-muted-foreground mt-1">{timeAgo}</p>
+        </div>
+      );
+    }
+
+    // Convoy invite notification - show Join/Decline buttons
+    if (notification.type === 'convoy_invite') {
+      const invite = findConvoyInvite(notification.trip_id);
+      const isExpired = invite ? new Date(invite.expires_at) < new Date() : false;
+      
+      return (
+        <div className="flex-1 min-w-0">
+          <p className="text-foreground text-sm">
+            <span className="font-semibold">{actorName}</span>{' '}
+            <span className="text-muted-foreground">invited you to join a convoy</span>
+          </p>
+          <p className="text-xs text-muted-foreground mt-1">{timeAgo}</p>
+          {/* Join/Decline Buttons */}
+          {invite && !isExpired ? (
+            <div className="flex gap-2 mt-3">
+              <Button
+                size="sm"
+                className="bg-primary hover:bg-primary/90 text-primary-foreground h-8 px-4"
+                disabled={acceptConvoyInvite.isPending}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleAcceptConvoyInvite(notification.trip_id, notification.id);
+                }}
+              >
+                <Users className="h-4 w-4 mr-1" />
+                Join
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                className="border-border text-foreground h-8 px-4"
+                disabled={declineConvoyInvite.isPending}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleDeclineConvoyInvite(notification.trip_id, notification.id);
+                }}
+              >
+                <X className="h-4 w-4 mr-1" />
+                Decline
+              </Button>
+            </div>
+          ) : isExpired ? (
+            <p className="text-xs text-destructive mt-2">This invite has expired</p>
+          ) : null}
         </div>
       );
     }

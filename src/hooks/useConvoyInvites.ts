@@ -290,11 +290,117 @@ export const useConvoyInvites = () => {
     }
   }, [getShareLink, toast]);
 
+  // Get pending convoy invites for current user (from notifications)
+  const useMyPendingConvoyInvites = () => {
+    const { user: currentUser } = useAuth();
+    return useQuery({
+      queryKey: ['my-convoy-invites', currentUser?.id],
+      queryFn: async () => {
+        if (!currentUser?.id) return [];
+        const { data, error } = await supabase
+          .from('convoy_invites')
+          .select(`
+            *,
+            trip:trips(id, title, start_location, end_location),
+            inviter:profiles!convoy_invites_inviter_id_fkey(id, display_name, username, avatar_url)
+          `)
+          .eq('invitee_id', currentUser.id)
+          .eq('status', 'pending')
+          .gt('expires_at', new Date().toISOString())
+          .order('created_at', { ascending: false });
+
+        if (error) throw error;
+        return data as unknown as ConvoyInvite[];
+      },
+      enabled: !!currentUser?.id,
+    });
+  };
+
+  // Accept convoy invite by invite ID
+  const acceptConvoyInvite = useMutation({
+    mutationFn: async ({ inviteId, tripId }: { inviteId: string; tripId: string }) => {
+      if (!user) throw new Error('Not authenticated');
+
+      // Update invite status
+      const { error: updateError } = await supabase
+        .from('convoy_invites')
+        .update({ status: 'accepted' })
+        .eq('id', inviteId);
+
+      if (updateError) throw updateError;
+
+      // Add user to convoy_members
+      const { error: memberError } = await supabase
+        .from('convoy_members')
+        .insert({
+          trip_id: tripId,
+          user_id: user.id,
+          status: 'active',
+          invite_id: inviteId,
+        });
+
+      if (memberError) throw memberError;
+
+      return { tripId };
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['my-convoy-invites'] });
+      queryClient.invalidateQueries({ queryKey: ['convoy-invites'] });
+      queryClient.invalidateQueries({ queryKey: ['convoy-members', data.tripId] });
+      queryClient.invalidateQueries({ queryKey: ['notifications'] });
+      toast({
+        title: 'Joined convoy!',
+        description: 'You are now part of this trip convoy.',
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: 'Failed to join convoy',
+        description: error.message,
+        variant: 'destructive',
+      });
+    },
+  });
+
+  // Decline convoy invite
+  const declineConvoyInvite = useMutation({
+    mutationFn: async ({ inviteId }: { inviteId: string }) => {
+      if (!user) throw new Error('Not authenticated');
+
+      // Update invite status to declined
+      const { error } = await supabase
+        .from('convoy_invites')
+        .update({ status: 'declined' })
+        .eq('id', inviteId);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['my-convoy-invites'] });
+      queryClient.invalidateQueries({ queryKey: ['convoy-invites'] });
+      queryClient.invalidateQueries({ queryKey: ['notifications'] });
+      toast({
+        title: 'Invitation declined',
+        description: 'You declined the convoy invitation.',
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: 'Failed to decline invite',
+        description: error.message,
+        variant: 'destructive',
+      });
+    },
+  });
+
   return {
     createInvite,
     createBulkInvites,
     acceptInvite,
+    acceptConvoyInvite,
+    declineConvoyInvite,
     useInviteByCode,
+    useMyPendingConvoyInvites,
     useTripInvites,
     useConvoyMembers,
     getShareLink,
