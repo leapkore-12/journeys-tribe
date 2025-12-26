@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
@@ -15,6 +15,7 @@ import { useConvoyInvites } from '@/hooks/useConvoyInvites';
 import { useConvoyMembers, useTransferLeadership, useIsConvoyLeader } from '@/hooks/useConvoyMembers';
 import { useOfflineTracking } from '@/hooks/useOfflineTracking';
 import { useActiveTrip } from '@/hooks/useActiveTrip';
+import { useActiveConvoy } from '@/hooks/useActiveConvoy';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/AuthContext';
 import LiveTrackingMap from '@/components/map/LiveTrackingMap';
@@ -31,10 +32,32 @@ const ActiveTrip = () => {
   const [showConvoyPanel, setShowConvoyPanel] = useState(false);
   const [elapsedTime, setElapsedTime] = useState(tripState.timeElapsed);
   const [distance, setDistance] = useState(tripState.distanceCovered);
-  const [activeTripId] = useState(() => crypto.randomUUID());
   const [compassMode, setCompassMode] = useState(false);
   const [showRoute, setShowRoute] = useState(true);
   const watchIdRef = useRef<number | null>(null);
+
+  // Get active convoy trip from database (for convoy members who joined)
+  const { data: activeConvoy, isLoading: isLoadingConvoy } = useActiveConvoy();
+
+  // Determine the trip ID - use convoy trip ID if available, otherwise generate one
+  const activeTripId = useMemo(() => {
+    if (activeConvoy?.trip_id) return activeConvoy.trip_id;
+    // Fall back to tripState tripId if it exists, otherwise generate
+    return crypto.randomUUID();
+  }, [activeConvoy?.trip_id]);
+
+  // Determine if user is convoy leader
+  const isLeader = activeConvoy?.is_leader ?? true;
+
+  // Get destination coordinates from active convoy or trip state
+  const destinationCoordinates = useMemo(() => {
+    if (activeConvoy?.trip?.end_lat && activeConvoy?.trip?.end_lng) {
+      return [activeConvoy.trip.end_lng, activeConvoy.trip.end_lat] as [number, number];
+    }
+    return tripState.destinationCoordinates;
+  }, [activeConvoy, tripState.destinationCoordinates]);
+
+  const destinationName = activeConvoy?.trip?.end_location || tripState.destination || 'Destination';
 
   // Real GPS tracking
   const { 
@@ -71,7 +94,7 @@ const ActiveTrip = () => {
     leaveConvoy,
   } = useConvoyPresence({ 
     tripId: activeTripId, 
-    enabled: tripState.isActive && isOnline,
+    enabled: (tripState.isActive || !!activeConvoy) && isOnline,
     onMemberJoin: (member) => {
       toast({
         title: 'Rider joined',
@@ -143,10 +166,10 @@ const ActiveTrip = () => {
 
   // Fetch route when we have position and destination
   useEffect(() => {
-    if (userPosition && tripState.destinationCoordinates) {
-      getRoute(userPosition, tripState.destinationCoordinates);
+    if (userPosition && destinationCoordinates) {
+      getRoute(userPosition, destinationCoordinates);
     }
-  }, [userPosition, tripState.destinationCoordinates, getRoute]);
+  }, [userPosition, destinationCoordinates, getRoute]);
 
   // Track trip progress
   useEffect(() => {
@@ -214,7 +237,7 @@ const ActiveTrip = () => {
       <div className="absolute inset-0">
         <LiveTrackingMap
           userPosition={userPosition}
-          destination={tripState.destinationCoordinates || undefined}
+          destination={destinationCoordinates || undefined}
           routeCoordinates={route?.coordinates || tripState.routeCoordinates || undefined}
           convoyMembers={convoyMembers}
         />
