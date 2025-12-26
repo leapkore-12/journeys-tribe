@@ -270,22 +270,27 @@ export const useTripById = (tripId: string | undefined) => {
         .eq('id', trip.user_id)
         .maybeSingle();
 
-      // Fetch vehicle
+      // Fetch vehicle with images (sorted by is_primary)
       let vehicle = null;
       if (trip.vehicle_id) {
         const { data: vehicleData } = await supabase
           .from('vehicles')
-          .select('*, vehicle_images(image_url)')
+          .select('*, vehicle_images(image_url, is_primary)')
           .eq('id', trip.vehicle_id)
           .maybeSingle();
         
         if (vehicleData) {
+          // Sort images so primary comes first
+          const sortedImages = (vehicleData.vehicle_images as { image_url: string; is_primary: boolean | null }[] | null)
+            ?.sort((a, b) => (b.is_primary ? 1 : 0) - (a.is_primary ? 1 : 0))
+            .map(vi => vi.image_url) || [];
+          
           vehicle = {
             id: vehicleData.id,
             name: vehicleData.name,
             make: vehicleData.make,
             model: vehicleData.model,
-            images: (vehicleData.vehicle_images as { image_url: string }[] | null)?.map(vi => vi.image_url) || []
+            images: sortedImages
           };
         }
       }
@@ -302,7 +307,31 @@ export const useTripById = (tripId: string | undefined) => {
         isLiked = !!like;
       }
 
-      return { ...trip, profile, vehicle, is_liked: isLiked } as TripWithDetails;
+      // Fetch convoy members
+      const { data: convoyMembers } = await supabase
+        .from('convoy_members')
+        .select('user_id, is_leader')
+        .eq('trip_id', tripId)
+        .eq('status', 'active');
+
+      // Fetch profiles for convoy members
+      const convoyUserIds = convoyMembers?.map(cm => cm.user_id).filter(id => id !== trip.user_id) || [];
+      const { data: convoyProfiles } = convoyUserIds.length > 0
+        ? await supabase.from('profiles').select('id, display_name, avatar_url').in('id', convoyUserIds)
+        : { data: [] };
+      
+      const profileMap = new Map<string, { id: string; display_name: string | null; avatar_url: string | null }>();
+      convoyProfiles?.forEach(p => profileMap.set(p.id, p));
+
+      const convoyMembersWithProfiles: ConvoyMemberProfile[] = convoyMembers
+        ?.filter(cm => cm.user_id !== trip.user_id)
+        .map(cm => ({
+          user_id: cm.user_id,
+          is_leader: cm.is_leader || false,
+          profile: profileMap.get(cm.user_id) || null,
+        })) || [];
+
+      return { ...trip, profile, vehicle, is_liked: isLiked, convoy_members: convoyMembersWithProfiles } as TripWithDetails;
     },
     enabled: !!tripId,
   });
