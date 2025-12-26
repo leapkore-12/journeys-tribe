@@ -171,7 +171,7 @@ const ManageTribe = () => {
             <Button
               variant="outline"
               onClick={() => setIsAddOpen(true)}
-              className="gap-2"
+              className="gap-2 border-primary text-primary hover:bg-primary/10"
             >
               <Plus className="h-4 w-4" />
               Add Friends
