@@ -42,6 +42,7 @@ import AdminDashboard from "./pages/admin/AdminDashboard";
 import UserManagement from "./pages/admin/UserManagement";
 import CreateUser from "./pages/admin/CreateUser";
 import EditUser from "./pages/admin/EditUser";
+import TripDetail from "./pages/TripDetail";
 import { initCapacitor } from "@/lib/capacitor-init";
 
 const queryClient = new QueryClient();
@@ -88,6 +89,7 @@ const App = () => {
                   <Route path="/join-convoy/:inviteCode" element={<ProtectedRoute><JoinConvoy /></ProtectedRoute>} />
                   <Route path="/search" element={<ProtectedRoute><Search /></ProtectedRoute>} />
                   <Route path="/notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
+                  <Route path="/trip/:tripId" element={<ProtectedRoute><TripDetail /></ProtectedRoute>} />
                   <Route path="/comments/:postId" element={<ProtectedRoute><Comments /></ProtectedRoute>} />
                   <Route path="/share/:postId" element={<ProtectedRoute><Share /></ProtectedRoute>} />
                   <Route path="/user/:userId" element={<ProtectedRoute><UserProfile /></ProtectedRoute>} />
