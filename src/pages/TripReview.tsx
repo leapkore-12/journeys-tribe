@@ -1,20 +1,71 @@
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Crosshair, Flag, Plus } from 'lucide-react';
+import { Crosshair, Flag, Plus, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import TripHeader from '@/components/trip/TripHeader';
 import { useTrip } from '@/context/TripContext';
 import { Search, Bell } from 'lucide-react';
 import logoWhite from '@/assets/logo-white.svg';
+import { useConvoyInvites } from '@/hooks/useConvoyInvites';
+import { useAuth } from '@/context/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 
 const TripReview = () => {
   const navigate = useNavigate();
   const { tripState, startTrip, resetTrip } = useTrip();
+  const { createBulkInvites } = useConvoyInvites();
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const [isStarting, setIsStarting] = useState(false);
 
-  const handleStartTrip = () => {
-    startTrip();
-    navigate('/trip/active');
+  const handleStartTrip = async () => {
+    if (!user) return;
+    
+    setIsStarting(true);
+    try {
+      // Generate a trip ID for convoy tracking
+      const tripId = crypto.randomUUID();
+      
+      // Add the current user as convoy leader
+      const { error: leaderError } = await supabase
+        .from('convoy_members')
+        .insert({
+          trip_id: tripId,
+          user_id: user.id,
+          is_leader: true,
+          status: 'active',
+        });
+      
+      if (leaderError) {
+        console.error('Failed to add leader:', leaderError);
+      }
+      
+      // Create invites for selected convoy members
+      if (tripState.convoy.length > 0) {
+        const inviteeIds = tripState.convoy.map(member => member.id);
+        await createBulkInvites.mutateAsync({ tripId, inviteeIds });
+        
+        toast({
+          title: 'Convoy invites sent!',
+          description: `Invited ${tripState.convoy.length} friends to join your convoy.`,
+        });
+      }
+      
+      startTrip();
+      navigate('/trip/active');
+    } catch (error) {
+      console.error('Failed to start trip:', error);
+      toast({
+        title: 'Failed to start trip',
+        description: 'Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsStarting(false);
+    }
   };
 
   const handleAddStops = () => {
@@ -155,9 +206,17 @@ const TripReview = () => {
         </Button>
         <Button
           onClick={handleStartTrip}
-          className="w-full h-14 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-lg"
+          disabled={isStarting}
+          className="w-full h-14 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-lg gap-2"
         >
-          Start trip
+          {isStarting ? (
+            <>
+              <Loader2 className="h-5 w-5 animate-spin" />
+              Starting...
+            </>
+          ) : (
+            'Start trip'
+          )}
         </Button>
       </div>
     </div>

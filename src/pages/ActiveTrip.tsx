@@ -25,12 +25,15 @@ import logoWhite from '@/assets/logo-white.svg';
 const ActiveTrip = () => {
   const navigate = useNavigate();
   const { tripState, pauseTrip, updateProgress } = useTrip();
+  const { user } = useAuth();
   const { toast } = useToast();
   const [showSOS, setShowSOS] = useState(false);
   const [showConvoyPanel, setShowConvoyPanel] = useState(false);
   const [elapsedTime, setElapsedTime] = useState(tripState.timeElapsed);
   const [distance, setDistance] = useState(tripState.distanceCovered);
   const [activeTripId] = useState(() => crypto.randomUUID());
+  const [compassMode, setCompassMode] = useState(false);
+  const [showRoute, setShowRoute] = useState(true);
   const watchIdRef = useRef<number | null>(null);
 
   // Real GPS tracking
@@ -316,19 +319,49 @@ const ActiveTrip = () => {
 
       {/* Right Side Floating Buttons */}
       <div className="absolute right-4 top-1/3 z-10 space-y-3">
-        <button className="w-12 h-12 bg-card rounded-full flex items-center justify-center shadow-lg">
-          <Compass className="h-5 w-5 text-foreground" />
+        <button 
+          onClick={() => {
+            setCompassMode(prev => !prev);
+            toast({
+              title: compassMode ? 'North-up mode' : 'Heading mode',
+              description: compassMode ? 'Map oriented to north' : 'Map oriented to your heading',
+            });
+          }}
+          className={`w-12 h-12 rounded-full flex items-center justify-center shadow-lg transition-colors ${
+            compassMode ? 'bg-primary' : 'bg-card'
+          }`}
+        >
+          <Compass className={`h-5 w-5 ${compassMode ? 'text-primary-foreground' : 'text-foreground'}`} />
         </button>
-        <button className="w-12 h-12 bg-card rounded-full flex items-center justify-center shadow-lg">
+        <button 
+          onClick={() => toast({ title: 'Coming soon', description: 'Search nearby places feature coming soon!' })}
+          className="w-12 h-12 bg-card rounded-full flex items-center justify-center shadow-lg"
+        >
           <Search className="h-5 w-5 text-foreground" />
         </button>
-        <button className="w-12 h-12 bg-card rounded-full flex items-center justify-center shadow-lg relative">
-          <Route className="h-5 w-5 text-foreground" />
-          <div className="absolute -top-1 -right-1 w-4 h-4 bg-destructive rounded-full flex items-center justify-center">
-            <X className="h-2.5 w-2.5 text-white" />
-          </div>
+        <button 
+          onClick={() => {
+            setShowRoute(prev => !prev);
+            toast({
+              title: showRoute ? 'Route hidden' : 'Route visible',
+              description: showRoute ? 'Route line hidden from map' : 'Route line shown on map',
+            });
+          }}
+          className={`w-12 h-12 rounded-full flex items-center justify-center shadow-lg relative transition-colors ${
+            showRoute ? 'bg-card' : 'bg-destructive'
+          }`}
+        >
+          <Route className={`h-5 w-5 ${showRoute ? 'text-foreground' : 'text-destructive-foreground'}`} />
+          {!showRoute && (
+            <div className="absolute -top-1 -right-1 w-4 h-4 bg-destructive rounded-full flex items-center justify-center">
+              <X className="h-2.5 w-2.5 text-white" />
+            </div>
+          )}
         </button>
-        <button className="w-12 h-12 bg-card rounded-full flex items-center justify-center shadow-lg">
+        <button 
+          onClick={() => toast({ title: 'Coming soon', description: 'Report road hazard feature coming soon!' })}
+          className="w-12 h-12 bg-card rounded-full flex items-center justify-center shadow-lg"
+        >
           <AlertTriangle className="h-5 w-5 text-foreground" />
         </button>
       </div>
@@ -442,6 +475,8 @@ const ActiveTrip = () => {
                   onMemberClick={(member) => {
                     console.log('Clicked member:', member);
                   }}
+                  tripId={activeTripId}
+                  currentLeaderId={user?.id}
                 />
               </div>
             </motion.div>
