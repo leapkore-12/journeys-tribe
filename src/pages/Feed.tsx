@@ -94,6 +94,7 @@ const Feed = () => {
                 key={trip.id}
                 trip={trip}
                 index={index}
+                context="feed"
                 onLike={() => handleLike(trip.id, trip.is_liked || false)}
                 onComment={() => navigate(`/comments/${trip.id}`)}
                 onShare={() => navigate(`/share/${trip.id}`)}
