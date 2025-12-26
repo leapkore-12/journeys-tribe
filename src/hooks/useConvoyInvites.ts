@@ -30,6 +30,11 @@ interface CreateInviteParams {
   tripId: string;
 }
 
+interface CreateBulkInvitesParams {
+  tripId: string;
+  inviteeIds: string[];
+}
+
 interface AcceptInviteParams {
   inviteCode: string;
 }
@@ -79,6 +84,46 @@ export const useConvoyInvites = () => {
     onError: (error) => {
       toast({
         title: 'Failed to create invite',
+        description: error.message,
+        variant: 'destructive',
+      });
+    },
+  });
+
+  // Create bulk invites for multiple invitees (used when starting a trip with convoy)
+  const createBulkInvites = useMutation({
+    mutationFn: async ({ tripId, inviteeIds }: CreateBulkInvitesParams) => {
+      if (!user) throw new Error('Not authenticated');
+      if (inviteeIds.length === 0) return [];
+
+      const invites = inviteeIds.map(inviteeId => {
+        const inviteCode = generateInviteCode();
+        const expiresAt = new Date();
+        expiresAt.setHours(expiresAt.getHours() + 24);
+        
+        return {
+          trip_id: tripId,
+          inviter_id: user.id,
+          invitee_id: inviteeId,
+          invite_code: inviteCode,
+          expires_at: expiresAt.toISOString(),
+        };
+      });
+
+      const { data, error } = await supabase
+        .from('convoy_invites')
+        .insert(invites)
+        .select();
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['convoy-invites'] });
+    },
+    onError: (error) => {
+      toast({
+        title: 'Failed to create invites',
         description: error.message,
         variant: 'destructive',
       });
@@ -247,6 +292,7 @@ export const useConvoyInvites = () => {
 
   return {
     createInvite,
+    createBulkInvites,
     acceptInvite,
     useInviteByCode,
     useTripInvites,

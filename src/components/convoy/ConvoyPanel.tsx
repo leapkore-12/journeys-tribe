@@ -1,9 +1,23 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronUp, ChevronDown, Users, MapPin, Navigation } from 'lucide-react';
+import { ChevronUp, ChevronDown, Users, MapPin, Navigation, Crown } from 'lucide-react';
 import { ConvoyMemberPresence } from '@/hooks/useConvoyPresence';
 import { getMemberStatus, getStatusColor } from './ConvoyMemberMarker';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Button } from '@/components/ui/button';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { useTransferLeadership } from '@/hooks/useConvoyMembers';
+import { useAuth } from '@/context/AuthContext';
+import { useToast } from '@/hooks/use-toast';
 
 interface ConvoyPanelProps {
   members: ConvoyMemberPresence[];
@@ -11,6 +25,8 @@ interface ConvoyPanelProps {
   isExpanded: boolean;
   onToggle: () => void;
   onMemberClick?: (member: ConvoyMemberPresence) => void;
+  tripId?: string;
+  currentLeaderId?: string;
 }
 
 // Calculate distance between two coordinates in km
@@ -56,7 +72,16 @@ const ConvoyPanel: React.FC<ConvoyPanelProps> = ({
   isExpanded,
   onToggle,
   onMemberClick,
+  tripId,
+  currentLeaderId,
 }) => {
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const transferLeadership = useTransferLeadership();
+  const [transferTarget, setTransferTarget] = useState<ConvoyMemberPresence | null>(null);
+  
+  const isCurrentUserLeader = user?.id === currentLeaderId;
+
   // Sort members by distance from user
   const sortedMembers = React.useMemo(() => {
     if (!userPosition) return members;
@@ -67,6 +92,30 @@ const ConvoyPanel: React.FC<ConvoyPanelProps> = ({
       return distA - distB;
     });
   }, [members, userPosition]);
+
+  const handleTransferLeadership = async () => {
+    if (!tripId || !transferTarget) return;
+    
+    try {
+      await transferLeadership.mutateAsync({
+        tripId,
+        newLeaderId: transferTarget.id,
+      });
+      
+      toast({
+        title: 'Leadership transferred',
+        description: `${transferTarget.name} is now the convoy leader.`,
+      });
+    } catch (error) {
+      toast({
+        title: 'Transfer failed',
+        description: 'Could not transfer leadership. Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setTransferTarget(null);
+    }
+  };
 
   return (
     <motion.div
@@ -136,15 +185,19 @@ const ConvoyPanel: React.FC<ConvoyPanelProps> = ({
                 const distance = userPosition
                   ? calculateDistance(userPosition, member.position)
                   : null;
+                const isLeader = member.id === currentLeaderId;
+                const canTransfer = isCurrentUserLeader && !isLeader && tripId;
 
                 return (
-                  <button
+                  <div
                     key={member.id}
-                    onClick={() => onMemberClick?.(member)}
                     className="w-full flex items-center gap-3 p-2 rounded-lg bg-secondary/50 hover:bg-secondary transition-colors"
                   >
                     {/* Avatar with status */}
-                    <div className="relative">
+                    <button
+                      onClick={() => onMemberClick?.(member)}
+                      className="relative"
+                    >
                       <Avatar className="w-10 h-10">
                         <AvatarImage src={member.avatar} />
                         <AvatarFallback className="bg-primary text-primary-foreground font-semibold">
@@ -155,13 +208,26 @@ const ConvoyPanel: React.FC<ConvoyPanelProps> = ({
                         className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full border-2 border-card"
                         style={{ backgroundColor: statusColor }}
                       />
-                    </div>
+                      {isLeader && (
+                        <div className="absolute -top-1 -right-1 w-5 h-5 bg-yellow-500 rounded-full flex items-center justify-center border-2 border-card">
+                          <Crown className="h-2.5 w-2.5 text-white" />
+                        </div>
+                      )}
+                    </button>
 
                     {/* Info */}
-                    <div className="flex-1 text-left">
-                      <p className="text-sm font-medium text-foreground">
-                        {member.name}
-                      </p>
+                    <button
+                      onClick={() => onMemberClick?.(member)}
+                      className="flex-1 text-left"
+                    >
+                      <div className="flex items-center gap-2">
+                        <p className="text-sm font-medium text-foreground">
+                          {member.name}
+                        </p>
+                        {isLeader && (
+                          <span className="text-xs text-yellow-500 font-medium">Leader</span>
+                        )}
+                      </div>
                       <div className="flex items-center gap-2 text-xs text-muted-foreground">
                         {member.speed ? (
                           <span className="flex items-center gap-1">
@@ -178,19 +244,31 @@ const ConvoyPanel: React.FC<ConvoyPanelProps> = ({
                           </span>
                         )}
                       </div>
-                    </div>
+                    </button>
 
-                    {/* Status badge */}
-                    <div
-                      className="px-2 py-1 rounded-full text-xs font-medium capitalize"
-                      style={{
-                        backgroundColor: `${statusColor}20`,
-                        color: statusColor,
-                      }}
-                    >
-                      {status}
-                    </div>
-                  </button>
+                    {/* Transfer button or status badge */}
+                    {canTransfer ? (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setTransferTarget(member)}
+                        className="text-xs px-2 py-1 h-7"
+                      >
+                        <Crown className="h-3 w-3 mr-1" />
+                        Make Leader
+                      </Button>
+                    ) : (
+                      <div
+                        className="px-2 py-1 rounded-full text-xs font-medium capitalize"
+                        style={{
+                          backgroundColor: `${statusColor}20`,
+                          color: statusColor,
+                        }}
+                      >
+                        {status}
+                      </div>
+                    )}
+                  </div>
                 );
               })}
 
@@ -205,6 +283,28 @@ const ConvoyPanel: React.FC<ConvoyPanelProps> = ({
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Transfer Leadership Confirmation Dialog */}
+      <AlertDialog open={!!transferTarget} onOpenChange={() => setTransferTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Transfer Leadership?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to make <strong>{transferTarget?.name}</strong> the convoy leader? 
+              They will be able to set the route and add stops.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleTransferLeadership}
+              disabled={transferLeadership.isPending}
+            >
+              {transferLeadership.isPending ? 'Transferring...' : 'Transfer Leadership'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </motion.div>
   );
 };
