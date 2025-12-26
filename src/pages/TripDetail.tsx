@@ -226,7 +226,7 @@ const TripDetail = () => {
                   <p className="font-semibold text-foreground text-sm">{trip.profile?.display_name || 'User'}</p>
                   {trip.vehicle && (
                     <span className="text-muted-foreground text-xs">
-                      🚗 {trip.vehicle.make} {trip.vehicle.model}
+                      🚗 {trip.vehicle.name}
                     </span>
                   )}
                 </div>
