@@ -8,6 +8,7 @@ export interface FollowerWithProfile {
   following_id: string;
   profile?: { id: string; username: string | null; display_name: string | null; avatar_url: string | null; plan_type?: string } | null;
   is_following_back: boolean;
+  has_pending_request?: boolean;
 }
 
 export interface FollowRequestWithProfile {
@@ -37,7 +38,21 @@ export const useFollowers = (userId?: string) => {
       const { data: following } = user?.id ? await supabase.from('follows').select('following_id').eq('follower_id', user.id) : { data: [] };
       const followingIds = new Set(following?.map(f => f.following_id) || []);
 
-      return followers.map(f => ({ ...f, profile: profileMap.get(f.follower_id), is_following_back: followingIds.has(f.follower_id) })) as FollowerWithProfile[];
+      // Check for pending follow requests from current user to these followers
+      const { data: pendingRequests } = user?.id ? await supabase
+        .from('follow_requests')
+        .select('target_id')
+        .eq('requester_id', user.id)
+        .eq('status', 'pending')
+        .in('target_id', ids) : { data: [] };
+      const pendingRequestIds = new Set(pendingRequests?.map(r => r.target_id) || []);
+
+      return followers.map(f => ({ 
+        ...f, 
+        profile: profileMap.get(f.follower_id), 
+        is_following_back: followingIds.has(f.follower_id),
+        has_pending_request: pendingRequestIds.has(f.follower_id)
+      })) as FollowerWithProfile[];
     },
     enabled: !!targetId,
   });

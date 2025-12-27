@@ -194,10 +194,13 @@ const ManageConnections = () => {
                       className="min-w-[100px] border-primary text-primary hover:bg-primary/10"
                       onClick={(e) => {
                         e.stopPropagation();
-                        handleToggleFollow(conn.profile.id, conn.is_following_back || false, conn.profile.username || undefined);
+                        if (!conn.has_pending_request) {
+                          handleToggleFollow(conn.profile.id, conn.is_following_back || false, conn.profile.username || undefined);
+                        }
                       }}
+                      disabled={conn.has_pending_request}
                     >
-                      {conn.is_following_back ? 'Following' : 'Follow back'}
+                      {conn.is_following_back ? 'Following' : conn.has_pending_request ? 'Requested' : 'Follow back'}
                     </Button>
                   </div>
                 ))}
