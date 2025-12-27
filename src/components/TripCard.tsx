@@ -153,7 +153,7 @@ const TripCard = ({ trip, index, onLike, onComment, onShare, onUserClick, contex
 
       {/* Stats Row */}
       <div className="px-4 pb-3">
-        <div className="flex items-center gap-6 text-sm">
+        <div className="flex items-start gap-6 text-sm">
           <div>
             <p className="text-muted-foreground text-xs">Distance</p>
             <p className="font-semibold text-foreground">{formatDistance(trip.distance_km)}</p>
@@ -167,22 +167,22 @@ const TripCard = ({ trip, index, onLike, onComment, onShare, onUserClick, contex
           {trip.convoy_members && trip.convoy_members.length > 0 && (
             <div>
               <p className="text-muted-foreground text-xs">Convoy with</p>
-              <div className="flex -space-x-1.5 mt-1">
+              <div className="flex -space-x-1.5 items-center h-[21px]">
                 {trip.convoy_members.slice(0, 4).map((member) => (
                   <Avatar 
                     key={member.user_id} 
-                    className="h-6 w-6 border-2 border-primary cursor-pointer hover:z-10 transition-transform hover:scale-110"
+                    className="h-5 w-5 border border-primary cursor-pointer hover:z-10 transition-transform hover:scale-110"
                     onClick={(e) => {
                       e.stopPropagation();
                       navigate(`/user/${member.user_id}`);
                     }}
                   >
                     <AvatarImage src={member.profile?.avatar_url || undefined} />
-                    <AvatarFallback className="text-[10px] bg-secondary">{member.profile?.display_name?.[0] || 'U'}</AvatarFallback>
+                    <AvatarFallback className="text-[8px] bg-secondary">{member.profile?.display_name?.[0] || 'U'}</AvatarFallback>
                   </Avatar>
                 ))}
                 {trip.convoy_members.length > 4 && (
-                  <div className="h-6 w-6 rounded-full bg-secondary border-2 border-primary flex items-center justify-center text-[10px] text-foreground">
+                  <div className="h-5 w-5 rounded-full bg-secondary border border-primary flex items-center justify-center text-[8px] text-foreground">
                     +{trip.convoy_members.length - 4}
                   </div>
                 )}
