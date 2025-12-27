@@ -39,15 +39,29 @@ const ActiveTrip = () => {
   // Get active convoy trip from database (for convoy members who joined)
   const { data: activeConvoy, isLoading: isLoadingConvoy } = useActiveConvoy();
 
-  // Determine the trip ID - use convoy trip ID if available, otherwise generate one
+  // Determine the trip ID with proper priority order (context > convoy > backend)
+  // NEVER generate a random UUID - we need a real trip ID
   const activeTripId = useMemo(() => {
-    if (activeConvoy?.trip_id) return activeConvoy.trip_id;
-    // Fall back to tripState tripId if it exists, otherwise generate
-    return crypto.randomUUID();
-  }, [activeConvoy?.trip_id]);
+    // Priority 1: Context trip ID (set when trip was created via TripReview)
+    if (tripState.activeTripId) {
+      console.log('[ActiveTrip] Using context tripId:', tripState.activeTripId);
+      return tripState.activeTripId;
+    }
+    // Priority 2: Active convoy trip ID (for convoy members who joined)
+    if (activeConvoy?.trip_id) {
+      console.log('[ActiveTrip] Using activeConvoy tripId:', activeConvoy.trip_id);
+      return activeConvoy.trip_id;
+    }
+    // Return null instead of generating random UUID - we'll handle this in the loading state
+    console.log('[ActiveTrip] No trip ID available yet');
+    return null;
+  }, [tripState.activeTripId, activeConvoy?.trip_id]);
 
   // Determine if user is convoy leader
   const isLeader = activeConvoy?.is_leader ?? true;
+  
+  // Show loading if we don't have a trip ID yet
+  const isResolvingTrip = !activeTripId && (isLoadingConvoy || !activeConvoy);
 
   // Get destination coordinates from active convoy or trip state
   const destinationCoordinates = useMemo(() => {
@@ -73,14 +87,14 @@ const ActiveTrip = () => {
   // Route fetching
   const { route, getRoute } = useMapboxRoute();
 
-  // Offline tracking support
+  // Offline tracking support - only enabled if we have a trip ID
   const {
     isOnline,
     isSyncing,
     bufferedCount,
     handlePositionUpdate,
     syncBufferedPoints,
-  } = useOfflineTracking(activeTripId);
+  } = useOfflineTracking(activeTripId || undefined);
 
   // Active trip DB persistence
   const { updatePosition: updateTripPosition } = useActiveTrip();
@@ -93,8 +107,8 @@ const ActiveTrip = () => {
     updatePosition,
     leaveConvoy,
   } = useConvoyPresence({ 
-    tripId: activeTripId, 
-    enabled: (tripState.isActive || !!activeConvoy) && isOnline,
+    tripId: activeTripId || undefined, 
+    enabled: !!activeTripId && (tripState.isActive || !!activeConvoy) && isOnline,
     onMemberJoin: (member) => {
       toast({
         title: 'Rider joined',

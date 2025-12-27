@@ -1,22 +1,39 @@
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
+import { Loader2 } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import TripHeader from '@/components/trip/TripHeader';
 import { useTrip } from '@/context/TripContext';
+import { useFinalizeTrip } from '@/hooks/useFinalizeTrip';
 
 const TripPaused = () => {
   const navigate = useNavigate();
   const { tripState, resumeTrip, finishTrip } = useTrip();
+  const { completeTrip } = useFinalizeTrip();
+  const [isFinishing, setIsFinishing] = useState(false);
 
   const handleResume = () => {
     resumeTrip();
     navigate('/trip/active');
   };
 
-  const handleFinish = () => {
-    finishTrip();
-    navigate('/trip/post');
+  const handleFinish = async () => {
+    setIsFinishing(true);
+    console.log('[TripPaused] Finishing trip...');
+    
+    // Use the reliable finalize hook which looks up trip ID from backend if needed
+    const success = await completeTrip();
+    
+    if (success) {
+      console.log('[TripPaused] Trip completed successfully');
+      finishTrip(); // Update local context
+      navigate('/trip/post');
+    } else {
+      console.error('[TripPaused] Failed to complete trip');
+      setIsFinishing(false);
+    }
   };
 
   const formatTime = (seconds: number) => {
@@ -107,9 +124,17 @@ const TripPaused = () => {
           </Button>
           <Button
             onClick={handleFinish}
+            disabled={isFinishing}
             className="w-full h-14 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-lg"
           >
-            Finish Trip
+            {isFinishing ? (
+              <>
+                <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                Finishing...
+              </>
+            ) : (
+              'Finish Trip'
+            )}
           </Button>
         </motion.div>
       </div>
