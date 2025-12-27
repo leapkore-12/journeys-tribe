@@ -83,22 +83,49 @@ const PostTrip = () => {
     // If there's an active trip, mark it as cancelled in the database
     if (tripState.activeTripId && user) {
       try {
-        // Update trip status to cancelled
-        await supabase
+        // Update trip status to cancelled - this triggers the database function
+        // that automatically sets all convoy members status to 'left'
+        const { error: tripError } = await supabase
           .from('trips')
           .update({ status: 'cancelled' })
           .eq('id', tripState.activeTripId);
         
-        // Update convoy members status to left
-        await supabase
+        if (tripError) {
+          console.error('Failed to update trip status:', tripError);
+          toast({
+            title: "Error",
+            description: "Failed to delete trip",
+            variant: "destructive",
+          });
+          return;
+        }
+        
+        // Also explicitly update convoy members as backup
+        const { error: convoyError } = await supabase
           .from('convoy_members')
           .update({ status: 'left' })
+          .eq('trip_id', tripState.activeTripId);
+        
+        if (convoyError) {
+          console.error('Failed to update convoy members:', convoyError);
+        }
+        
+        // Delete active_trips entries
+        await supabase
+          .from('active_trips')
+          .delete()
           .eq('trip_id', tripState.activeTripId);
         
         // Invalidate active-convoy query to hide the Active Trip bar
         queryClient.invalidateQueries({ queryKey: ['active-convoy'] });
       } catch (error) {
         console.error('Error cleaning up trip:', error);
+        toast({
+          title: "Error",
+          description: "Failed to delete trip",
+          variant: "destructive",
+        });
+        return;
       }
     }
     

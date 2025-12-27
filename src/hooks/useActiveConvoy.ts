@@ -1,4 +1,5 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/context/AuthContext';
 
@@ -21,8 +22,9 @@ export interface ActiveConvoyTrip {
 
 export const useActiveConvoy = () => {
   const { user } = useAuth();
+  const queryClient = useQueryClient();
 
-  return useQuery({
+  const query = useQuery({
     queryKey: ['active-convoy', user?.id],
     queryFn: async (): Promise<ActiveConvoyTrip | null> => {
       if (!user?.id) return null;
@@ -68,6 +70,52 @@ export const useActiveConvoy = () => {
       };
     },
     enabled: !!user?.id,
-    refetchInterval: 30000, // Refetch every 30 seconds to check if trip is still active
+    staleTime: 0, // Always consider data stale
+    refetchInterval: 10000, // Refetch every 10 seconds
+    refetchOnWindowFocus: true,
+    refetchOnMount: 'always',
   });
+
+  // Subscribe to trip status changes for real-time updates
+  useEffect(() => {
+    if (!user?.id) return;
+
+    // Subscribe to trips table changes
+    const channel = supabase
+      .channel('active-convoy-trips')
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'trips',
+        },
+        (payload) => {
+          const newStatus = payload.new?.status;
+          // If any trip becomes completed or cancelled, invalidate the query
+          if (newStatus === 'completed' || newStatus === 'cancelled') {
+            queryClient.invalidateQueries({ queryKey: ['active-convoy', user.id] });
+          }
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'convoy_members',
+        },
+        () => {
+          // Invalidate on any convoy member changes
+          queryClient.invalidateQueries({ queryKey: ['active-convoy', user.id] });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user?.id, queryClient]);
+
+  return query;
 };
