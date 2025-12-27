@@ -26,7 +26,41 @@ const TripReview = () => {
     
     setIsStarting(true);
     try {
-      // First, create the trip in the database
+      // Check for existing active trips and complete them first
+      const { data: existingTrip } = await supabase
+        .from('trips')
+        .select('id, title')
+        .eq('user_id', user.id)
+        .eq('status', 'active')
+        .maybeSingle();
+
+      if (existingTrip) {
+        console.log('Found existing active trip, completing it:', existingTrip.id);
+        
+        // Complete the old trip
+        await supabase
+          .from('trips')
+          .update({ 
+            status: 'completed', 
+            completed_at: new Date().toISOString() 
+          })
+          .eq('id', existingTrip.id);
+        
+        // Deactivate convoy members of old trip
+        await supabase
+          .from('convoy_members')
+          .update({ status: 'left' })
+          .eq('trip_id', existingTrip.id)
+          .eq('status', 'active');
+        
+        // Delete any active_trips entries for the old trip
+        await supabase
+          .from('active_trips')
+          .delete()
+          .eq('trip_id', existingTrip.id);
+      }
+
+      // Now create the new trip
       const { data: trip, error: tripError } = await supabase
         .from('trips')
         .insert({
@@ -49,6 +83,14 @@ const TripReview = () => {
       
       if (tripError || !trip) {
         console.error('Failed to create trip:', tripError);
+        if (tripError?.code === '23505') {
+          toast({
+            title: 'Trip already in progress',
+            description: 'Please complete or cancel your current trip first.',
+            variant: 'destructive',
+          });
+          return;
+        }
         throw new Error('Failed to create trip');
       }
       
