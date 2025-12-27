@@ -203,3 +203,28 @@ export const useIsConvoyLeader = (tripId: string | undefined) => {
   const currentMember = members.find(m => m.user_id === user.id);
   return currentMember?.is_leader || false;
 };
+
+export const useUntagFromTrip = () => {
+  const queryClient = useQueryClient();
+  const { user } = useAuth();
+
+  return useMutation({
+    mutationFn: async (tripId: string) => {
+      if (!user?.id) throw new Error('Not authenticated');
+
+      const { error } = await supabase
+        .from('convoy_members')
+        .update({ status: 'left' })
+        .eq('trip_id', tripId)
+        .eq('user_id', user.id)
+        .eq('is_leader', false);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['participated-trips'] });
+      queryClient.invalidateQueries({ queryKey: ['profile'] });
+      queryClient.invalidateQueries({ queryKey: ['convoy-members'] });
+    },
+  });
+};
