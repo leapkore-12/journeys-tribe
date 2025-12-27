@@ -171,18 +171,18 @@ const TripCard = ({ trip, index, onLike, onComment, onShare, onUserClick, contex
                 {trip.convoy_members.slice(0, 4).map((member) => (
                   <Avatar 
                     key={member.user_id} 
-                    className="h-6 w-6 border-2 border-background cursor-pointer hover:z-10 transition-transform hover:scale-110"
+                    className="h-8 w-8 border-2 border-primary ring-2 ring-background cursor-pointer hover:z-10 transition-transform hover:scale-110"
                     onClick={(e) => {
                       e.stopPropagation();
-                      navigate(`/profile/${member.user_id}`);
+                      navigate(`/user/${member.user_id}`);
                     }}
                   >
                     <AvatarImage src={member.profile?.avatar_url || undefined} />
-                    <AvatarFallback className="text-xs">{member.profile?.display_name?.[0] || 'U'}</AvatarFallback>
+                    <AvatarFallback className="text-xs bg-secondary">{member.profile?.display_name?.[0] || 'U'}</AvatarFallback>
                   </Avatar>
                 ))}
                 {trip.convoy_members.length > 4 && (
-                  <div className="h-6 w-6 rounded-full bg-muted border-2 border-background flex items-center justify-center text-xs text-muted-foreground">
+                  <div className="h-8 w-8 rounded-full bg-secondary border-2 border-primary ring-2 ring-background flex items-center justify-center text-xs text-foreground">
                     +{trip.convoy_members.length - 4}
                   </div>
                 )}
