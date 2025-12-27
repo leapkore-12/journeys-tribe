@@ -109,7 +109,7 @@ export const useFeedTrips = () => {
             .from('convoy_members')
             .select('trip_id, user_id, is_leader')
             .in('trip_id', tripIds)
-            .in('status', ['active', 'completed'])
+            .in('status', ['active', 'completed', 'left'])
         : { data: [] };
 
       // Get profiles for convoy members (excluding trip owners to avoid duplicates)
@@ -307,12 +307,12 @@ export const useTripById = (tripId: string | undefined) => {
         isLiked = !!like;
       }
 
-      // Fetch convoy members (include completed for completed trips)
+      // Fetch convoy members (include completed/left for completed trips)
       const { data: convoyMembers } = await supabase
         .from('convoy_members')
         .select('user_id, is_leader')
         .eq('trip_id', tripId)
-        .in('status', ['active', 'completed']);
+        .in('status', ['active', 'completed', 'left']);
 
       // Fetch profiles for convoy members
       const convoyUserIds = convoyMembers?.map(cm => cm.user_id).filter(id => id !== trip.user_id) || [];
@@ -390,7 +390,7 @@ export const useParticipatedTrips = (userId?: string) => {
         .select('trip_id')
         .eq('user_id', userId)
         .eq('is_leader', false)
-        .in('status', ['active', 'completed']);
+        .in('status', ['active', 'completed', 'left']);
 
       if (membershipError || !memberships || memberships.length === 0) return [];
 

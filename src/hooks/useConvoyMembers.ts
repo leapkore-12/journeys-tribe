@@ -134,8 +134,8 @@ export const useConvoyMembers = (tripId: string | undefined, options?: UseConvoy
     queryFn: async () => {
       if (!tripId) return [];
       
-      // Fetch convoy members - optionally include completed
-      const statusFilter = options?.includeCompleted ? ['active', 'completed'] : ['active'];
+      // Fetch convoy members - optionally include completed/left (for historical data)
+      const statusFilter = options?.includeCompleted ? ['active', 'completed', 'left'] : ['active'];
       const { data, error } = await supabase
         .from('convoy_members')
         .select('*')
