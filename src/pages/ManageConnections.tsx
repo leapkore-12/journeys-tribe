@@ -39,8 +39,12 @@ const ManageConnections = () => {
       });
     } else {
       followMutation.mutate(userId, {
-        onSuccess: () => {
-          toast({ description: `You followed @${username || 'user'}` });
+        onSuccess: (result) => {
+          if (result?.type === 'request') {
+            toast({ description: `Request sent to @${username || 'user'}` });
+          } else {
+            toast({ description: `You followed @${username || 'user'}` });
+          }
         }
       });
     }
