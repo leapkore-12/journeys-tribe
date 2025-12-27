@@ -58,6 +58,26 @@ const Notifications = () => {
     return pendingConvoyInvites.find((invite) => invite.trip_id === tripId) ?? null;
   };
 
+  // Fetch invite status (including non-pending) for better error messaging
+  const fetchInviteStatus = async (tripId: string, inviterId?: string | null) => {
+    if (!user?.id) throw new Error('Not authenticated');
+
+    let query = supabase
+      .from('convoy_invites')
+      .select('*, trips!inner(status)')
+      .eq('trip_id', tripId)
+      .eq('invitee_id', user.id)
+      .order('created_at', { ascending: false })
+      .limit(1);
+
+    if (inviterId) query = query.eq('inviter_id', inviterId);
+
+    const { data, error } = await query.maybeSingle();
+    if (error) throw error;
+
+    return data as { id: string; status: string; expires_at: string; trip_id: string; trips: { status: string } } | null;
+  };
+
   const fetchMyPendingInviteForTrip = async (tripId: string, inviterId?: string | null) => {
     if (!user?.id) throw new Error('Not authenticated');
 
@@ -79,6 +99,10 @@ const Notifications = () => {
     return data;
   };
 
+  const handleDismissNotification = (notificationId: string) => {
+    deleteNotification.mutate(notificationId);
+  };
+
   const handleAcceptConvoyInvite = async (
     tripId: string | null,
     notificationId: string,
@@ -94,14 +118,55 @@ const Notifications = () => {
       return;
     }
 
-    const invite = findConvoyInvite(tripId) ?? (await fetchMyPendingInviteForTrip(tripId, inviterId));
+    let invite: { id: string; trip_id: string } | null = findConvoyInvite(tripId);
+    
+    if (!invite) {
+      const fetchedInvite = await fetchMyPendingInviteForTrip(tripId, inviterId);
+      if (fetchedInvite) invite = { id: fetchedInvite.id, trip_id: fetchedInvite.trip_id };
+    }
 
     if (!invite) {
+      // Check invite status for better error message
+      const inviteStatus = await fetchInviteStatus(tripId, inviterId);
+      
+      if (inviteStatus) {
+        if (inviteStatus.status === 'accepted') {
+          toast({
+            title: 'Already joined',
+            description: 'You have already joined this convoy.',
+          });
+          deleteNotification.mutate(notificationId);
+          return;
+        } else if (inviteStatus.status === 'declined') {
+          toast({
+            title: 'Already declined',
+            description: 'You have already declined this invite.',
+          });
+          deleteNotification.mutate(notificationId);
+          return;
+        } else if (inviteStatus.status === 'cancelled' || inviteStatus.trips?.status === 'completed') {
+          toast({
+            title: 'Trip ended',
+            description: 'This trip has already been completed.',
+          });
+          deleteNotification.mutate(notificationId);
+          return;
+        } else if (new Date(inviteStatus.expires_at) < new Date()) {
+          toast({
+            title: 'Invite expired',
+            description: 'This invite has expired.',
+          });
+          deleteNotification.mutate(notificationId);
+          return;
+        }
+      }
+      
       toast({
         title: 'Invite not found',
-        description: 'This invite may have expired. Ask the trip leader to resend it.',
+        description: 'This invite may have expired or been cancelled.',
         variant: 'destructive',
       });
+      deleteNotification.mutate(notificationId);
       return;
     }
 
@@ -131,14 +196,54 @@ const Notifications = () => {
       return;
     }
 
-    const invite = findConvoyInvite(tripId) ?? (await fetchMyPendingInviteForTrip(tripId, inviterId));
+    let invite: { id: string; trip_id: string } | null = findConvoyInvite(tripId);
+    
+    if (!invite) {
+      const fetchedInvite = await fetchMyPendingInviteForTrip(tripId, inviterId);
+      if (fetchedInvite) invite = { id: fetchedInvite.id, trip_id: fetchedInvite.trip_id };
+    }
 
     if (!invite) {
-      toast({
-        title: 'Invite not found',
-        description: 'This invite may have expired. Ask the trip leader to resend it.',
-        variant: 'destructive',
-      });
+      // Check invite status for better error message
+      const inviteStatus = await fetchInviteStatus(tripId, inviterId);
+      
+      if (inviteStatus) {
+        if (inviteStatus.status === 'accepted') {
+          toast({
+            title: 'Already joined',
+            description: 'You have already joined this convoy.',
+          });
+        } else if (inviteStatus.status === 'declined') {
+          toast({
+            title: 'Already declined',
+            description: 'You have already declined this invite.',
+          });
+        } else if (inviteStatus.status === 'cancelled' || inviteStatus.trips?.status === 'completed') {
+          toast({
+            title: 'Trip ended',
+            description: 'This trip has already been completed.',
+          });
+        } else if (new Date(inviteStatus.expires_at) < new Date()) {
+          toast({
+            title: 'Invite expired',
+            description: 'This invite has expired.',
+          });
+        } else {
+          toast({
+            title: 'Invite not found',
+            description: 'This invite may have expired or been cancelled.',
+            variant: 'destructive',
+          });
+        }
+      } else {
+        toast({
+          title: 'Invite not found',
+          description: 'This invite may have expired or been cancelled.',
+          variant: 'destructive',
+        });
+      }
+      
+      deleteNotification.mutate(notificationId);
       return;
     }
 
