@@ -163,6 +163,8 @@ const Notifications = () => {
     if (notification.type === 'convoy_invite') {
       const invite = findConvoyInvite(notification.trip_id);
       const isExpired = invite ? new Date(invite.expires_at) < new Date() : false;
+      const showButtons = invite && !isExpired;
+      const isLoadingInvite = !invite && notification.trip_id;
       
       return (
         <div className="flex-1 min-w-0">
@@ -172,7 +174,7 @@ const Notifications = () => {
           </p>
           <p className="text-xs text-muted-foreground mt-1">{timeAgo}</p>
           {/* Join/Decline Buttons */}
-          {invite && !isExpired ? (
+          {showButtons ? (
             <div className="flex gap-2 mt-3">
               <Button
                 size="sm"
@@ -202,6 +204,11 @@ const Notifications = () => {
             </div>
           ) : isExpired ? (
             <p className="text-xs text-destructive mt-2">This invite has expired</p>
+          ) : isLoadingInvite ? (
+            <div className="flex gap-2 mt-3">
+              <Skeleton className="h-8 w-16" />
+              <Skeleton className="h-8 w-20" />
+            </div>
           ) : null}
         </div>
       );

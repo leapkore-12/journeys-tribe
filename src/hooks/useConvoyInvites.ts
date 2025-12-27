@@ -343,11 +343,12 @@ export const useConvoyInvites = () => {
 
       return { tripId };
     },
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ['my-convoy-invites'] });
-      queryClient.invalidateQueries({ queryKey: ['convoy-invites'] });
-      queryClient.invalidateQueries({ queryKey: ['convoy-members', data.tripId] });
-      queryClient.invalidateQueries({ queryKey: ['notifications'] });
+      onSuccess: (data) => {
+        queryClient.invalidateQueries({ queryKey: ['my-convoy-invites'] });
+        queryClient.invalidateQueries({ queryKey: ['convoy-invites'] });
+        queryClient.invalidateQueries({ queryKey: ['convoy-members', data.tripId] });
+        queryClient.invalidateQueries({ queryKey: ['notifications'] });
+        queryClient.invalidateQueries({ predicate: (q) => q.queryKey[0] === 'active-convoy' });
       toast({
         title: 'Joined convoy!',
         description: 'You are now part of this trip convoy.',
