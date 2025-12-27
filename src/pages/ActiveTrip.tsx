@@ -15,9 +15,10 @@ import { useConvoyInvites } from '@/hooks/useConvoyInvites';
 import { useConvoyMembers, useTransferLeadership, useIsConvoyLeader } from '@/hooks/useConvoyMembers';
 import { useOfflineTracking } from '@/hooks/useOfflineTracking';
 import { useActiveTrip } from '@/hooks/useActiveTrip';
-import { useActiveConvoy } from '@/hooks/useActiveConvoy';
+import { useActiveConvoy, ActiveConvoyTrip } from '@/hooks/useActiveConvoy';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
 import LiveTrackingMap from '@/components/map/LiveTrackingMap';
 import ConvoyPanel from '@/components/convoy/ConvoyPanel';
 import ConvoyStatusBar from '@/components/convoy/ConvoyStatusBar';
@@ -25,7 +26,7 @@ import logoWhite from '@/assets/logo-white.svg';
 
 const ActiveTrip = () => {
   const navigate = useNavigate();
-  const { tripState, pauseTrip, updateProgress } = useTrip();
+  const { tripState, pauseTrip, updateProgress, resetTrip } = useTrip();
   const { user } = useAuth();
   const { toast } = useToast();
   const [showSOS, setShowSOS] = useState(false);
@@ -62,6 +63,78 @@ const ActiveTrip = () => {
   
   // Show loading if we don't have a trip ID yet
   const isResolvingTrip = !activeTripId && (isLoadingConvoy || !activeConvoy);
+
+  // Track previous convoy state to detect trip completion
+  const prevActiveConvoyRef = useRef<ActiveConvoyTrip | null | undefined>(undefined);
+
+  // Detect when trip transitions from active to completed (for convoy members)
+  useEffect(() => {
+    // Only track after we've had at least one value
+    if (prevActiveConvoyRef.current === undefined) {
+      prevActiveConvoyRef.current = activeConvoy;
+      return;
+    }
+
+    // Detect when trip transitions from active to completed/null
+    const wasActive = prevActiveConvoyRef.current?.trip?.status === 'active';
+    const isNowCompleted = !activeConvoy || activeConvoy.trip?.status !== 'active';
+    const wasConvoyMember = prevActiveConvoyRef.current && !prevActiveConvoyRef.current.is_leader;
+
+    // If we were a convoy member and trip just became completed
+    if (wasActive && isNowCompleted && wasConvoyMember) {
+      console.log('[ActiveTrip] Convoy trip completed by leader, navigating member away');
+      toast({
+        title: '🏁 Trip completed!',
+        description: 'The convoy leader has finished the trip',
+      });
+      resetTrip();
+      navigate('/trip/complete');
+    }
+
+    // Update the ref for next comparison
+    prevActiveConvoyRef.current = activeConvoy;
+  }, [activeConvoy, navigate, toast, resetTrip]);
+
+  // Real-time subscription to convoy_members status changes (backup detection)
+  useEffect(() => {
+    if (!user?.id || !activeTripId || isLeader) return;
+
+    console.log('[ActiveTrip] Setting up convoy member status subscription for user:', user.id);
+    
+    const channel = supabase
+      .channel(`convoy-member-status-${user.id}-${activeTripId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'convoy_members',
+          filter: `user_id=eq.${user.id}`,
+        },
+        (payload) => {
+          const newStatus = payload.new?.status;
+          const tripId = payload.new?.trip_id;
+          
+          console.log('[ActiveTrip] Convoy member status changed:', newStatus, 'for trip:', tripId);
+          
+          if ((newStatus === 'completed' || newStatus === 'left') && tripId === activeTripId) {
+            toast({
+              title: '🏁 Trip completed!',
+              description: 'The convoy leader has finished the trip',
+            });
+            resetTrip();
+            navigate('/trip/complete');
+          }
+        }
+      )
+      .subscribe((status) => {
+        console.log('[ActiveTrip] Convoy member status subscription:', status);
+      });
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user?.id, activeTripId, isLeader, navigate, toast, resetTrip]);
 
   // Get destination coordinates from active convoy or trip state
   const destinationCoordinates = useMemo(() => {
