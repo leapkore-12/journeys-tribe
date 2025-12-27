@@ -36,19 +36,38 @@ const LiveTrackingMap = forwardRef<LiveTrackingMapRef, LiveTrackingMapProps>(({
   const destMarker = useRef<mapboxgl.Marker | null>(null);
   const convoyMarkers = useRef<Map<string, mapboxgl.Marker>>(new Map());
   const [isLoaded, setIsLoaded] = useState(false);
+  
+  // Refs to track latest values for recenter function
+  const userPositionRef = useRef<[number, number] | null>(null);
+  const headingRef = useRef<number | null>(null);
+  const compassModeRef = useRef<boolean>(false);
 
-  // Recenter function
+  // Keep refs updated with latest values
+  useEffect(() => {
+    userPositionRef.current = userPosition;
+    headingRef.current = heading ?? null;
+    compassModeRef.current = compassMode;
+  }, [userPosition, heading, compassMode]);
+
+  // Recenter function using refs for latest values
   const recenter = useCallback(() => {
-    if (map.current && userPosition) {
+    const currentPosition = userPositionRef.current;
+    const currentHeading = headingRef.current;
+    const currentCompassMode = compassModeRef.current;
+
+    if (map.current && currentPosition) {
+      console.log('[LiveTrackingMap] Recentering to:', currentPosition);
       map.current.flyTo({
-        center: userPosition,
+        center: currentPosition,
         zoom: 15,
         pitch: 60,
-        bearing: compassMode && heading ? heading : 0,
+        bearing: currentCompassMode && currentHeading ? currentHeading : 0,
         duration: 1000,
       });
+    } else {
+      console.log('[LiveTrackingMap] Cannot recenter - no user position or map not ready');
     }
-  }, [userPosition, compassMode, heading]);
+  }, []);
 
   // Expose recenter via ref
   useImperativeHandle(ref, () => ({
