@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/context/AuthContext';
 
@@ -8,6 +9,7 @@ export interface ConvoyMember {
   trip_id: string;
   is_leader: boolean;
   joined_at: string | null;
+  status: string | null;
   profile?: {
     id: string;
     username: string | null;
@@ -17,15 +19,48 @@ export interface ConvoyMember {
 }
 
 export const useConvoyMembers = (tripId: string | undefined) => {
+  const queryClient = useQueryClient();
+
+  // Subscribe to real-time updates for convoy_members table
+  useEffect(() => {
+    if (!tripId) return;
+
+    const channel = supabase
+      .channel(`convoy-members-realtime-${tripId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*', // Listen to INSERT, UPDATE, DELETE
+          schema: 'public',
+          table: 'convoy_members',
+          filter: `trip_id=eq.${tripId}`,
+        },
+        (payload) => {
+          console.log('Convoy member change detected:', payload);
+          // Invalidate query to refetch fresh data with profiles
+          queryClient.invalidateQueries({ queryKey: ['convoy-members', tripId] });
+        }
+      )
+      .subscribe((status) => {
+        console.log('Convoy members realtime subscription status:', status);
+      });
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [tripId, queryClient]);
+
   return useQuery({
     queryKey: ['convoy-members', tripId],
     queryFn: async () => {
       if (!tripId) return [];
       
+      // Only fetch active convoy members
       const { data, error } = await supabase
         .from('convoy_members')
         .select('*')
-        .eq('trip_id', tripId);
+        .eq('trip_id', tripId)
+        .eq('status', 'active');
 
       if (error) {
         console.error('Error fetching convoy members:', error);
