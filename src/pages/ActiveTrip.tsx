@@ -19,7 +19,7 @@ import { useActiveConvoy, ActiveConvoyTrip } from '@/hooks/useActiveConvoy';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
-import LiveTrackingMap from '@/components/map/LiveTrackingMap';
+import LiveTrackingMap, { LiveTrackingMapRef } from '@/components/map/LiveTrackingMap';
 import ConvoyPanel from '@/components/convoy/ConvoyPanel';
 import ConvoyStatusBar from '@/components/convoy/ConvoyStatusBar';
 import logoWhite from '@/assets/logo-white.svg';
@@ -36,6 +36,7 @@ const ActiveTrip = () => {
   const [compassMode, setCompassMode] = useState(false);
   const [showRoute, setShowRoute] = useState(true);
   const watchIdRef = useRef<number | null>(null);
+  const mapRef = useRef<LiveTrackingMapRef>(null);
 
   // Get active convoy trip from database (for convoy members who joined)
   const { data: activeConvoy, isLoading: isLoadingConvoy } = useActiveConvoy();
@@ -213,6 +214,11 @@ const ActiveTrip = () => {
     },
   });
 
+  // Debug convoy members
+  useEffect(() => {
+    console.log('[ActiveTrip] convoyMembers:', convoyMembers.length, convoyMembers);
+  }, [convoyMembers]);
+
   // Convoy invites
   const { createInvite, copyInviteLink, getShareLink } = useConvoyInvites();
 
@@ -336,10 +342,14 @@ const ActiveTrip = () => {
       {/* Live Mapbox Map */}
       <div className="absolute inset-0">
         <LiveTrackingMap
+          ref={mapRef}
           userPosition={userPosition}
           destination={destinationCoordinates || undefined}
           routeCoordinates={route?.coordinates || tripState.routeCoordinates || undefined}
           convoyMembers={convoyMembers}
+          heading={heading}
+          compassMode={compassMode}
+          showRoute={showRoute}
         />
       </div>
 
@@ -501,7 +511,7 @@ const ActiveTrip = () => {
           />
         ) : null}
         <button 
-          onClick={() => getCurrentPosition()}
+          onClick={() => mapRef.current?.recenter()}
           className="px-4 py-2 bg-card rounded-full flex items-center gap-2 shadow-lg"
         >
           <LocateFixed className="h-4 w-4 text-foreground" />

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useRef, useState, useCallback, forwardRef, useImperativeHandle } from 'react';
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import { MAPBOX_TOKEN, MAP_STYLES } from '@/lib/mapbox';
@@ -10,23 +10,50 @@ interface LiveTrackingMapProps {
   destination?: [number, number];
   routeCoordinates?: [number, number][];
   convoyMembers?: ConvoyMemberPresence[];
-  onRecenter?: () => void;
+  heading?: number | null;
+  compassMode?: boolean;
+  showRoute?: boolean;
   className?: string;
 }
 
-const LiveTrackingMap = ({
+export interface LiveTrackingMapRef {
+  recenter: () => void;
+}
+
+const LiveTrackingMap = forwardRef<LiveTrackingMapRef, LiveTrackingMapProps>(({
   userPosition,
   destination,
   routeCoordinates,
   convoyMembers = [],
+  heading,
+  compassMode = false,
+  showRoute = true,
   className = '',
-}: LiveTrackingMapProps) => {
+}, ref) => {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<mapboxgl.Map | null>(null);
   const userMarker = useRef<mapboxgl.Marker | null>(null);
   const destMarker = useRef<mapboxgl.Marker | null>(null);
   const convoyMarkers = useRef<Map<string, mapboxgl.Marker>>(new Map());
   const [isLoaded, setIsLoaded] = useState(false);
+
+  // Recenter function
+  const recenter = useCallback(() => {
+    if (map.current && userPosition) {
+      map.current.flyTo({
+        center: userPosition,
+        zoom: 15,
+        pitch: 60,
+        bearing: compassMode && heading ? heading : 0,
+        duration: 1000,
+      });
+    }
+  }, [userPosition, compassMode, heading]);
+
+  // Expose recenter via ref
+  useImperativeHandle(ref, () => ({
+    recenter,
+  }), [recenter]);
 
   // Initialize map
   useEffect(() => {
@@ -153,12 +180,13 @@ const LiveTrackingMap = ({
       userMarker.current.setLngLat(userPosition);
     }
 
-    // Center map on user
+    // Center map on user with compass mode
     map.current.easeTo({
       center: userPosition,
+      bearing: compassMode && heading ? heading : 0,
       duration: 500,
     });
-  }, [userPosition, isLoaded]);
+  }, [userPosition, isLoaded, compassMode, heading]);
 
   // Update destination marker
   useEffect(() => {
@@ -210,12 +238,29 @@ const LiveTrackingMap = ({
     }
   }, [routeCoordinates, isLoaded]);
 
+  // Toggle route visibility
+  useEffect(() => {
+    if (!map.current || !isLoaded) return;
+
+    const visibility = showRoute ? 'visible' : 'none';
+    
+    if (map.current.getLayer('route')) {
+      map.current.setLayoutProperty('route', 'visibility', visibility);
+    }
+    if (map.current.getLayer('route-outline')) {
+      map.current.setLayoutProperty('route-outline', 'visibility', visibility);
+    }
+  }, [showRoute, isLoaded]);
+
   // Track previous member states for smart updates
   const prevMemberStates = useRef<Map<string, { status: string; speed?: number; heading?: number }>>(new Map());
 
   // Update convoy member markers with enhanced visuals
   useEffect(() => {
     if (!map.current || !isLoaded) return;
+
+    // Debug logging for convoy members
+    console.log('[LiveTrackingMap] Convoy members received:', convoyMembers.length, convoyMembers);
 
     // Remove markers for members no longer in convoy
     const currentIds = new Set(convoyMembers.map((m) => m.id));
@@ -297,23 +342,13 @@ const LiveTrackingMap = ({
     });
   }, [convoyMembers, isLoaded]);
 
-  // Recenter function
-  const recenter = useCallback(() => {
-    if (map.current && userPosition) {
-      map.current.flyTo({
-        center: userPosition,
-        zoom: 15,
-        pitch: 60,
-        duration: 1000,
-      });
-    }
-  }, [userPosition]);
-
   return (
     <div className={`relative w-full h-full ${className}`}>
       <div ref={mapContainer} className="absolute inset-0" />
     </div>
   );
-};
+});
+
+LiveTrackingMap.displayName = 'LiveTrackingMap';
 
 export default LiveTrackingMap;
