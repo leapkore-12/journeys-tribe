@@ -1,22 +1,39 @@
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
+import { Loader2 } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import TripHeader from '@/components/trip/TripHeader';
 import { useTrip } from '@/context/TripContext';
+import { useFinalizeTrip } from '@/hooks/useFinalizeTrip';
 
 const TripReached = () => {
   const navigate = useNavigate();
   const { tripState, finishTrip, resetTrip } = useTrip();
+  const { completeTrip } = useFinalizeTrip();
+  const [isFinishing, setIsFinishing] = useState(false);
 
   const handleAddDestination = () => {
     // Reset to step 2 to add new destination
     navigate('/trip');
   };
 
-  const handleFinish = () => {
-    finishTrip();
-    navigate('/trip/post');
+  const handleFinish = async () => {
+    setIsFinishing(true);
+    console.log('[TripReached] Finishing trip...');
+    
+    // Use the reliable finalize hook which looks up trip ID from backend if needed
+    const success = await completeTrip();
+    
+    if (success) {
+      console.log('[TripReached] Trip completed successfully');
+      finishTrip(); // Update local context
+      navigate('/trip/post');
+    } else {
+      console.error('[TripReached] Failed to complete trip');
+      setIsFinishing(false);
+    }
   };
 
   const formatTime = (seconds: number) => {
@@ -91,9 +108,17 @@ const TripReached = () => {
           </Button>
           <Button
             onClick={handleFinish}
+            disabled={isFinishing}
             className="w-full h-14 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-lg"
           >
-            Finish Trip
+            {isFinishing ? (
+              <>
+                <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                Finishing...
+              </>
+            ) : (
+              'Finish Trip'
+            )}
           </Button>
         </motion.div>
       </div>

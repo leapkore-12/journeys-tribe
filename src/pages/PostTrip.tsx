@@ -1,7 +1,7 @@
 import { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Image, ChevronDown, Trash2, X, Lock, Crown } from 'lucide-react';
+import { Image, ChevronDown, Trash2, X, Lock, Crown, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -16,6 +16,7 @@ import { useCurrentProfile } from '@/hooks/useProfile';
 import { supabase } from '@/integrations/supabase/client';
 import { useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/context/AuthContext';
+import { useFinalizeTrip } from '@/hooks/useFinalizeTrip';
 
 const MAX_PHOTOS = 5;
 
@@ -29,11 +30,13 @@ const PostTrip = () => {
   const { data: profile } = useCurrentProfile();
   const queryClient = useQueryClient();
   const { user } = useAuth();
+  const { cancelTrip, resolveTripId } = useFinalizeTrip();
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [visibility, setVisibility] = useState<'public' | 'followers' | 'tribe' | 'private'>('public');
   const [showVisibilityDropdown, setShowVisibilityDropdown] = useState(false);
   const [isPosting, setIsPosting] = useState('');
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // Visibility options - paid users get all, free users get default based on profile
   const paidVisibilityOptions = [
@@ -80,61 +83,23 @@ const PostTrip = () => {
   };
 
   const handleDelete = async () => {
-    // If there's an active trip, mark it as cancelled in the database
-    if (tripState.activeTripId && user) {
-      try {
-        // Update trip status to cancelled - this triggers the database function
-        // that automatically sets all convoy members status to 'left'
-        const { error: tripError } = await supabase
-          .from('trips')
-          .update({ status: 'cancelled' })
-          .eq('id', tripState.activeTripId);
-        
-        if (tripError) {
-          console.error('Failed to update trip status:', tripError);
-          toast({
-            title: "Error",
-            description: "Failed to delete trip",
-            variant: "destructive",
-          });
-          return;
-        }
-        
-        // Also explicitly update convoy members as backup
-        const { error: convoyError } = await supabase
-          .from('convoy_members')
-          .update({ status: 'left' })
-          .eq('trip_id', tripState.activeTripId);
-        
-        if (convoyError) {
-          console.error('Failed to update convoy members:', convoyError);
-        }
-        
-        // Delete active_trips entries
-        await supabase
-          .from('active_trips')
-          .delete()
-          .eq('trip_id', tripState.activeTripId);
-        
-        // Invalidate active-convoy query to hide the Active Trip bar
-        queryClient.invalidateQueries({ queryKey: ['active-convoy'] });
-      } catch (error) {
-        console.error('Error cleaning up trip:', error);
-        toast({
-          title: "Error",
-          description: "Failed to delete trip",
-          variant: "destructive",
-        });
-        return;
-      }
-    }
+    setIsDeleting(true);
+    console.log('[PostTrip] Deleting trip...');
     
-    resetTrip();
-    toast({
-      title: "Trip deleted",
-      description: "Your trip has been deleted",
-    });
-    navigate('/feed');
+    // Use the reliable cancel function which looks up trip ID from backend if needed
+    const success = await cancelTrip();
+    
+    if (success) {
+      console.log('[PostTrip] Trip cancelled successfully');
+      toast({
+        title: "Trip deleted",
+        description: "Your trip has been deleted",
+      });
+      navigate('/feed');
+    } else {
+      console.error('[PostTrip] Failed to cancel trip');
+      setIsDeleting(false);
+    }
   };
 
   const handlePost = async () => {
@@ -175,10 +140,14 @@ const PostTrip = () => {
       
       const isPublic = tripVisibility === 'public';
 
-      let tripId: string;
+      let tripId: string | null = null;
+      
+      // Resolve trip ID reliably - from context or backend
+      const resolvedTripId = await resolveTripId();
+      console.log('[PostTrip] Resolved trip ID:', resolvedTripId);
 
       // If we have an active trip ID, update it instead of creating a new one
-      if (tripState.activeTripId) {
+      if (resolvedTripId) {
         const { error: updateError } = await supabase
           .from('trips')
           .update({
@@ -190,20 +159,22 @@ const PostTrip = () => {
             status: 'completed',
             completed_at: new Date().toISOString(),
           })
-          .eq('id', tripState.activeTripId);
+          .eq('id', resolvedTripId);
         
         if (updateError) {
-          console.error('Failed to update trip:', updateError);
+          console.error('[PostTrip] Failed to update trip:', updateError);
           throw new Error('Failed to update trip');
         }
         
-        tripId = tripState.activeTripId;
+        tripId = resolvedTripId;
+        console.log('[PostTrip] Trip updated successfully:', tripId);
         
         // Update convoy members status to 'completed'
         await supabase
           .from('convoy_members')
           .update({ status: 'completed' })
-          .eq('trip_id', tripId);
+          .eq('trip_id', tripId)
+          .eq('status', 'active');
         
         // Delete any active_trips entries
         await supabase
