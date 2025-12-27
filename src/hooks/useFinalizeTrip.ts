@@ -148,13 +148,84 @@ export const useFinalizeTrip = () => {
   }, [resolveTripId, toast, queryClient]);
 
   const cancelTrip = useCallback(async (): Promise<boolean> => {
-    // Use 'completed' status since 'cancelled' is not a valid status per DB constraint
-    const success = await finalizeTrip({ status: 'completed' });
-    if (success) {
-      resetTrip();
+    const tripId = await resolveTripId();
+    
+    if (!tripId) {
+      console.error('[useFinalizeTrip] No trip ID found to cancel');
+      toast({
+        title: "Error",
+        description: "No active trip found to delete",
+        variant: "destructive",
+      });
+      return false;
     }
-    return success;
-  }, [finalizeTrip, resetTrip]);
+
+    console.log('[useFinalizeTrip] Deleting trip:', tripId);
+
+    try {
+      // Delete convoy members first (foreign key constraint)
+      await supabase
+        .from('convoy_members')
+        .delete()
+        .eq('trip_id', tripId);
+
+      // Delete active_trips entries
+      await supabase
+        .from('active_trips')
+        .delete()
+        .eq('trip_id', tripId);
+
+      // Delete trip photos
+      await supabase
+        .from('trip_photos')
+        .delete()
+        .eq('trip_id', tripId);
+
+      // Delete convoy invites
+      await supabase
+        .from('convoy_invites')
+        .delete()
+        .eq('trip_id', tripId);
+
+      // Delete the trip itself
+      const { error } = await supabase
+        .from('trips')
+        .delete()
+        .eq('id', tripId);
+
+      if (error) {
+        console.error('[useFinalizeTrip] Failed to delete trip:', error);
+        toast({
+          title: "Error",
+          description: "Failed to delete trip",
+          variant: "destructive",
+        });
+        return false;
+      }
+
+      console.log('[useFinalizeTrip] Trip deleted successfully');
+
+      // Invalidate queries
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['active-convoy'] }),
+        queryClient.invalidateQueries({ queryKey: ['active-trip'] }),
+        queryClient.invalidateQueries({ queryKey: ['latest-active-trip'] }),
+        queryClient.invalidateQueries({ queryKey: ['trips'] }),
+        queryClient.invalidateQueries({ queryKey: ['feed-trips'] }),
+      ]);
+
+      resetTrip();
+      return true;
+    } catch (error) {
+      console.error('[useFinalizeTrip] Unexpected error:', error);
+      toast({
+        title: "Error",
+        description: "An unexpected error occurred",
+        variant: "destructive",
+      });
+      return false;
+    }
+  }, [resolveTripId, toast, queryClient, resetTrip]);
 
   const completeTrip = useCallback(async (): Promise<boolean> => {
     return finalizeTrip({ status: 'completed' });
