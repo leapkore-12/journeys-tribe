@@ -359,10 +359,10 @@ export const useConvoyInvites = () => {
     mutationFn: async ({ inviteId, tripId }: { inviteId: string; tripId: string }) => {
       if (!user) throw new Error('Not authenticated');
 
-      // Update invite status
+      // Update invite status (also ensure invite is claimed by this user)
       const { error: updateError } = await supabase
         .from('convoy_invites')
-        .update({ status: 'accepted' })
+        .update({ status: 'accepted', invitee_id: user.id })
         .eq('id', inviteId);
 
       if (updateError) throw updateError;
@@ -382,11 +382,11 @@ export const useConvoyInvites = () => {
       return { tripId };
     },
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ['my-convoy-invites'] });
+      queryClient.invalidateQueries({ queryKey: ['my-convoy-invites', user?.id] });
       queryClient.invalidateQueries({ queryKey: ['convoy-invites'] });
       queryClient.invalidateQueries({ queryKey: ['convoy-members', data.tripId] });
-      queryClient.invalidateQueries({ queryKey: ['notifications'] });
-      queryClient.invalidateQueries({ queryKey: ['active-convoy'] });
+      queryClient.invalidateQueries({ queryKey: ['notifications', user?.id] });
+      queryClient.invalidateQueries({ queryKey: ['active-convoy', user?.id] });
       toast({
         title: 'Joined convoy!',
         description: 'You are now part of this trip convoy.',
@@ -415,9 +415,9 @@ export const useConvoyInvites = () => {
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['my-convoy-invites'] });
+      queryClient.invalidateQueries({ queryKey: ['my-convoy-invites', user?.id] });
       queryClient.invalidateQueries({ queryKey: ['convoy-invites'] });
-      queryClient.invalidateQueries({ queryKey: ['notifications'] });
+      queryClient.invalidateQueries({ queryKey: ['notifications', user?.id] });
       toast({
         title: 'Invitation declined',
         description: 'You declined the convoy invitation.',
