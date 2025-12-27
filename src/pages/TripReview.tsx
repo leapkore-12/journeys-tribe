@@ -39,7 +39,7 @@ const TripReview = () => {
           end_lat: tripState.destinationCoordinates?.[1],
           end_lng: tripState.destinationCoordinates?.[0],
           distance_km: tripState.routeDistance,
-          duration_minutes: tripState.routeDuration,
+          duration_minutes: tripState.routeDuration ? Math.round(tripState.routeDuration) : null,
           vehicle_id: tripState.vehicle?.id,
           status: 'active',
           started_at: new Date().toISOString(),
