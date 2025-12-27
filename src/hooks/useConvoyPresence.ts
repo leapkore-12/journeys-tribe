@@ -38,6 +38,16 @@ export const useConvoyPresence = ({
   const [connectionAttempts, setConnectionAttempts] = useState(0);
   const channelRef = useRef<RealtimeChannel | null>(null);
   const retryTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  
+  // Store callbacks in refs to avoid dependency issues
+  const onMemberJoinRef = useRef(onMemberJoin);
+  const onMemberLeaveRef = useRef(onMemberLeave);
+  
+  // Keep refs updated
+  useEffect(() => {
+    onMemberJoinRef.current = onMemberJoin;
+    onMemberLeaveRef.current = onMemberLeave;
+  }, [onMemberJoin, onMemberLeave]);
 
   // Update own position in the convoy
   const updatePosition = useCallback(
@@ -50,6 +60,7 @@ export const useConvoyPresence = ({
       if (!channelRef.current || !user || !tripId) return;
 
       try {
+        console.log('[ConvoyPresence] Broadcasting position:', position);
         await channelRef.current.track({
           user_id: user.id,
           name: user.user_metadata?.display_name || user.email?.split('@')[0] || 'Unknown',
@@ -115,7 +126,7 @@ export const useConvoyPresence = ({
         setMembers(membersList);
       })
       .on('presence', { event: 'join' }, ({ key, newPresences }) => {
-        console.log('Member joined convoy:', key, newPresences);
+        console.log('[ConvoyPresence] Member joined convoy:', key, newPresences);
         const presence = (newPresences as any[])[0];
         if (presence && key !== user.id) {
           const newMember: ConvoyMemberPresence = {
@@ -128,17 +139,18 @@ export const useConvoyPresence = ({
             lastUpdate: presence.lastUpdate || Date.now(),
             vehicleType: presence.vehicleType || 'car',
           };
-          onMemberJoin?.(newMember);
+          onMemberJoinRef.current?.(newMember);
         }
       })
       .on('presence', { event: 'leave' }, ({ key, leftPresences }) => {
-        console.log('Member left convoy:', key, leftPresences);
+        console.log('[ConvoyPresence] Member left convoy:', key, leftPresences);
         setMembers((prev) => prev.filter((m) => m.id !== key));
         if (key !== user.id) {
-          onMemberLeave?.(key);
+          onMemberLeaveRef.current?.(key);
         }
       })
       .subscribe(async (status) => {
+        console.log('[ConvoyPresence] Subscription status:', status, 'for trip:', tripId);
         if (status === 'SUBSCRIBED') {
           setIsConnected(true);
           setError(null);
@@ -163,7 +175,7 @@ export const useConvoyPresence = ({
     return () => {
       channel.unsubscribe();
     };
-  }, [tripId, user, enabled, connectionAttempts, onMemberJoin, onMemberLeave]);
+  }, [tripId, user, enabled, connectionAttempts]);
 
   // Subscribe to convoy channel
   useEffect(() => {
