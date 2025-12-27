@@ -137,18 +137,30 @@ export const useConvoyInvites = () => {
       queryFn: async () => {
         if (!inviteCode) return null;
 
-        const { data, error } = await supabase
+        // Fetch invite with trip info
+        const { data: invite, error } = await supabase
           .from('convoy_invites')
           .select(`
             *,
-            trip:trips(id, title, start_location, end_location),
-            inviter:profiles!convoy_invites_inviter_id_fkey(id, display_name, avatar_url)
+            trip:trips(id, title, start_location, end_location)
           `)
           .eq('invite_code', inviteCode.toUpperCase())
-          .single();
+          .maybeSingle();
 
         if (error) throw error;
-        return data as unknown as ConvoyInvite;
+        if (!invite) return null;
+
+        // Fetch inviter profile separately
+        const { data: inviterProfile } = await supabase
+          .from('profiles')
+          .select('id, display_name, avatar_url')
+          .eq('id', invite.inviter_id)
+          .maybeSingle();
+
+        return {
+          ...invite,
+          inviter: inviterProfile,
+        } as ConvoyInvite;
       },
       enabled: !!inviteCode,
     });
@@ -297,12 +309,13 @@ export const useConvoyInvites = () => {
       queryKey: ['my-convoy-invites', currentUser?.id],
       queryFn: async () => {
         if (!currentUser?.id) return [];
-        const { data, error } = await supabase
+        
+        // Fetch invites with trip info (no embedded profile relationship)
+        const { data: invites, error } = await supabase
           .from('convoy_invites')
           .select(`
             *,
-            trip:trips(id, title, start_location, end_location),
-            inviter:profiles!convoy_invites_inviter_id_fkey(id, display_name, username, avatar_url)
+            trip:trips(id, title, start_location, end_location)
           `)
           .eq('invitee_id', currentUser.id)
           .eq('status', 'pending')
@@ -310,7 +323,21 @@ export const useConvoyInvites = () => {
           .order('created_at', { ascending: false });
 
         if (error) throw error;
-        return data as unknown as ConvoyInvite[];
+        if (!invites || invites.length === 0) return [];
+
+        // Fetch inviter profiles separately
+        const inviterIds = [...new Set(invites.map(inv => inv.inviter_id))];
+        const { data: profiles } = await supabase
+          .from('profiles')
+          .select('id, display_name, username, avatar_url')
+          .in('id', inviterIds);
+
+        const profileMap = new Map(profiles?.map(p => [p.id, p]) || []);
+
+        return invites.map(invite => ({
+          ...invite,
+          inviter: profileMap.get(invite.inviter_id) || null,
+        })) as ConvoyInvite[];
       },
       enabled: !!currentUser?.id,
     });
@@ -343,12 +370,12 @@ export const useConvoyInvites = () => {
 
       return { tripId };
     },
-      onSuccess: (data) => {
-        queryClient.invalidateQueries({ queryKey: ['my-convoy-invites'] });
-        queryClient.invalidateQueries({ queryKey: ['convoy-invites'] });
-        queryClient.invalidateQueries({ queryKey: ['convoy-members', data.tripId] });
-        queryClient.invalidateQueries({ queryKey: ['notifications'] });
-        queryClient.invalidateQueries({ predicate: (q) => q.queryKey[0] === 'active-convoy' });
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['my-convoy-invites'] });
+      queryClient.invalidateQueries({ queryKey: ['convoy-invites'] });
+      queryClient.invalidateQueries({ queryKey: ['convoy-members', data.tripId] });
+      queryClient.invalidateQueries({ queryKey: ['notifications'] });
+      queryClient.invalidateQueries({ queryKey: ['active-convoy'] });
       toast({
         title: 'Joined convoy!',
         description: 'You are now part of this trip convoy.',
