@@ -196,18 +196,8 @@ export const useConvoyInvites = () => {
         throw new Error('Invite has already been used');
       }
 
-      // Update invite status
-      const { error: updateError } = await supabase
-        .from('convoy_invites')
-        .update({
-          status: 'accepted',
-          invitee_id: user.id,
-        })
-        .eq('id', invite.id);
-
-      if (updateError) throw updateError;
-
-      // Add user to convoy_members
+      // IMPORTANT: Insert into convoy_members FIRST (while invite is still 'pending')
+      // This is required because RLS policy checks for status = 'pending'
       const { error: memberError } = await supabase
         .from('convoy_members')
         .insert({
@@ -218,6 +208,17 @@ export const useConvoyInvites = () => {
         });
 
       if (memberError) throw memberError;
+
+      // THEN update invite status to 'accepted'
+      const { error: updateError } = await supabase
+        .from('convoy_invites')
+        .update({
+          status: 'accepted',
+          invitee_id: user.id,
+        })
+        .eq('id', invite.id);
+
+      if (updateError) throw updateError;
 
       return invite;
     },
@@ -359,15 +360,8 @@ export const useConvoyInvites = () => {
     mutationFn: async ({ inviteId, tripId }: { inviteId: string; tripId: string }) => {
       if (!user) throw new Error('Not authenticated');
 
-      // Update invite status (also ensure invite is claimed by this user)
-      const { error: updateError } = await supabase
-        .from('convoy_invites')
-        .update({ status: 'accepted', invitee_id: user.id })
-        .eq('id', inviteId);
-
-      if (updateError) throw updateError;
-
-      // Add user to convoy_members
+      // IMPORTANT: Insert into convoy_members FIRST (while invite is still 'pending')
+      // This is required because RLS policy checks for status = 'pending'
       const { error: memberError } = await supabase
         .from('convoy_members')
         .insert({
@@ -378,6 +372,14 @@ export const useConvoyInvites = () => {
         });
 
       if (memberError) throw memberError;
+
+      // THEN update invite status to 'accepted'
+      const { error: updateError } = await supabase
+        .from('convoy_invites')
+        .update({ status: 'accepted', invitee_id: user.id })
+        .eq('id', inviteId);
+
+      if (updateError) throw updateError;
 
       return { tripId };
     },
