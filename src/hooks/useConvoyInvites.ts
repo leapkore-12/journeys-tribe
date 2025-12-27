@@ -137,29 +137,34 @@ export const useConvoyInvites = () => {
       queryFn: async () => {
         if (!inviteCode) return null;
 
-        // Fetch invite with trip info
+        // Fetch invite (no embedded relationships; backend has no FKs)
         const { data: invite, error } = await supabase
           .from('convoy_invites')
-          .select(`
-            *,
-            trip:trips(id, title, start_location, end_location)
-          `)
+          .select('*')
           .eq('invite_code', inviteCode.toUpperCase())
           .maybeSingle();
 
         if (error) throw error;
         if (!invite) return null;
 
-        // Fetch inviter profile separately
-        const { data: inviterProfile } = await supabase
-          .from('profiles')
-          .select('id, display_name, avatar_url')
-          .eq('id', invite.inviter_id)
-          .maybeSingle();
+        // Fetch inviter profile + trip separately
+        const [{ data: inviterProfile }, { data: trip }] = await Promise.all([
+          supabase
+            .from('profiles')
+            .select('id, display_name, avatar_url')
+            .eq('id', invite.inviter_id)
+            .maybeSingle(),
+          supabase
+            .from('trips')
+            .select('id, title, start_location, end_location')
+            .eq('id', invite.trip_id)
+            .maybeSingle(),
+        ]);
 
         return {
           ...invite,
           inviter: inviterProfile,
+          trip: trip ?? undefined,
         } as ConvoyInvite;
       },
       enabled: !!inviteCode,
@@ -310,13 +315,10 @@ export const useConvoyInvites = () => {
       queryFn: async () => {
         if (!currentUser?.id) return [];
         
-        // Fetch invites with trip info (no embedded profile relationship)
+        // Fetch invites (no embedded relationships; backend has no FKs)
         const { data: invites, error } = await supabase
           .from('convoy_invites')
-          .select(`
-            *,
-            trip:trips(id, title, start_location, end_location)
-          `)
+          .select('*')
           .eq('invitee_id', currentUser.id)
           .eq('status', 'pending')
           .gt('expires_at', new Date().toISOString())
@@ -325,18 +327,27 @@ export const useConvoyInvites = () => {
         if (error) throw error;
         if (!invites || invites.length === 0) return [];
 
-        // Fetch inviter profiles separately
         const inviterIds = [...new Set(invites.map(inv => inv.inviter_id))];
-        const { data: profiles } = await supabase
-          .from('profiles')
-          .select('id, display_name, username, avatar_url')
-          .in('id', inviterIds);
+        const tripIds = [...new Set(invites.map(inv => inv.trip_id))];
+
+        const [{ data: profiles }, { data: trips }] = await Promise.all([
+          supabase
+            .from('profiles')
+            .select('id, display_name, username, avatar_url')
+            .in('id', inviterIds),
+          supabase
+            .from('trips')
+            .select('id, title, start_location, end_location')
+            .in('id', tripIds),
+        ]);
 
         const profileMap = new Map(profiles?.map(p => [p.id, p]) || []);
+        const tripMap = new Map(trips?.map(t => [t.id, t]) || []);
 
         return invites.map(invite => ({
           ...invite,
           inviter: profileMap.get(invite.inviter_id) || null,
+          trip: tripMap.get(invite.trip_id) || undefined,
         })) as ConvoyInvite[];
       },
       enabled: !!currentUser?.id,
