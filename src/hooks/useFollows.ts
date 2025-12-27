@@ -217,7 +217,10 @@ export const useFollowUser = () => {
       queryClient.invalidateQueries({ queryKey: ['is-following', user?.id, targetUserId] });
       queryClient.invalidateQueries({ queryKey: ['pending-request', user?.id, targetUserId] });
       queryClient.invalidateQueries({ queryKey: ['following'] });
-      queryClient.invalidateQueries({ queryKey: ['followers'] });
+      // Use predicate to match all followers queries (e.g. ['followers', userId])
+      queryClient.invalidateQueries({ 
+        predicate: (query) => query.queryKey[0] === 'followers' 
+      });
       queryClient.invalidateQueries({ queryKey: ['profile'] });
     },
   });
