@@ -127,6 +127,19 @@ const ActiveTrip = () => {
     },
   });
 
+  // Real-time convoy members from database (for join notifications)
+  useConvoyMembers(activeTripId || undefined, {
+    onMemberJoin: (member) => {
+      // Only show toast if we're the leader and it's not us
+      if (isLeader && member.user_id !== user?.id) {
+        toast({
+          title: '🎉 New rider joined!',
+          description: `${member.profile?.display_name || member.profile?.username || 'A rider'} joined your convoy`,
+        });
+      }
+    },
+  });
+
   // Convoy invites
   const { createInvite, copyInviteLink, getShareLink } = useConvoyInvites();
 
