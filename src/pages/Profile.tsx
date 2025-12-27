@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, Settings, Flag, BarChart3, Users } from 'lucide-react';
+import { Search, Settings, Flag, BarChart3 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useCurrentProfile } from '@/hooks/useProfile';
@@ -30,7 +30,21 @@ const Profile = () => {
   const { data: profile, isLoading: profileLoading } = useCurrentProfile();
   const { data: trips, isLoading: tripsLoading } = useUserTrips();
   const { data: participatedTrips, isLoading: participatedLoading } = useParticipatedTrips(user?.id);
-  const [activeTab, setActiveTab] = useState<'trips' | 'tagged' | 'stats'>('trips');
+  const [activeTab, setActiveTab] = useState<'trips' | 'stats'>('trips');
+
+  // Combine user's own trips with participated trips
+  const combinedTrips = useMemo(() => {
+    const userTrips = (trips || []).map(trip => ({ ...trip, isTagged: false }));
+    const taggedTrips = (participatedTrips || []).map(trip => ({ ...trip, isTagged: true }));
+    const allTrips = [...userTrips, ...taggedTrips];
+    
+    // Sort by created_at, newest first
+    return allTrips.sort((a, b) => {
+      const dateA = new Date(a.created_at || 0).getTime();
+      const dateB = new Date(b.created_at || 0).getTime();
+      return dateB - dateA;
+    });
+  }, [trips, participatedTrips]);
 
   const stats = {
     ytd: {
@@ -159,17 +173,6 @@ const Profile = () => {
             <span className="font-medium">Trips</span>
           </button>
           <button
-            onClick={() => setActiveTab('tagged')}
-            className={`flex-1 flex items-center justify-center gap-2 py-3 border-b-2 transition-colors ${
-              activeTab === 'tagged'
-                ? 'border-primary text-primary'
-                : 'border-transparent text-muted-foreground'
-            }`}
-          >
-            <Users className="h-5 w-5" />
-            <span className="font-medium">Tagged</span>
-          </button>
-          <button
             onClick={() => setActiveTab('stats')}
             className={`flex-1 flex items-center justify-center gap-2 py-3 border-b-2 transition-colors ${
               activeTab === 'stats'
@@ -187,15 +190,20 @@ const Profile = () => {
       <div className="flex-1 px-4 py-4">
         {activeTab === 'trips' && (
           <div className="space-y-4">
-            {tripsLoading ? (
+            {(tripsLoading || participatedLoading) ? (
               [...Array(2)].map((_, i) => (
                 <div key={i} className="bg-card rounded-lg p-4">
                   <Skeleton className="h-32 w-full rounded-lg" />
                 </div>
               ))
-            ) : trips && trips.length > 0 ? (
-              trips.map((trip) => (
-                <ProfileTripCard key={trip.id} trip={trip} />
+            ) : combinedTrips.length > 0 ? (
+              combinedTrips.map((trip) => (
+                <ProfileTripCard 
+                  key={trip.id} 
+                  trip={trip} 
+                  isTagged={trip.isTagged}
+                  showOwner={trip.isTagged}
+                />
               ))
             ) : (
               <div className="text-center py-12">
@@ -210,30 +218,6 @@ const Profile = () => {
                 >
                   Plan a Trip
                 </Button>
-              </div>
-            )}
-          </div>
-        )}
-
-        {activeTab === 'tagged' && (
-          <div className="space-y-4">
-            {participatedLoading ? (
-              [...Array(2)].map((_, i) => (
-                <div key={i} className="bg-card rounded-lg p-4">
-                  <Skeleton className="h-32 w-full rounded-lg" />
-                </div>
-              ))
-            ) : participatedTrips && participatedTrips.length > 0 ? (
-              participatedTrips.map((trip) => (
-                <ProfileTripCard key={trip.id} trip={trip} showOwner />
-              ))
-            ) : (
-              <div className="text-center py-12">
-                <Users className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
-                <h3 className="font-semibold text-foreground">No tagged trips</h3>
-                <p className="text-sm text-muted-foreground">
-                  Trips where you joined as a convoy member will appear here
-                </p>
               </div>
             )}
           </div>

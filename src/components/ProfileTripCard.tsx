@@ -7,6 +7,7 @@ import { formatDistanceToNow } from 'date-fns';
 interface ProfileTripCardProps {
   trip: TripWithDetails;
   showOwner?: boolean;
+  isTagged?: boolean;
 }
 
 const formatDistance = (km: number | null) => {
@@ -38,7 +39,7 @@ const getVisibilityIcon = (visibility: string) => {
   }
 };
 
-const ProfileTripCard = ({ trip, showOwner = false }: ProfileTripCardProps) => {
+const ProfileTripCard = ({ trip, showOwner = false, isTagged = false }: ProfileTripCardProps) => {
   const navigate = useNavigate();
 
   const imageUrl = trip.trip_photos?.[0]?.image_url || trip.map_image_url;
@@ -73,6 +74,13 @@ const ProfileTripCard = ({ trip, showOwner = false }: ProfileTripCardProps) => {
         {trip.vehicle && (
           <div className="absolute top-2 left-2 bg-background/80 backdrop-blur-sm px-2 py-1 rounded-full text-xs text-foreground flex items-center gap-1">
             🚗 {trip.vehicle.make} {trip.vehicle.model}
+          </div>
+        )}
+        {/* Tagged badge */}
+        {isTagged && (
+          <div className="absolute top-2 right-2 bg-primary/90 backdrop-blur-sm px-2 py-1 rounded-full text-xs text-primary-foreground flex items-center gap-1">
+            <Users className="h-3 w-3" />
+            Tagged
           </div>
         )}
       </div>
