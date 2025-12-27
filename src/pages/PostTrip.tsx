@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Image, ChevronDown, Trash2, X, Lock, Crown, Loader2 } from 'lucide-react';
@@ -17,6 +17,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/context/AuthContext';
 import { useFinalizeTrip } from '@/hooks/useFinalizeTrip';
+import { useConvoyMembers } from '@/hooks/useConvoyMembers';
 
 const MAX_PHOTOS = 5;
 
@@ -37,6 +38,22 @@ const PostTrip = () => {
   const [showVisibilityDropdown, setShowVisibilityDropdown] = useState(false);
   const [isPosting, setIsPosting] = useState('');
   const [isDeleting, setIsDeleting] = useState(false);
+  const [resolvedTripIdState, setResolvedTripIdState] = useState<string | null>(null);
+
+  // Resolve trip ID on mount to fetch convoy members
+  useEffect(() => {
+    const fetchTripId = async () => {
+      const id = await resolveTripId();
+      setResolvedTripIdState(id);
+    };
+    fetchTripId();
+  }, [resolveTripId]);
+
+  // Fetch convoy members from database (include completed since trip might be ending)
+  const { data: convoyMembers = [] } = useConvoyMembers(resolvedTripIdState ?? undefined, { includeCompleted: true });
+  
+  // Filter out the current user (leader) from display
+  const displayConvoyMembers = convoyMembers.filter(m => m.user_id !== user?.id);
 
   // Visibility options - paid users get all, free users get default based on profile
   const paidVisibilityOptions = [
@@ -361,19 +378,23 @@ const PostTrip = () => {
           <div className="flex items-center gap-3">
             <span className="text-foreground font-medium">Convoy with</span>
             <div className="flex -space-x-2">
-              {tripState.convoy.length > 0 ? (
-                tripState.convoy.slice(0, 4).map(member => (
+              {displayConvoyMembers.length > 0 ? (
+                displayConvoyMembers.slice(0, 4).map(member => (
                   <Avatar key={member.id} className="h-8 w-8 border-2 border-background">
-                    <AvatarImage src={member.avatar} alt={member.name} />
-                    <AvatarFallback>{member.name[0]}</AvatarFallback>
+                    <AvatarImage src={member.profile?.avatar_url || undefined} alt={member.profile?.display_name || 'Member'} />
+                    <AvatarFallback>{member.profile?.display_name?.[0] || 'M'}</AvatarFallback>
                   </Avatar>
                 ))
               ) : (
                 <span className="text-muted-foreground text-sm">No convoy</span>
               )}
+              {displayConvoyMembers.length > 4 && (
+                <div className="h-8 w-8 rounded-full bg-muted border-2 border-background flex items-center justify-center text-xs text-muted-foreground">
+                  +{displayConvoyMembers.length - 4}
+                </div>
+              )}
             </div>
           </div>
-          <button className="text-primary text-sm font-medium">Edit</button>
         </motion.div>
 
         {/* Hidden file input */}

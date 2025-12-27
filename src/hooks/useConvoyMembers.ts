@@ -21,6 +21,7 @@ export interface ConvoyMember {
 interface UseConvoyMembersOptions {
   onMemberJoin?: (member: ConvoyMember) => void;
   onMemberLeave?: (memberId: string) => void;
+  includeCompleted?: boolean;
 }
 
 export const useConvoyMembers = (tripId: string | undefined, options?: UseConvoyMembersOptions) => {
@@ -133,12 +134,13 @@ export const useConvoyMembers = (tripId: string | undefined, options?: UseConvoy
     queryFn: async () => {
       if (!tripId) return [];
       
-      // Only fetch active convoy members
+      // Fetch convoy members - optionally include completed
+      const statusFilter = options?.includeCompleted ? ['active', 'completed'] : ['active'];
       const { data, error } = await supabase
         .from('convoy_members')
         .select('*')
         .eq('trip_id', tripId)
-        .eq('status', 'active');
+        .in('status', statusFilter);
 
       if (error) {
         console.error('Error fetching convoy members:', error);

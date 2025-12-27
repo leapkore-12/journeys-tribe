@@ -6,6 +6,7 @@ import { formatDistanceToNow } from 'date-fns';
 
 interface ProfileTripCardProps {
   trip: TripWithDetails;
+  showOwner?: boolean;
 }
 
 const formatDistance = (km: number | null) => {
@@ -37,7 +38,7 @@ const getVisibilityIcon = (visibility: string) => {
   }
 };
 
-const ProfileTripCard = ({ trip }: ProfileTripCardProps) => {
+const ProfileTripCard = ({ trip, showOwner = false }: ProfileTripCardProps) => {
   const navigate = useNavigate();
 
   const imageUrl = trip.trip_photos?.[0]?.image_url || trip.map_image_url;
@@ -46,6 +47,7 @@ const ProfileTripCard = ({ trip }: ProfileTripCardProps) => {
     : '';
   const visibilityInfo = getVisibilityIcon(trip.visibility || 'public');
   const VisibilityIcon = visibilityInfo.icon;
+  const ownerName = trip.profile?.display_name || trip.profile?.username || 'Unknown';
 
   return (
     <motion.div
@@ -77,6 +79,9 @@ const ProfileTripCard = ({ trip }: ProfileTripCardProps) => {
 
       {/* Trip Info */}
       <div className="p-3 space-y-2">
+        {showOwner && (
+          <p className="text-xs text-primary font-medium">by @{ownerName}</p>
+        )}
         <h3 className="font-semibold text-foreground">{trip.title}</h3>
         {trip.description && (
           <p className="text-sm text-muted-foreground line-clamp-1">{trip.description}</p>

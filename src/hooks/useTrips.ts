@@ -102,14 +102,14 @@ export const useFeedTrips = () => {
         likedIds = new Set(likes?.map(l => l.trip_id) || []);
       }
 
-      // Fetch convoy members for all trips
+      // Fetch convoy members for all trips (include completed status for completed trips)
       const tripIds = trips.map(t => t.id);
       const { data: convoyMembers } = tripIds.length > 0
         ? await supabase
             .from('convoy_members')
             .select('trip_id, user_id, is_leader')
             .in('trip_id', tripIds)
-            .eq('status', 'active')
+            .in('status', ['active', 'completed'])
         : { data: [] };
 
       // Get profiles for convoy members (excluding trip owners to avoid duplicates)
@@ -307,12 +307,12 @@ export const useTripById = (tripId: string | undefined) => {
         isLiked = !!like;
       }
 
-      // Fetch convoy members
+      // Fetch convoy members (include completed for completed trips)
       const { data: convoyMembers } = await supabase
         .from('convoy_members')
         .select('user_id, is_leader')
         .eq('trip_id', tripId)
-        .eq('status', 'active');
+        .in('status', ['active', 'completed']);
 
       // Fetch profiles for convoy members
       const convoyUserIds = convoyMembers?.map(cm => cm.user_id).filter(id => id !== trip.user_id) || [];
@@ -374,5 +374,70 @@ export const useDeleteTrip = () => {
       queryClient.invalidateQueries({ queryKey: ['feed-trips'] });
       queryClient.invalidateQueries({ queryKey: ['user-trips'] });
     },
+  });
+};
+
+// Hook to fetch trips where user participated as convoy member (not leader)
+export const useParticipatedTrips = (userId?: string) => {
+  return useQuery({
+    queryKey: ['participated-trips', userId],
+    queryFn: async () => {
+      if (!userId) return [];
+
+      // Get trip IDs where user is a convoy member (not leader)
+      const { data: memberships, error: membershipError } = await supabase
+        .from('convoy_members')
+        .select('trip_id')
+        .eq('user_id', userId)
+        .eq('is_leader', false)
+        .in('status', ['active', 'completed']);
+
+      if (membershipError || !memberships || memberships.length === 0) return [];
+
+      const tripIds = memberships.map(m => m.trip_id);
+
+      // Fetch those trips with details
+      const { data: trips, error } = await supabase
+        .from('trips')
+        .select('*, trip_photos(*)')
+        .in('id', tripIds)
+        .eq('status', 'completed')
+        .order('created_at', { ascending: false });
+
+      if (error || !trips) return [];
+
+      // Fetch profiles for trip owners
+      const ownerIds = [...new Set(trips.map(t => t.user_id))];
+      const { data: profiles } = ownerIds.length > 0
+        ? await supabase.from('profiles').select('id, username, display_name, avatar_url').in('id', ownerIds)
+        : { data: [] };
+      
+      const profileMap = new Map<string, { id: string; username: string | null; display_name: string | null; avatar_url: string | null }>();
+      profiles?.forEach(p => profileMap.set(p.id, p));
+
+      // Fetch vehicles
+      const vehicleIds = [...new Set(trips.map(t => t.vehicle_id).filter((id): id is string => id !== null))];
+      const { data: vehicles } = vehicleIds.length > 0 
+        ? await supabase.from('vehicles').select('*, vehicle_images(image_url)').in('id', vehicleIds)
+        : { data: [] };
+      
+      type VehicleType = { id: string; name: string; make: string | null; model: string | null; images: string[] };
+      const vehicleMap = new Map<string, VehicleType>();
+      vehicles?.forEach(v => vehicleMap.set(v.id, { 
+        id: v.id, 
+        name: v.name, 
+        make: v.make, 
+        model: v.model, 
+        images: (v.vehicle_images as { image_url: string }[] | null)?.map(vi => vi.image_url) || [] 
+      }));
+
+      return trips.map(trip => ({
+        ...trip,
+        profile: profileMap.get(trip.user_id) || null,
+        vehicle: trip.vehicle_id ? vehicleMap.get(trip.vehicle_id) : null,
+        is_participated: true, // Mark as participated trip
+      })) as TripWithDetails[];
+    },
+    enabled: !!userId,
   });
 };
