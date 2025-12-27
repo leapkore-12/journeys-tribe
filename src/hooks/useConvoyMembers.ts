@@ -27,6 +27,16 @@ export const useConvoyMembers = (tripId: string | undefined, options?: UseConvoy
   const queryClient = useQueryClient();
   const isInitialLoadRef = useRef(true);
   const knownMemberIdsRef = useRef<Set<string>>(new Set());
+  
+  // Store callbacks in refs to avoid dependency issues
+  const onMemberJoinRef = useRef(options?.onMemberJoin);
+  const onMemberLeaveRef = useRef(options?.onMemberLeave);
+  
+  // Keep refs updated
+  useEffect(() => {
+    onMemberJoinRef.current = options?.onMemberJoin;
+    onMemberLeaveRef.current = options?.onMemberLeave;
+  }, [options?.onMemberJoin, options?.onMemberLeave]);
 
   // Subscribe to real-time updates for convoy_members table
   useEffect(() => {
@@ -60,8 +70,8 @@ export const useConvoyMembers = (tripId: string | undefined, options?: UseConvoy
                 .eq('id', newMemberId)
                 .single();
               
-              if (options?.onMemberJoin && profile) {
-                options.onMemberJoin({
+              if (onMemberJoinRef.current && profile) {
+                onMemberJoinRef.current({
                   ...(payload.new as any),
                   profile,
                 });
@@ -88,8 +98,8 @@ export const useConvoyMembers = (tripId: string | undefined, options?: UseConvoy
             const leftMemberId = payload.new.user_id as string;
             knownMemberIdsRef.current.delete(leftMemberId);
             
-            if (options?.onMemberLeave) {
-              options.onMemberLeave(leftMemberId);
+            if (onMemberLeaveRef.current) {
+              onMemberLeaveRef.current(leftMemberId);
             }
           }
           
@@ -116,7 +126,7 @@ export const useConvoyMembers = (tripId: string | undefined, options?: UseConvoy
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [tripId, queryClient, options]);
+  }, [tripId, queryClient]);
 
   const query = useQuery({
     queryKey: ['convoy-members', tripId],
