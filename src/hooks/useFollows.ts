@@ -243,6 +243,23 @@ export const useUnfollowUser = () => {
   });
 };
 
+export const useRemoveFollower = () => {
+  const queryClient = useQueryClient();
+  const { user } = useAuth();
+  return useMutation({
+    mutationFn: async (followerId: string) => {
+      if (!user?.id) throw new Error('Not authenticated');
+      // Delete the follow where this person is following me
+      await supabase.from('follows').delete().eq('follower_id', followerId).eq('following_id', user.id);
+    },
+    onSuccess: (_, followerId) => {
+      queryClient.invalidateQueries({ queryKey: ['followers'] });
+      queryClient.invalidateQueries({ queryKey: ['is-following', followerId] });
+      queryClient.invalidateQueries({ queryKey: ['profile'] });
+    },
+  });
+};
+
 export const useCancelFollowRequest = () => {
   const queryClient = useQueryClient();
   const { user } = useAuth();

@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, X } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -10,6 +10,7 @@ import {
   useFollowRequests,
   useFollowUser,
   useUnfollowUser,
+  useRemoveFollower,
   useAcceptFollowRequest,
   useDeclineFollowRequest
 } from '@/hooks/useFollows';
@@ -27,8 +28,17 @@ const ManageConnections = () => {
   
   const followMutation = useFollowUser();
   const unfollowMutation = useUnfollowUser();
+  const removeFollowerMutation = useRemoveFollower();
   const acceptMutation = useAcceptFollowRequest();
   const declineMutation = useDeclineFollowRequest();
+
+  const handleRemoveFollower = (followerId: string, username?: string) => {
+    removeFollowerMutation.mutate(followerId, {
+      onSuccess: () => {
+        toast({ description: `Removed @${username || 'user'} from your followers` });
+      }
+    });
+  };
 
   const handleToggleFollow = (userId: string, isCurrentlyFollowing: boolean, username?: string) => {
     if (isCurrentlyFollowing) {
@@ -192,20 +202,35 @@ const ManageConnections = () => {
                       <span className="font-medium text-foreground">{conn.profile.display_name || 'User'}</span>
                     </div>
                     
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="min-w-[100px] border-primary text-primary hover:bg-primary/10"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        if (!conn.has_pending_request) {
-                          handleToggleFollow(conn.profile.id, conn.is_following_back || false, conn.profile.username || undefined);
-                        }
-                      }}
-                      disabled={conn.has_pending_request}
-                    >
-                      {conn.is_following_back ? 'Following' : conn.has_pending_request ? 'Requested' : 'Follow back'}
-                    </Button>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="min-w-[90px] border-primary text-primary hover:bg-primary/10"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (!conn.has_pending_request) {
+                            handleToggleFollow(conn.profile.id, conn.is_following_back || false, conn.profile.username || undefined);
+                          }
+                        }}
+                        disabled={conn.has_pending_request}
+                      >
+                        {conn.is_following_back ? 'Following' : conn.has_pending_request ? 'Requested' : 'Follow back'}
+                      </Button>
+                      
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-muted-foreground hover:text-destructive hover:bg-destructive/10 p-2"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleRemoveFollower(conn.profile.id, conn.profile.username || undefined);
+                        }}
+                        disabled={removeFollowerMutation.isPending}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </div>
                 ))}
               </div>
