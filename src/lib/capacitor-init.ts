@@ -9,12 +9,11 @@ export async function initCapacitor() {
     try {
       const { StatusBar, Style } = await import('@capacitor/status-bar');
       
-      // Disable overlay so status bar has its own space
-      // This fixes touch issues on iOS where header elements
-      // were being overlapped by the status bar
-      await StatusBar.setOverlaysWebView({ overlay: false });
+      // Enable overlay mode - status bar overlays on top of web content
+      // The CSS safe-area-inset-top will push content below the status bar
+      await StatusBar.setOverlaysWebView({ overlay: true });
       
-      // Use dark style for dark theme app
+      // Use Dark style (light/white text) for dark theme app
       await StatusBar.setStyle({ style: Style.Dark });
       
       console.log('Capacitor StatusBar initialized');
