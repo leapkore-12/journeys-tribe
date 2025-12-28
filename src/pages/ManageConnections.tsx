@@ -1,4 +1,5 @@
 import { useNavigate } from 'react-router-dom';
+import { useSmartBack } from '@/hooks/useSmartBack';
 import { ArrowLeft, X } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -19,6 +20,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 
 const ManageConnections = () => {
   const navigate = useNavigate();
+  const goBack = useSmartBack('/profile');
   const { toast } = useToast();
   const { data: profile } = useCurrentProfile();
   
@@ -82,7 +84,7 @@ const ManageConnections = () => {
       <header className="sticky top-0 z-50 bg-background/95 backdrop-blur-sm border-b border-border">
         <div className="flex items-center justify-between px-4 h-14">
           <button 
-            onClick={() => navigate(-1)}
+            onClick={goBack}
             className="w-10 h-10 flex items-center justify-center"
           >
             <ArrowLeft className="h-6 w-6 text-primary" />

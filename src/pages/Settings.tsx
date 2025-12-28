@@ -1,4 +1,5 @@
 import { useNavigate } from 'react-router-dom';
+import { useSmartBack } from '@/hooks/useSmartBack';
 import { ArrowLeft, ChevronRight, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
@@ -21,6 +22,7 @@ import { supabase } from '@/integrations/supabase/client';
 
 const Settings = () => {
   const navigate = useNavigate();
+  const goBack = useSmartBack('/profile');
   const { toast } = useToast();
   const { signOut, user } = useAuth();
   const { data: profile } = useCurrentProfile();
@@ -161,7 +163,7 @@ const Settings = () => {
       {/* Header */}
       <header className="sticky top-0 z-40 bg-background">
         <div className="flex items-center gap-3 px-4 h-14">
-          <button onClick={() => navigate(-1)} className="text-foreground">
+          <button onClick={goBack} className="text-foreground">
             <ArrowLeft className="h-6 w-6" />
           </button>
           <h1 className="text-lg font-semibold text-foreground">Settings page</h1>

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { useSmartBack } from '@/hooks/useSmartBack';
 import { ArrowLeft, Flag, Send, MessageCircle } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Input } from '@/components/ui/input';
@@ -11,6 +12,7 @@ import { formatDistanceToNow } from 'date-fns';
 
 const Comments = () => {
   const navigate = useNavigate();
+  const goBack = useSmartBack('/feed');
   const { postId } = useParams();
   const [newComment, setNewComment] = useState('');
   
@@ -37,7 +39,7 @@ const Comments = () => {
       <header className="sticky top-0 z-40 bg-background border-b border-border">
         <div className="flex items-center justify-between px-4 h-14">
           <button
-            onClick={() => navigate(-1)}
+            onClick={goBack}
             className="text-foreground p-2 -ml-2"
           >
             <ArrowLeft className="h-6 w-6" />
