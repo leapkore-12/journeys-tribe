@@ -18,7 +18,11 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 
-const ActiveTripBar = () => {
+interface ActiveTripBarProps {
+  bottomOffset?: number;
+}
+
+const ActiveTripBar = ({ bottomOffset = 80 }: ActiveTripBarProps) => {
   const navigate = useNavigate();
   const location = useLocation();
   const { user } = useAuth();
@@ -96,7 +100,8 @@ const ActiveTripBar = () => {
         animate={{ y: 0, opacity: 1 }}
         exit={{ y: 100, opacity: 0 }}
         transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-        className="fixed bottom-20 left-4 right-4 z-50"
+        className="fixed left-4 right-4 z-50"
+        style={{ bottom: bottomOffset + 16 }}
       >
         <button
           onClick={() => navigate('/trip/active')}

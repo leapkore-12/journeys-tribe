@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { useRealtimeNotifications } from '@/hooks/useNotifications';
 import ActiveTripBar from '@/components/trip/ActiveTripBar';
+import { useDeviceSpacing } from '@/hooks/useDeviceInfo';
 
 const tabs = [
   { path: '/feed', icon: Menu, label: 'Feed' },
@@ -14,6 +15,7 @@ const tabs = [
 const MainLayout = () => {
   const location = useLocation();
   const navigate = useNavigate();
+  const { bottomNavHeight, safeAreaBottom, sizeCategory } = useDeviceSpacing();
   
   // Enable real-time notification updates across the app
   useRealtimeNotifications();
@@ -21,22 +23,37 @@ const MainLayout = () => {
   // Hide bottom nav on certain pages
   const hideBottomNav = ['/trip/active', '/trip/complete'].some(p => location.pathname.startsWith(p));
 
+  // Dynamic bottom padding based on device
+  const mainPaddingBottom = hideBottomNav ? 0 : bottomNavHeight;
+
   return (
     <div className="h-full bg-background flex flex-col overflow-hidden">
-      {/* Main Content */}
-      <main className="flex-1 pb-20 overflow-y-auto scrollbar-hide">
+      {/* Main Content - dynamic padding based on device */}
+      <main 
+        className="flex-1 overflow-y-auto scrollbar-hide"
+        style={{ paddingBottom: mainPaddingBottom }}
+      >
         <Outlet />
       </main>
 
       {/* Active Trip Floating Bar */}
       <AnimatePresence>
-        <ActiveTripBar />
+        <ActiveTripBar bottomOffset={hideBottomNav ? safeAreaBottom : bottomNavHeight} />
       </AnimatePresence>
 
-      {/* Bottom Tab Navigation */}
+      {/* Bottom Tab Navigation - dynamic height */}
       {!hideBottomNav && (
-        <nav className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[430px] bg-card border-t border-border safe-bottom z-50">
-          <div className="flex items-center justify-around h-16">
+        <nav 
+          className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[430px] bg-card border-t border-border z-50"
+          style={{ 
+            height: bottomNavHeight,
+            paddingBottom: safeAreaBottom 
+          }}
+        >
+          <div className={cn(
+            "flex items-center justify-around",
+            sizeCategory === 'small' ? 'h-14' : 'h-16'
+          )}>
             {tabs.map((tab) => {
               const isActive = location.pathname.startsWith(tab.path);
               const Icon = tab.icon;
@@ -51,7 +68,9 @@ const MainLayout = () => {
                   )}
                 >
                   <div className="relative">
-                    <Icon className="h-6 w-6" />
+                    <Icon className={cn(
+                      sizeCategory === 'small' ? 'h-5 w-5' : 'h-6 w-6'
+                    )} />
                     {isActive && (
                       <motion.div
                         layoutId="activeTab"
@@ -60,7 +79,10 @@ const MainLayout = () => {
                       />
                     )}
                   </div>
-                  <span className="text-xs font-medium">{tab.label}</span>
+                  <span className={cn(
+                    "font-medium",
+                    sizeCategory === 'small' ? 'text-[10px]' : 'text-xs'
+                  )}>{tab.label}</span>
                 </button>
               );
             })}
