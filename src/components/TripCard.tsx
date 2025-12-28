@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
-import { MoreHorizontal, Flag, MessageCircle, Upload } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { MoreHorizontal, Flag, MessageCircle, Upload, ChevronDown } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { TripWithDetails } from '@/hooks/useTrips';
 import { cn } from '@/lib/utils';
@@ -19,6 +19,8 @@ import {
 } from '@/components/ui/carousel';
 import { useAuth } from '@/context/AuthContext';
 import { formatDistanceToNow } from 'date-fns';
+import { useTripLikes } from '@/hooks/useTripLikes';
+import { useComments } from '@/hooks/useComments';
 
 interface TripCardProps {
   trip: TripWithDetails;
@@ -50,7 +52,13 @@ const TripCard = ({ trip, index, onLike, onComment, onShare, onUserClick, contex
   const [menuOpen, setMenuOpen] = useState(false);
   const [carouselApi, setCarouselApi] = useState<CarouselApi>();
   const [currentSlide, setCurrentSlide] = useState(0);
+  const [likesExpanded, setLikesExpanded] = useState(false);
+  const [commentsExpanded, setCommentsExpanded] = useState(false);
   const isOwnPost = trip.user_id === user?.id;
+
+  // Fetch likes and comments when expanded
+  const { data: likes } = useTripLikes(trip.id, likesExpanded);
+  const { data: comments } = useComments(trip.id);
 
   // Build slides array
   const slides = [
@@ -224,14 +232,114 @@ const TripCard = ({ trip, index, onLike, onComment, onShare, onUserClick, contex
         </div>
       )}
 
-      {/* Engagement Row */}
+      {/* Engagement Row - Clickable to expand */}
       <div className="px-4 pb-2 flex items-center justify-between">
-        <div className="flex items-center gap-2">
+        <button 
+          onClick={(e) => {
+            e.stopPropagation();
+            setLikesExpanded(!likesExpanded);
+            setCommentsExpanded(false);
+          }}
+          className="flex items-center gap-2 hover:opacity-80 transition-opacity"
+        >
+          {/* Show avatars of first 3 likers */}
+          {likes && likes.length > 0 && (
+            <div className="flex -space-x-1.5">
+              {likes.slice(0, 3).map((like) => (
+                <Avatar key={like.id} className="h-5 w-5 border border-background">
+                  <AvatarImage src={like.profile?.avatar_url || undefined} />
+                  <AvatarFallback className="text-[8px]">{like.profile?.display_name?.[0] || 'U'}</AvatarFallback>
+                </Avatar>
+              ))}
+            </div>
+          )}
           <span className="text-sm text-foreground">{trip.likes_count || 0} Likes</span>
           <Flag className={cn("h-4 w-4", trip.is_liked ? "text-primary fill-primary" : "text-muted-foreground")} />
-        </div>
-        <span className="text-sm text-muted-foreground">{trip.comments_count || 0} Comments</span>
+          <ChevronDown className={cn("h-3 w-3 text-muted-foreground transition-transform", likesExpanded && "rotate-180")} />
+        </button>
+        
+        <button 
+          onClick={(e) => {
+            e.stopPropagation();
+            setCommentsExpanded(!commentsExpanded);
+            setLikesExpanded(false);
+          }}
+          className="flex items-center gap-1 hover:opacity-80 transition-opacity"
+        >
+          <span className="text-sm text-muted-foreground">{trip.comments_count || 0} Comments</span>
+          <ChevronDown className={cn("h-3 w-3 text-muted-foreground transition-transform", commentsExpanded && "rotate-180")} />
+        </button>
       </div>
+
+      {/* Expanded Likes List */}
+      <AnimatePresence>
+        {likesExpanded && likes && likes.length > 0 && (
+          <motion.div 
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="overflow-hidden"
+          >
+            <div className="px-4 pb-3 border-t border-border">
+              <div className="pt-3 space-y-2 max-h-60 overflow-y-auto">
+                {likes.map((like) => (
+                  <div 
+                    key={like.id}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      navigate(`/user/${like.user_id}`);
+                    }}
+                    className="flex items-center gap-3 cursor-pointer hover:bg-secondary/50 rounded-lg p-2 -mx-2 transition-colors"
+                  >
+                    <Avatar className="h-9 w-9">
+                      <AvatarImage src={like.profile?.avatar_url || undefined} />
+                      <AvatarFallback>{like.profile?.display_name?.[0] || 'U'}</AvatarFallback>
+                    </Avatar>
+                    <span className="font-medium text-foreground text-sm">{like.profile?.display_name || 'User'}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Expanded Comments List */}
+      <AnimatePresence>
+        {commentsExpanded && comments && comments.length > 0 && (
+          <motion.div 
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="overflow-hidden"
+          >
+            <div className="px-4 pb-3 border-t border-border">
+              <div className="pt-3 space-y-3 max-h-60 overflow-y-auto">
+                {comments.map((comment) => (
+                  <div key={comment.id} className="flex items-start gap-3">
+                    <Avatar 
+                      className="h-8 w-8 cursor-pointer"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        navigate(`/user/${comment.user_id}`);
+                      }}
+                    >
+                      <AvatarImage src={comment.profile?.avatar_url || undefined} />
+                      <AvatarFallback>{comment.profile?.display_name?.[0] || 'U'}</AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1">
+                      <span className="font-medium text-foreground text-sm">{comment.profile?.display_name || 'User'}</span>
+                      <p className="text-muted-foreground text-sm">{comment.content}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <div className="h-0.5 bg-primary/30 mx-4" />
 
