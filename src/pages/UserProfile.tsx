@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { useSmartBack } from '@/hooks/useSmartBack';
 import { Flag, BarChart3, Car, ArrowLeft, Lock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -34,6 +35,7 @@ const formatStatsTime = (minutes: number) => {
 
 const UserProfile = () => {
   const navigate = useNavigate();
+  const goBack = useSmartBack('/feed');
   const { userId } = useParams();
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState<'trips' | 'stats'>('trips');
@@ -131,7 +133,7 @@ const UserProfile = () => {
       <div className="flex flex-col min-h-screen bg-background safe-top pb-24">
         <header className="sticky top-0 z-40 bg-background">
           <div className="flex items-center justify-between px-4 h-14">
-            <button onClick={() => navigate(-1)} className="text-primary">
+            <button onClick={goBack} className="text-primary">
               <ArrowLeft className="h-6 w-6" />
             </button>
             <Skeleton className="h-4 w-24" />
@@ -156,7 +158,7 @@ const UserProfile = () => {
       {/* Header */}
       <header className="sticky top-0 z-40 bg-background">
         <div className="flex items-center justify-between px-4 h-14">
-          <button onClick={() => navigate(-1)} className="text-primary">
+          <button onClick={goBack} className="text-primary">
             <ArrowLeft className="h-6 w-6" />
           </button>
           <span className="text-primary font-medium flex items-center gap-1">

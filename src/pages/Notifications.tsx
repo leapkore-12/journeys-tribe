@@ -1,4 +1,5 @@
 import { useNavigate } from 'react-router-dom';
+import { useSmartBack } from '@/hooks/useSmartBack';
 import { ArrowLeft, Check, X, Bell, Users } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -20,6 +21,7 @@ import { formatDistanceToNow } from 'date-fns';
 
 const Notifications = () => {
   const navigate = useNavigate();
+  const goBack = useSmartBack('/feed');
   const { user } = useAuth();
   const { toast } = useToast();
 
@@ -459,7 +461,7 @@ const Notifications = () => {
       <header className="sticky top-0 z-40 bg-background border-b border-border">
         <div className="flex items-center justify-between px-4 h-14">
           <button
-            onClick={() => navigate(-1)}
+            onClick={goBack}
             className="text-foreground p-2 -ml-2"
           >
             <ArrowLeft className="h-6 w-6" />

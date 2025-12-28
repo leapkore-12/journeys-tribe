@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { useSmartBack } from '@/hooks/useSmartBack';
 import { ArrowLeft, MoreHorizontal, Flag, MessageCircle, Upload, Send } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -51,6 +52,7 @@ const formatDuration = (minutes: number | null) => {
 
 const TripDetail = () => {
   const navigate = useNavigate();
+  const goBack = useSmartBack('/feed');
   const { tripId } = useParams();
   const { user } = useAuth();
   const { toast } = useToast();
@@ -152,7 +154,7 @@ const TripDetail = () => {
       <div className="flex flex-col bg-background safe-top min-h-screen">
         <header className="sticky top-0 z-40 bg-background border-b border-border">
           <div className="flex items-center justify-between px-4 h-14">
-            <button onClick={() => navigate(-1)} className="text-foreground p-2 -ml-2">
+            <button onClick={goBack} className="text-foreground p-2 -ml-2">
               <ArrowLeft className="h-6 w-6" />
             </button>
             <img src={logoWhite} alt="RoadTribe" className="h-6" />
@@ -179,7 +181,7 @@ const TripDetail = () => {
       <div className="flex flex-col bg-background safe-top min-h-screen">
         <header className="sticky top-0 z-40 bg-background border-b border-border">
           <div className="flex items-center justify-between px-4 h-14">
-            <button onClick={() => navigate(-1)} className="text-foreground p-2 -ml-2">
+            <button onClick={goBack} className="text-foreground p-2 -ml-2">
               <ArrowLeft className="h-6 w-6" />
             </button>
             <img src={logoWhite} alt="RoadTribe" className="h-6" />
@@ -198,7 +200,7 @@ const TripDetail = () => {
       {/* Header */}
       <header className="sticky top-0 z-40 bg-background border-b border-border">
         <div className="flex items-center justify-between px-4 h-14">
-          <button onClick={() => navigate(-1)} className="text-foreground p-2 -ml-2">
+          <button onClick={goBack} className="text-foreground p-2 -ml-2">
             <ArrowLeft className="h-6 w-6" />
           </button>
           <img src={logoWhite} alt="RoadTribe" className="h-6" />

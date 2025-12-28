@@ -1,5 +1,6 @@
 import { useState, useCallback, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { useSmartBack } from '@/hooks/useSmartBack';
 import { ArrowLeft, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -36,6 +37,7 @@ interface SlideData {
 
 const Share = () => {
   const navigate = useNavigate();
+  const goBack = useSmartBack('/feed');
   const { postId } = useParams();
   const [carouselApi, setCarouselApi] = useState<CarouselApi>();
   const [currentSlide, setCurrentSlide] = useState(0);
@@ -245,7 +247,7 @@ const Share = () => {
       <div className="flex flex-col bg-background safe-top min-h-screen">
         <header className="sticky top-0 z-40 bg-background border-b border-border">
           <div className="flex items-center justify-between px-4 h-14">
-            <button onClick={() => navigate(-1)} className="text-foreground p-2 -ml-2">
+            <button onClick={goBack} className="text-foreground p-2 -ml-2">
               <ArrowLeft className="h-6 w-6" />
             </button>
             <img src={logoWhite} alt="RoadTribe" className="h-6" />
@@ -267,7 +269,7 @@ const Share = () => {
     return (
       <div className="flex flex-col bg-background safe-top min-h-screen items-center justify-center">
         <p className="text-muted-foreground">Trip not found</p>
-        <Button variant="ghost" onClick={() => navigate(-1)} className="mt-4">
+        <Button variant="ghost" onClick={goBack} className="mt-4">
           Go Back
         </Button>
       </div>
@@ -278,7 +280,7 @@ const Share = () => {
     return (
       <div className="flex flex-col bg-background safe-top min-h-screen items-center justify-center">
         <p className="text-muted-foreground">No images available to share</p>
-        <Button variant="ghost" onClick={() => navigate(-1)} className="mt-4">
+        <Button variant="ghost" onClick={goBack} className="mt-4">
           Go Back
         </Button>
       </div>
@@ -291,7 +293,7 @@ const Share = () => {
       <header className="sticky top-0 z-40 bg-background border-b border-border">
         <div className="flex items-center justify-between px-4 h-14">
           <button
-            onClick={() => navigate(-1)}
+            onClick={goBack}
             className="text-foreground p-2 -ml-2"
           >
             <ArrowLeft className="h-6 w-6" />
