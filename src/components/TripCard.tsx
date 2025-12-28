@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { MoreHorizontal, Flag, MessageCircle, Upload, ChevronDown } from 'lucide-react';
+import { MoreHorizontal, Flag, MessageCircle, Upload, ChevronDown, Send } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { TripWithDetails } from '@/hooks/useTrips';
 import { cn } from '@/lib/utils';
@@ -20,8 +20,9 @@ import {
 import { useAuth } from '@/context/AuthContext';
 import { formatDistanceToNow } from 'date-fns';
 import { useTripLikes } from '@/hooks/useTripLikes';
-import { useComments } from '@/hooks/useComments';
-
+import { useComments, useCreateComment, CommentWithProfile } from '@/hooks/useComments';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
 interface TripCardProps {
   trip: TripWithDetails;
   index: number;
@@ -54,11 +55,98 @@ const TripCard = ({ trip, index, onLike, onComment, onShare, onUserClick, contex
   const [currentSlide, setCurrentSlide] = useState(0);
   const [likesExpanded, setLikesExpanded] = useState(false);
   const [commentsExpanded, setCommentsExpanded] = useState(false);
+  const [replyingTo, setReplyingTo] = useState<string | null>(null);
+  const [replyContent, setReplyContent] = useState('');
+  const [newComment, setNewComment] = useState('');
   const isOwnPost = trip.user_id === user?.id;
 
   // Fetch likes and comments when expanded
   const { data: likes } = useTripLikes(trip.id, likesExpanded);
   const { data: comments } = useComments(trip.id);
+  const createComment = useCreateComment();
+
+  // Comment item component with reply support
+  const CommentItem = ({ comment, depth = 0 }: { comment: CommentWithProfile; depth?: number }) => (
+    <div className={cn("flex items-start gap-3", depth > 0 && "ml-6 border-l border-border pl-3 mt-2")}>
+      <Avatar 
+        className="h-8 w-8 cursor-pointer flex-shrink-0"
+        onClick={(e) => {
+          e.stopPropagation();
+          navigate(`/user/${comment.user_id}`);
+        }}
+      >
+        <AvatarImage src={comment.profile?.avatar_url || undefined} />
+        <AvatarFallback>{comment.profile?.display_name?.[0] || 'U'}</AvatarFallback>
+      </Avatar>
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2">
+          <span className="font-medium text-foreground text-sm">{comment.profile?.display_name || 'User'}</span>
+          <span className="text-xs text-muted-foreground">
+            {comment.created_at ? formatDistanceToNow(new Date(comment.created_at), { addSuffix: true }) : ''}
+          </span>
+        </div>
+        <p className="text-muted-foreground text-sm">{comment.content}</p>
+        
+        {/* Reply button */}
+        {user && (
+          <button 
+            onClick={(e) => {
+              e.stopPropagation();
+              setReplyingTo(replyingTo === comment.id ? null : comment.id);
+              setReplyContent('');
+            }}
+            className="text-xs text-primary mt-1 hover:underline"
+          >
+            Reply
+          </button>
+        )}
+        
+        {/* Reply input */}
+        {replyingTo === comment.id && (
+          <div className="flex gap-2 mt-2">
+            <Input
+              placeholder="Write a reply..."
+              value={replyContent}
+              onChange={(e) => setReplyContent(e.target.value)}
+              onClick={(e) => e.stopPropagation()}
+              className="flex-1 h-8 text-sm"
+            />
+            <Button 
+              size="sm"
+              className="h-8 px-2"
+              onClick={(e) => {
+                e.stopPropagation();
+                if (replyContent.trim()) {
+                  createComment.mutate({ tripId: trip.id, content: replyContent, parentId: comment.id });
+                  setReplyContent('');
+                  setReplyingTo(null);
+                }
+              }}
+              disabled={!replyContent.trim() || createComment.isPending}
+            >
+              <Send className="h-4 w-4" />
+            </Button>
+          </div>
+        )}
+        
+        {/* Nested replies */}
+        {comment.replies && comment.replies.length > 0 && (
+          <div className="mt-2 space-y-2">
+            {comment.replies.map(reply => (
+              <CommentItem key={reply.id} comment={reply} depth={depth + 1} />
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+
+  const handleAddComment = () => {
+    if (newComment.trim() && user) {
+      createComment.mutate({ tripId: trip.id, content: newComment });
+      setNewComment('');
+    }
+  };
 
   // Build slides array
   const slides = [
@@ -307,7 +395,7 @@ const TripCard = ({ trip, index, onLike, onComment, onShare, onUserClick, contex
 
       {/* Expanded Comments List */}
       <AnimatePresence>
-        {commentsExpanded && comments && comments.length > 0 && (
+        {commentsExpanded && (
           <motion.div 
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: 'auto', opacity: 1 }}
@@ -317,25 +405,42 @@ const TripCard = ({ trip, index, onLike, onComment, onShare, onUserClick, contex
           >
             <div className="px-4 pb-3 border-t border-border">
               <div className="pt-3 space-y-3 max-h-60 overflow-y-auto">
-                {comments.map((comment) => (
-                  <div key={comment.id} className="flex items-start gap-3">
-                    <Avatar 
-                      className="h-8 w-8 cursor-pointer"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        navigate(`/user/${comment.user_id}`);
-                      }}
-                    >
-                      <AvatarImage src={comment.profile?.avatar_url || undefined} />
-                      <AvatarFallback>{comment.profile?.display_name?.[0] || 'U'}</AvatarFallback>
-                    </Avatar>
-                    <div className="flex-1">
-                      <span className="font-medium text-foreground text-sm">{comment.profile?.display_name || 'User'}</span>
-                      <p className="text-muted-foreground text-sm">{comment.content}</p>
-                    </div>
-                  </div>
-                ))}
+                {comments && comments.length > 0 ? (
+                  comments.map((comment) => (
+                    <CommentItem key={comment.id} comment={comment} />
+                  ))
+                ) : (
+                  <p className="text-muted-foreground text-sm text-center py-2">No comments yet</p>
+                )}
               </div>
+              
+              {/* Add new comment input */}
+              {user && (
+                <div className="flex gap-2 mt-3 pt-3 border-t border-border">
+                  <Input
+                    placeholder="Add a comment..."
+                    value={newComment}
+                    onChange={(e) => setNewComment(e.target.value)}
+                    onClick={(e) => e.stopPropagation()}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        handleAddComment();
+                      }
+                    }}
+                    className="flex-1"
+                  />
+                  <Button 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleAddComment();
+                    }} 
+                    disabled={!newComment.trim() || createComment.isPending}
+                  >
+                    <Send className="h-4 w-4" />
+                  </Button>
+                </div>
+              )}
             </div>
           </motion.div>
         )}
