@@ -1,13 +1,13 @@
 import { useState, useCallback, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useSmartBack } from '@/hooks/useSmartBack';
-import { ArrowLeft, MoreHorizontal, Flag, MessageCircle, Upload, Send } from 'lucide-react';
+import { ArrowLeft, MoreHorizontal, Flag, MessageCircle, Upload, Send, Trash2 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useTripById, useLikeTrip, useDeleteTrip } from '@/hooks/useTrips';
-import { useComments, useCreateComment } from '@/hooks/useComments';
+import { useComments, useCreateComment, useDeleteComment } from '@/hooks/useComments';
 import { useAuth } from '@/context/AuthContext';
 import { cn } from '@/lib/utils';
 import logoWhite from '@/assets/logo-white.svg';
@@ -62,13 +62,35 @@ const TripDetail = () => {
   const [carouselApi, setCarouselApi] = useState<CarouselApi>();
   const [currentSlide, setCurrentSlide] = useState(0);
 
+  const [commentDeleteDialogOpen, setCommentDeleteDialogOpen] = useState(false);
+  const [commentToDelete, setCommentToDelete] = useState<string | null>(null);
+
   const { data: trip, isLoading: tripLoading } = useTripById(tripId);
   const { data: comments, isLoading: commentsLoading } = useComments(tripId || '');
   const createComment = useCreateComment();
+  const deleteComment = useDeleteComment();
   const likeTrip = useLikeTrip();
   const deleteTrip = useDeleteTrip();
 
   const isOwnPost = trip?.user_id === user?.id;
+
+  const handleCommentDeleteClick = (commentId: string) => {
+    setCommentToDelete(commentId);
+    setCommentDeleteDialogOpen(true);
+  };
+
+  const confirmDeleteComment = () => {
+    if (!commentToDelete || !tripId) return;
+    deleteComment.mutate(
+      { commentId: commentToDelete, tripId },
+      {
+        onSuccess: () => {
+          setCommentDeleteDialogOpen(false);
+          setCommentToDelete(null);
+        }
+      }
+    );
+  };
 
   // Build slides array
   const slides = trip ? [
@@ -384,6 +406,14 @@ const TripDetail = () => {
                 </div>
                 <p className="text-foreground text-sm mt-1">{comment.content}</p>
               </div>
+              {comment.user_id === user?.id && (
+                <button 
+                  onClick={() => handleCommentDeleteClick(comment.id)}
+                  className="text-muted-foreground hover:text-destructive p-2 -mr-2 transition-colors"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              )}
             </div>
           ))
         ) : (
@@ -421,7 +451,7 @@ const TripDetail = () => {
         </form>
       </div>
 
-      {/* Delete Confirmation Dialog */}
+      {/* Delete Trip Confirmation Dialog */}
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent className="bg-card border-border">
           <AlertDialogHeader>
@@ -435,6 +465,27 @@ const TripDetail = () => {
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction 
               onClick={confirmDelete}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Delete Comment Confirmation Dialog */}
+      <AlertDialog open={commentDeleteDialogOpen} onOpenChange={setCommentDeleteDialogOpen}>
+        <AlertDialogContent className="bg-card border-border">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete comment?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={confirmDeleteComment}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
               Delete

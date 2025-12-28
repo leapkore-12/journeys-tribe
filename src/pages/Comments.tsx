@@ -1,23 +1,56 @@
 import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useSmartBack } from '@/hooks/useSmartBack';
-import { ArrowLeft, Flag, Send, MessageCircle } from 'lucide-react';
+import { ArrowLeft, Send, MessageCircle, Trash2 } from 'lucide-react';
+import { useAuth } from '@/context/AuthContext';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Input } from '@/components/ui/input';
-import { useComments, useCreateComment } from '@/hooks/useComments';
+import { useComments, useCreateComment, useDeleteComment } from '@/hooks/useComments';
 import { cn } from '@/lib/utils';
 import logoWhite from '@/assets/logo-white.svg';
 import { Skeleton } from '@/components/ui/skeleton';
 import { formatDistanceToNow } from 'date-fns';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
 const Comments = () => {
   const navigate = useNavigate();
   const goBack = useSmartBack('/feed');
   const { postId } = useParams();
+  const { user } = useAuth();
   const [newComment, setNewComment] = useState('');
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [commentToDelete, setCommentToDelete] = useState<string | null>(null);
   
   const { data: comments, isLoading } = useComments(postId || '');
   const createComment = useCreateComment();
+  const deleteComment = useDeleteComment();
+
+  const handleDeleteClick = (commentId: string) => {
+    setCommentToDelete(commentId);
+    setDeleteDialogOpen(true);
+  };
+
+  const confirmDeleteComment = () => {
+    if (!commentToDelete || !postId) return;
+    deleteComment.mutate(
+      { commentId: commentToDelete, tripId: postId },
+      {
+        onSuccess: () => {
+          setDeleteDialogOpen(false);
+          setCommentToDelete(null);
+        }
+      }
+    );
+  };
 
   const handleSubmitComment = (e: React.FormEvent) => {
     e.preventDefault();
@@ -93,6 +126,14 @@ const Comments = () => {
                 </div>
                 <p className="text-foreground text-sm mt-1">{comment.content}</p>
               </div>
+              {comment.user_id === user?.id && (
+                <button 
+                  onClick={() => handleDeleteClick(comment.id)}
+                  className="text-muted-foreground hover:text-destructive p-2 -mr-2 transition-colors"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              )}
             </div>
           ))
         ) : (
@@ -129,6 +170,27 @@ const Comments = () => {
           </button>
         </form>
       </div>
+
+      {/* Delete Comment Confirmation Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent className="bg-card border-border">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete comment?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={confirmDeleteComment}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
