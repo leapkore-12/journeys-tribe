@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useSmartBack } from '@/hooks/useSmartBack';
 import { ArrowLeft, X } from 'lucide-react';
@@ -17,12 +18,25 @@ import {
 } from '@/hooks/useFollows';
 import { useCurrentProfile } from '@/hooks/useProfile';
 import { Skeleton } from '@/components/ui/skeleton';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
 const ManageConnections = () => {
   const navigate = useNavigate();
   const goBack = useSmartBack('/profile');
   const { toast } = useToast();
   const { data: profile } = useCurrentProfile();
+  
+  const [removeDialogOpen, setRemoveDialogOpen] = useState(false);
+  const [followerToRemove, setFollowerToRemove] = useState<{ id: string; username?: string } | null>(null);
   
   const { data: following, isLoading: followingLoading } = useFollowing();
   const { data: followers, isLoading: followersLoading } = useFollowers();
@@ -34,12 +48,21 @@ const ManageConnections = () => {
   const acceptMutation = useAcceptFollowRequest();
   const declineMutation = useDeclineFollowRequest();
 
-  const handleRemoveFollower = (followerId: string, username?: string) => {
-    removeFollowerMutation.mutate(followerId, {
-      onSuccess: () => {
-        toast({ description: `Removed @${username || 'user'} from your followers` });
-      }
-    });
+  const openRemoveDialog = (followerId: string, username?: string) => {
+    setFollowerToRemove({ id: followerId, username });
+    setRemoveDialogOpen(true);
+  };
+
+  const confirmRemoveFollower = () => {
+    if (followerToRemove) {
+      removeFollowerMutation.mutate(followerToRemove.id, {
+        onSuccess: () => {
+          toast({ description: `Removed @${followerToRemove.username || 'user'} from your followers` });
+          setRemoveDialogOpen(false);
+          setFollowerToRemove(null);
+        }
+      });
+    }
   };
 
   const handleToggleFollow = (userId: string, isCurrentlyFollowing: boolean, username?: string) => {
@@ -226,9 +249,8 @@ const ManageConnections = () => {
                         className="text-muted-foreground hover:text-destructive hover:bg-destructive/10 p-2"
                         onClick={(e) => {
                           e.stopPropagation();
-                          handleRemoveFollower(conn.profile.id, conn.profile.username || undefined);
+                          openRemoveDialog(conn.profile.id, conn.profile.username || undefined);
                         }}
-                        disabled={removeFollowerMutation.isPending}
                       >
                         <X className="h-4 w-4" />
                       </Button>
@@ -306,6 +328,30 @@ const ManageConnections = () => {
           )}
         </div>
       </Tabs>
+
+      <AlertDialog open={removeDialogOpen} onOpenChange={setRemoveDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remove follower?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to remove @{followerToRemove?.username || 'this user'} from your followers? 
+              They won't be notified, but they'll need to follow you again to see your posts.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setFollowerToRemove(null)}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={confirmRemoveFollower}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              disabled={removeFollowerMutation.isPending}
+            >
+              Remove
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
