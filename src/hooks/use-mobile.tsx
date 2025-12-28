@@ -1,4 +1,5 @@
 import * as React from "react";
+import { useDeviceInfo } from "./useDeviceInfo";
 
 const MOBILE_BREAKPOINT = 768;
 
@@ -16,4 +17,15 @@ export function useIsMobile() {
   }, []);
 
   return !!isMobile;
+}
+
+// Enhanced mobile hook with device info
+export function useDeviceMobile() {
+  const isMobile = useIsMobile();
+  const deviceInfo = useDeviceInfo();
+  
+  return {
+    isMobile,
+    ...deviceInfo,
+  };
 }
