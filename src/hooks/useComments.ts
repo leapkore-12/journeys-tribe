@@ -7,22 +7,55 @@ export interface CommentWithProfile {
   trip_id: string;
   user_id: string;
   content: string;
+  parent_id: string | null;
   created_at: string | null;
   profile?: { id: string; username: string | null; display_name: string | null; avatar_url: string | null; } | null;
+  replies?: CommentWithProfile[];
 }
 
 export const useComments = (tripId: string) => {
   return useQuery({
     queryKey: ['comments', tripId],
     queryFn: async () => {
-      const { data, error } = await supabase.from('comments').select('*').eq('trip_id', tripId).order('created_at', { ascending: true });
+      const { data, error } = await supabase
+        .from('comments')
+        .select('*')
+        .eq('trip_id', tripId)
+        .order('created_at', { ascending: true });
+      
       if (error || !data) return [];
 
       const userIds = [...new Set(data.map(c => c.user_id))];
-      const { data: profiles } = await supabase.from('profiles').select('id, username, display_name, avatar_url').in('id', userIds);
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('id, username, display_name, avatar_url')
+        .in('id', userIds);
+      
       const profileMap = new Map(profiles?.map(p => [p.id, p]) || []);
 
-      return data.map(c => ({ ...c, profile: profileMap.get(c.user_id) || null })) as CommentWithProfile[];
+      const commentsWithProfiles: CommentWithProfile[] = data.map(c => ({ 
+        ...c, 
+        parent_id: c.parent_id || null,
+        profile: profileMap.get(c.user_id) || null,
+        replies: []
+      }));
+
+      // Build thread hierarchy
+      const rootComments: CommentWithProfile[] = [];
+      const commentMap = new Map(commentsWithProfiles.map(c => [c.id, c]));
+
+      commentsWithProfiles.forEach(comment => {
+        if (comment.parent_id) {
+          const parent = commentMap.get(comment.parent_id);
+          if (parent && parent.replies) {
+            parent.replies.push(comment);
+          }
+        } else {
+          rootComments.push(comment);
+        }
+      });
+
+      return rootComments;
     },
     enabled: !!tripId,
   });
@@ -33,9 +66,18 @@ export const useCreateComment = () => {
   const { user } = useAuth();
 
   return useMutation({
-    mutationFn: async ({ tripId, content }: { tripId: string; content: string }) => {
+    mutationFn: async ({ tripId, content, parentId }: { tripId: string; content: string; parentId?: string }) => {
       if (!user?.id) throw new Error('Not authenticated');
-      const { data, error } = await supabase.from('comments').insert({ trip_id: tripId, user_id: user.id, content }).select().single();
+      const { data, error } = await supabase
+        .from('comments')
+        .insert({ 
+          trip_id: tripId, 
+          user_id: user.id, 
+          content,
+          parent_id: parentId || null
+        })
+        .select()
+        .single();
       if (error) throw error;
       return data;
     },
