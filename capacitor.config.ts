@@ -1,12 +1,11 @@
 import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
-  appId: 'app.lovable.ce09c587786345489382e8fdec3d2473',
-  appName: 'jlllllllj',
+  appId: 'app.roadtribe.mobile',
+  appName: 'RoadTribe',
   webDir: 'dist',
   server: {
-    // Hot reload from Lovable sandbox during development
-    // REMOVE THIS BLOCK when building for App Store release!
+    // Hot reload during development - REMOVE for App Store release!
     url: 'https://ce09c587-7863-4548-9382-e8fdec3d2473.lovableproject.com?forceHideBadge=true',
     cleartext: true
   },
