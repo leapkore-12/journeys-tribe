@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { MoreHorizontal, Flag, MessageCircle, Upload, ChevronDown, Send } from 'lucide-react';
+import { MoreHorizontal, Flag, MessageCircle, Upload, ChevronDown, Send, Trash2 } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { TripWithDetails } from '@/hooks/useTrips';
 import { cn } from '@/lib/utils';
@@ -20,7 +20,7 @@ import {
 import { useAuth } from '@/context/AuthContext';
 import { formatDistanceToNow } from 'date-fns';
 import { useTripLikes } from '@/hooks/useTripLikes';
-import { useComments, useCreateComment, CommentWithProfile } from '@/hooks/useComments';
+import { useComments, useCreateComment, useDeleteComment, CommentWithProfile } from '@/hooks/useComments';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 interface TripCardProps {
@@ -64,6 +64,7 @@ const TripCard = ({ trip, index, onLike, onComment, onShare, onUserClick, contex
   const { data: likes } = useTripLikes(trip.id, likesExpanded);
   const { data: comments } = useComments(trip.id);
   const createComment = useCreateComment();
+  const deleteComment = useDeleteComment();
 
   // Comment item component with reply support
   const CommentItem = ({ comment, depth = 0 }: { comment: CommentWithProfile; depth?: number }) => (
@@ -79,11 +80,27 @@ const TripCard = ({ trip, index, onLike, onComment, onShare, onUserClick, contex
         <AvatarFallback>{comment.profile?.display_name?.[0] || 'U'}</AvatarFallback>
       </Avatar>
       <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2">
-          <span className="font-medium text-foreground text-sm">{comment.profile?.display_name || 'User'}</span>
-          <span className="text-xs text-muted-foreground">
-            {comment.created_at ? formatDistanceToNow(new Date(comment.created_at), { addSuffix: true }) : ''}
-          </span>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span className="font-medium text-foreground text-sm">{comment.profile?.display_name || 'User'}</span>
+            <span className="text-xs text-muted-foreground">
+              {comment.created_at ? formatDistanceToNow(new Date(comment.created_at), { addSuffix: true }) : ''}
+            </span>
+          </div>
+          
+          {/* Delete button for own comments */}
+          {user?.id === comment.user_id && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                deleteComment.mutate({ commentId: comment.id, tripId: trip.id });
+              }}
+              disabled={deleteComment.isPending}
+              className="text-muted-foreground hover:text-destructive p-1 rounded-md hover:bg-destructive/10 transition-colors disabled:opacity-50"
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+            </button>
+          )}
         </div>
         <p className="text-muted-foreground text-sm">{comment.content}</p>
         
