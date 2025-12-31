@@ -223,7 +223,7 @@ const Comments = () => {
             value={newComment}
             onChange={(e) => setNewComment(e.target.value)}
             placeholder={replyingTo ? `Reply to @${replyingTo.username}...` : "Add a comment..."}
-            className="flex-1 h-10 bg-secondary border-border"
+            className="flex-1 h-10 bg-secondary border-border text-foreground"
           />
           <button
             type="submit"
