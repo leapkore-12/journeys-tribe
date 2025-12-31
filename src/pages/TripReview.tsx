@@ -12,6 +12,7 @@ import { useConvoyInvites } from '@/hooks/useConvoyInvites';
 import { useAuth } from '@/context/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { useDeviceSpacing } from '@/hooks/useDeviceInfo';
 
 const TripReview = () => {
   const navigate = useNavigate();
@@ -19,6 +20,7 @@ const TripReview = () => {
   const { createBulkInvites } = useConvoyInvites();
   const { user } = useAuth();
   const { toast } = useToast();
+  const { bottomNavHeight } = useDeviceSpacing();
   const [isStarting, setIsStarting] = useState(false);
 
   const handleStartTrip = async () => {
@@ -143,7 +145,7 @@ const TripReview = () => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-background safe-top">
+    <div className="flex flex-col h-full bg-background">
       {/* Custom header with search */}
       <header className="flex items-center justify-between px-4 h-14 bg-background">
         <button onClick={() => navigate('/search')} className="w-10 h-10 flex items-center justify-center">
@@ -160,7 +162,7 @@ const TripReview = () => {
         <h1 className="text-xl font-semibold text-primary text-center">Trip Planner</h1>
       </div>
 
-      <div className="flex-1 px-4 pb-40 space-y-4">
+      <div className="flex-1 overflow-y-auto px-4 pb-48 space-y-4 scrollbar-hide">
         {/* Route Section */}
         <div className="space-y-2">
           <label className="text-sm text-muted-foreground">Route</label>
@@ -263,7 +265,10 @@ const TripReview = () => {
       </div>
 
       {/* Bottom Buttons */}
-      <div className="fixed bottom-20 left-0 right-0 p-4 bg-background space-y-3">
+      <div 
+        className="fixed left-0 right-0 p-4 bg-background space-y-3 max-w-[430px] mx-auto"
+        style={{ bottom: bottomNavHeight }}
+      >
         <Button
           variant="outline"
           onClick={() => {
