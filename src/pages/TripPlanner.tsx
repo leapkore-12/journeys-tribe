@@ -12,6 +12,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import TripHeader from '@/components/trip/TripHeader';
+import FixedBottomActions from '@/components/layout/FixedBottomActions';
 import LocationSearchInput from '@/components/trip/LocationSearchInput';
 import RoutePreviewMap from '@/components/trip/RoutePreviewMap';
 import { useTrip } from '@/context/TripContext';
@@ -667,31 +668,15 @@ const TripPlanner = () => {
       </div>
 
       {/* Bottom Button */}
-      <BottomButton 
-        onClick={handleNext}
-        disabled={!canProceed()}
-        text={getButtonText()}
-      />
-    </div>
-  );
-};
-
-// Extracted component to use hook
-const BottomButton = ({ onClick, disabled, text }: { onClick: () => void; disabled: boolean; text: string }) => {
-  const { bottomNavHeight } = useDeviceSpacing();
-  
-  return (
-    <div 
-      className="fixed left-0 right-0 p-4 bg-background max-w-[430px] mx-auto"
-      style={{ bottom: bottomNavHeight }}
-    >
-      <Button
-        onClick={onClick}
-        disabled={disabled}
-        className="w-full h-14 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-lg disabled:opacity-50"
-      >
-        {text}
-      </Button>
+      <FixedBottomActions>
+        <Button
+          onClick={handleNext}
+          disabled={!canProceed()}
+          className="w-full h-14 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-lg disabled:opacity-50"
+        >
+          {getButtonText()}
+        </Button>
+      </FixedBottomActions>
     </div>
   );
 };

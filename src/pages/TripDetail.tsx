@@ -35,6 +35,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { formatDistanceToNow } from 'date-fns';
+import FixedBottomActions from '@/components/layout/FixedBottomActions';
 
 const formatDistance = (km: number | null) => {
   if (!km) return '0 km';
@@ -430,7 +431,7 @@ const TripDetail = () => {
       </div>
 
       {/* Comment Input */}
-      <div className="fixed bottom-0 left-0 right-0 bg-background border-t border-border p-4 safe-bottom">
+      <FixedBottomActions showBorder>
         <form onSubmit={handleSubmitComment} className="flex items-center gap-3">
           <Input
             value={newComment}
@@ -449,7 +450,7 @@ const TripDetail = () => {
             <Send className="h-5 w-5" />
           </button>
         </form>
-      </div>
+      </FixedBottomActions>
 
       {/* Delete Trip Confirmation Dialog */}
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>

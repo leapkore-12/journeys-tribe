@@ -12,7 +12,7 @@ import { useConvoyInvites } from '@/hooks/useConvoyInvites';
 import { useAuth } from '@/context/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { useDeviceSpacing } from '@/hooks/useDeviceInfo';
+import FixedBottomActions from '@/components/layout/FixedBottomActions';
 
 const TripReview = () => {
   const navigate = useNavigate();
@@ -20,7 +20,6 @@ const TripReview = () => {
   const { createBulkInvites } = useConvoyInvites();
   const { user } = useAuth();
   const { toast } = useToast();
-  const { bottomNavHeight } = useDeviceSpacing();
   const [isStarting, setIsStarting] = useState(false);
 
   const handleStartTrip = async () => {
@@ -265,10 +264,7 @@ const TripReview = () => {
       </div>
 
       {/* Bottom Buttons */}
-      <div 
-        className="fixed left-0 right-0 p-4 bg-background space-y-3 max-w-[430px] mx-auto"
-        style={{ bottom: bottomNavHeight }}
-      >
+      <FixedBottomActions className="space-y-3">
         <Button
           variant="outline"
           onClick={() => {
@@ -293,7 +289,7 @@ const TripReview = () => {
             'Start trip'
           )}
         </Button>
-      </div>
+      </FixedBottomActions>
     </div>
   );
 };
