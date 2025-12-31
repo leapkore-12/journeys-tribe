@@ -62,7 +62,7 @@ const Profile = () => {
 
   if (profileLoading) {
     return (
-      <div className="flex flex-col min-h-screen bg-background safe-top pb-24">
+      <div className="flex flex-col bg-background pb-24">
         <header className="sticky top-0 z-40 bg-background">
           <div className="flex items-center justify-between px-4 h-14">
             <Skeleton className="h-6 w-6" />
@@ -84,7 +84,7 @@ const Profile = () => {
   }
 
   return (
-    <div className="flex flex-col min-h-screen bg-background safe-top pb-24">
+    <div className="flex flex-col bg-background pb-24">
       {/* Header */}
       <header className="sticky top-0 z-40 bg-background">
         <div className="flex items-center justify-between px-4 h-14">
