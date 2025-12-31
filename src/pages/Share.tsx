@@ -244,7 +244,7 @@ const Share = () => {
 
   if (isLoading) {
     return (
-      <div className="flex flex-col bg-background safe-top min-h-screen">
+      <div className="flex flex-col bg-background">
         <header className="sticky top-0 z-40 bg-background border-b border-border">
           <div className="flex items-center justify-between px-4 h-14">
             <button onClick={goBack} className="text-foreground p-2 -ml-2">
@@ -267,7 +267,7 @@ const Share = () => {
 
   if (!trip) {
     return (
-      <div className="flex flex-col bg-background safe-top min-h-screen items-center justify-center">
+      <div className="flex flex-col bg-background items-center justify-center">
         <p className="text-muted-foreground">Trip not found</p>
         <Button variant="ghost" onClick={goBack} className="mt-4">
           Go Back
@@ -278,7 +278,7 @@ const Share = () => {
 
   if (slides.length === 0) {
     return (
-      <div className="flex flex-col bg-background safe-top min-h-screen items-center justify-center">
+      <div className="flex flex-col bg-background items-center justify-center">
         <p className="text-muted-foreground">No images available to share</p>
         <Button variant="ghost" onClick={goBack} className="mt-4">
           Go Back
@@ -288,7 +288,7 @@ const Share = () => {
   }
 
   return (
-    <div className="flex flex-col bg-background safe-top min-h-screen">
+    <div className="flex flex-col bg-background">
       {/* Header */}
       <header className="sticky top-0 z-40 bg-background border-b border-border">
         <div className="flex items-center justify-between px-4 h-14">

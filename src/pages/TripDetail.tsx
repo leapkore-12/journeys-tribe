@@ -173,7 +173,7 @@ const TripDetail = () => {
 
   if (tripLoading) {
     return (
-      <div className="flex flex-col bg-background safe-top min-h-screen">
+      <div className="flex flex-col bg-background">
         <header className="sticky top-0 z-40 bg-background border-b border-border">
           <div className="flex items-center justify-between px-4 h-14">
             <button onClick={goBack} className="text-foreground p-2 -ml-2">
@@ -200,7 +200,7 @@ const TripDetail = () => {
 
   if (!trip) {
     return (
-      <div className="flex flex-col bg-background safe-top min-h-screen">
+      <div className="flex flex-col bg-background">
         <header className="sticky top-0 z-40 bg-background border-b border-border">
           <div className="flex items-center justify-between px-4 h-14">
             <button onClick={goBack} className="text-foreground p-2 -ml-2">
@@ -218,7 +218,7 @@ const TripDetail = () => {
   }
 
   return (
-    <div className="flex flex-col bg-background safe-top min-h-screen">
+    <div className="flex flex-col bg-background">
       {/* Header */}
       <header className="sticky top-0 z-40 bg-background border-b border-border">
         <div className="flex items-center justify-between px-4 h-14">

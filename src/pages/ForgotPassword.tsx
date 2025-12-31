@@ -56,7 +56,7 @@ const ForgotPassword = () => {
 
   if (emailSent) {
     return (
-      <div className="min-h-screen bg-background flex flex-col safe-top safe-bottom">
+      <div className="bg-background flex flex-col safe-bottom">
         <div className="flex-1 flex flex-col justify-center px-6 py-8">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -102,7 +102,7 @@ const ForgotPassword = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background flex flex-col safe-top safe-bottom">
+    <div className="bg-background flex flex-col safe-bottom">
       {/* Header */}
       <header className="px-4 h-14 flex items-center">
         <button onClick={() => navigate('/login')} className="text-foreground">

@@ -130,7 +130,7 @@ const UserProfile = () => {
 
   if (profileLoading) {
     return (
-      <div className="flex flex-col min-h-screen bg-background safe-top pb-24">
+      <div className="flex flex-col bg-background pb-24">
         <header className="sticky top-0 z-40 bg-background">
           <div className="flex items-center justify-between px-4 h-14">
             <button onClick={goBack} className="text-primary">
@@ -154,7 +154,7 @@ const UserProfile = () => {
   }
 
   return (
-    <div className="flex flex-col min-h-screen bg-background safe-top pb-24">
+    <div className="flex flex-col bg-background pb-24">
       {/* Header */}
       <header className="sticky top-0 z-40 bg-background">
         <div className="flex items-center justify-between px-4 h-14">

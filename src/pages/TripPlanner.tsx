@@ -280,7 +280,7 @@ const TripPlanner = () => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-background safe-top">
+    <div className="flex flex-col bg-background">
       <TripHeader onBack={handleBack} />
       
       {/* Title */}
