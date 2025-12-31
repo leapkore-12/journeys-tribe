@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useDeviceSpacing } from '@/hooks/useDeviceInfo';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
@@ -666,15 +667,31 @@ const TripPlanner = () => {
       </div>
 
       {/* Bottom Button */}
-      <div className="fixed bottom-20 left-0 right-0 p-4 bg-background">
-        <Button
-          onClick={handleNext}
-          disabled={!canProceed()}
-          className="w-full h-14 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-lg disabled:opacity-50"
-        >
-          {getButtonText()}
-        </Button>
-      </div>
+      <BottomButton 
+        onClick={handleNext}
+        disabled={!canProceed()}
+        text={getButtonText()}
+      />
+    </div>
+  );
+};
+
+// Extracted component to use hook
+const BottomButton = ({ onClick, disabled, text }: { onClick: () => void; disabled: boolean; text: string }) => {
+  const { bottomNavHeight } = useDeviceSpacing();
+  
+  return (
+    <div 
+      className="fixed left-0 right-0 p-4 bg-background max-w-[430px] mx-auto"
+      style={{ bottom: bottomNavHeight }}
+    >
+      <Button
+        onClick={onClick}
+        disabled={disabled}
+        className="w-full h-14 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-lg disabled:opacity-50"
+      >
+        {text}
+      </Button>
     </div>
   );
 };
