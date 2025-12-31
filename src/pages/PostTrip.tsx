@@ -18,6 +18,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/context/AuthContext';
 import { useFinalizeTrip } from '@/hooks/useFinalizeTrip';
 import { useConvoyMembers } from '@/hooks/useConvoyMembers';
+import FixedBottomActions from '@/components/layout/FixedBottomActions';
 
 const MAX_PHOTOS = 5;
 
@@ -517,7 +518,7 @@ const PostTrip = () => {
       </div>
 
       {/* Bottom Buttons */}
-      <div className="fixed bottom-0 left-0 right-0 p-4 bg-background space-y-3">
+      <FixedBottomActions>
         <div className="flex gap-3">
           <Button
             variant="outline"
@@ -535,7 +536,7 @@ const PostTrip = () => {
             {isPosting ? isPosting : 'Post trip'}
           </Button>
         </div>
-      </div>
+      </FixedBottomActions>
     </div>
   );
 };

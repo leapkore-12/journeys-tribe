@@ -20,6 +20,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import FixedBottomActions from '@/components/layout/FixedBottomActions';
 
 const Comments = () => {
   const navigate = useNavigate();
@@ -213,10 +214,7 @@ const Comments = () => {
       )}
 
       {/* Comment Input */}
-      <div className={cn(
-        "fixed bottom-0 left-0 right-0 bg-background border-t border-border p-4 safe-bottom",
-        replyingTo && "pb-4"
-      )}>
+      <FixedBottomActions showBorder>
         <form onSubmit={handleSubmitComment} className="flex items-center gap-3">
           <Input
             ref={inputRef}
@@ -236,7 +234,7 @@ const Comments = () => {
             <Send className="h-5 w-5" />
           </button>
         </form>
-      </div>
+      </FixedBottomActions>
 
       {/* Delete Comment Confirmation Dialog */}
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
