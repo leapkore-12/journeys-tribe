@@ -23,7 +23,7 @@ const Splash = () => {
   }, [navigate]);
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center safe-top safe-bottom">
+    <div className="min-h-screen bg-background flex items-center justify-center safe-bottom">
       <motion.div
         initial={{ opacity: 0, scale: 0.8 }}
         animate={showLogo ? { opacity: 1, scale: 1 } : {}}

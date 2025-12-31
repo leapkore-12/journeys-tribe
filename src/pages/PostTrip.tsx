@@ -270,7 +270,7 @@ const PostTrip = () => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-background safe-top">
+    <div className="flex flex-col bg-background">
       <TripHeader backTo="/trip/paused" />
       
       <div className="flex-1 px-4 py-4 pb-24 space-y-4 overflow-y-auto">

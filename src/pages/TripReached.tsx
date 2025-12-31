@@ -44,7 +44,7 @@ const TripReached = () => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-background safe-top">
+    <div className="flex flex-col bg-background">
       <TripHeader backTo="/trip/active" />
       
       {/* Title */}

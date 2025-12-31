@@ -20,7 +20,7 @@ const Search = () => {
   const { data: trips, isLoading: tripsLoading } = useSearchTrips(debouncedQuery);
 
   return (
-    <div className="flex flex-col bg-background safe-top">
+    <div className="flex flex-col bg-background">
       {/* Header */}
       <header className="sticky top-0 z-40 bg-background border-b border-border">
         <div className="flex items-center gap-3 px-4 h-14">

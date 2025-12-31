@@ -50,7 +50,7 @@ const TripComplete = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background safe-top safe-bottom">
+    <div className="bg-background safe-bottom">
       {/* Success Header */}
       <div className="bg-primary/10 border-b border-primary/20">
         <div className="py-8 px-4 text-center">
