@@ -22,6 +22,9 @@ import { supabase } from '@/integrations/supabase/client';
 import LiveTrackingMap, { LiveTrackingMapRef } from '@/components/map/LiveTrackingMap';
 import ConvoyPanel from '@/components/convoy/ConvoyPanel';
 import ConvoyStatusBar from '@/components/convoy/ConvoyStatusBar';
+import NearbySearchSheet from '@/components/trip/NearbySearchSheet';
+import ReportHazardSheet from '@/components/trip/ReportHazardSheet';
+import { useRoadHazards, RoadHazard } from '@/hooks/useRoadHazards';
 import logoWhite from '@/assets/logo-white.svg';
 import { calculateDistance } from '@/lib/distance-utils';
 
@@ -36,6 +39,8 @@ const ActiveTrip = () => {
   const [distance, setDistance] = useState(tripState.distanceCovered);
   const [compassMode, setCompassMode] = useState(false);
   const [showRoute, setShowRoute] = useState(true);
+  const [showNearbySearch, setShowNearbySearch] = useState(false);
+  const [showReportHazard, setShowReportHazard] = useState(false);
   const watchIdRef = useRef<number | null>(null);
   const mapRef = useRef<LiveTrackingMapRef>(null);
   const prevPositionRef = useRef<[number, number] | null>(null);
@@ -224,6 +229,9 @@ const ActiveTrip = () => {
   // Convoy invites
   const { createInvite, copyInviteLink, getShareLink } = useConvoyInvites();
 
+  // Road hazards
+  const { hazards } = useRoadHazards(activeTripId);
+
   // Update convoy position when user moves (handles online/offline)
   useEffect(() => {
     if (userPosition) {
@@ -371,6 +379,7 @@ const ActiveTrip = () => {
           destination={destinationCoordinates || undefined}
           routeCoordinates={route?.coordinates || tripState.routeCoordinates || undefined}
           convoyMembers={convoyMembers}
+          hazards={hazards}
           heading={heading}
           compassMode={compassMode}
           showRoute={showRoute}
@@ -491,7 +500,7 @@ const ActiveTrip = () => {
           <Compass className={`h-5 w-5 ${compassMode ? 'text-primary-foreground' : 'text-foreground'}`} />
         </button>
         <button 
-          onClick={() => toast({ title: 'Coming soon', description: 'Search nearby places feature coming soon!' })}
+          onClick={() => setShowNearbySearch(true)}
           className="w-12 h-12 bg-card rounded-full flex items-center justify-center shadow-lg"
         >
           <Search className="h-5 w-5 text-foreground" />
@@ -516,7 +525,7 @@ const ActiveTrip = () => {
           )}
         </button>
         <button 
-          onClick={() => toast({ title: 'Coming soon', description: 'Report road hazard feature coming soon!' })}
+          onClick={() => setShowReportHazard(true)}
           className="w-12 h-12 bg-card rounded-full flex items-center justify-center shadow-lg"
         >
           <AlertTriangle className="h-5 w-5 text-foreground" />
@@ -686,6 +695,27 @@ const ActiveTrip = () => {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Nearby Search Sheet */}
+      <NearbySearchSheet
+        open={showNearbySearch}
+        onOpenChange={setShowNearbySearch}
+        userPosition={userPosition}
+        onSelectPlace={(place) => {
+          toast({
+            title: 'Place selected',
+            description: place.name.split(',')[0],
+          });
+        }}
+      />
+
+      {/* Report Hazard Sheet */}
+      <ReportHazardSheet
+        open={showReportHazard}
+        onOpenChange={setShowReportHazard}
+        userPosition={userPosition}
+        tripId={activeTripId}
+      />
     </div>
   );
 };

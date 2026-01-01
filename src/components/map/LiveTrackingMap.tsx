@@ -4,12 +4,14 @@ import 'mapbox-gl/dist/mapbox-gl.css';
 import { MAPBOX_TOKEN, MAP_STYLES } from '@/lib/mapbox';
 import { ConvoyMemberPresence } from '@/hooks/useConvoyPresence';
 import { createConvoyMarkerElement, getMemberStatus, getStatusColor } from '@/components/convoy/ConvoyMemberMarker';
+import { RoadHazard } from '@/hooks/useRoadHazards';
 
 interface LiveTrackingMapProps {
   userPosition: [number, number] | null;
   destination?: [number, number];
   routeCoordinates?: [number, number][];
   convoyMembers?: ConvoyMemberPresence[];
+  hazards?: RoadHazard[];
   heading?: number | null;
   compassMode?: boolean;
   showRoute?: boolean;
@@ -25,6 +27,7 @@ const LiveTrackingMap = forwardRef<LiveTrackingMapRef, LiveTrackingMapProps>(({
   destination,
   routeCoordinates,
   convoyMembers = [],
+  hazards = [],
   heading,
   compassMode = false,
   showRoute = true,
@@ -35,6 +38,7 @@ const LiveTrackingMap = forwardRef<LiveTrackingMapRef, LiveTrackingMapProps>(({
   const userMarker = useRef<mapboxgl.Marker | null>(null);
   const destMarker = useRef<mapboxgl.Marker | null>(null);
   const convoyMarkers = useRef<Map<string, mapboxgl.Marker>>(new Map());
+  const hazardMarkers = useRef<Map<string, mapboxgl.Marker>>(new Map());
   const [isLoaded, setIsLoaded] = useState(false);
   
   // Refs to track latest values for recenter function
@@ -360,6 +364,71 @@ const LiveTrackingMap = forwardRef<LiveTrackingMapRef, LiveTrackingMapProps>(({
       });
     });
   }, [convoyMembers, isLoaded]);
+
+  // Update hazard markers
+  useEffect(() => {
+    if (!map.current || !isLoaded) return;
+
+    // Remove markers for hazards no longer active
+    const currentIds = new Set(hazards.map((h) => h.id));
+    hazardMarkers.current.forEach((marker, id) => {
+      if (!currentIds.has(id)) {
+        marker.remove();
+        hazardMarkers.current.delete(id);
+      }
+    });
+
+    // Add new hazard markers
+    hazards.forEach((hazard) => {
+      if (hazardMarkers.current.has(hazard.id)) return;
+
+      const el = document.createElement('div');
+      const iconMap: Record<string, string> = {
+        pothole: '🕳️',
+        accident: '🚗',
+        debris: '⚠️',
+        weather: '🌧️',
+      };
+      const icon = iconMap[hazard.hazard_type] || '⚠️';
+
+      el.innerHTML = `
+        <div style="
+          width: 32px;
+          height: 32px;
+          background: #fbbf24;
+          border: 2px solid white;
+          border-radius: 50%;
+          box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 16px;
+          cursor: pointer;
+        ">${icon}</div>
+      `;
+
+      el.addEventListener('click', () => {
+        new mapboxgl.Popup({ offset: 20, closeButton: true })
+          .setLngLat([hazard.longitude, hazard.latitude])
+          .setHTML(`
+            <div style="padding: 8px;">
+              <div style="font-weight: 600; text-transform: capitalize;">${hazard.hazard_type}</div>
+              ${hazard.description ? `<div style="font-size: 12px; color: #666;">${hazard.description}</div>` : ''}
+              <div style="font-size: 11px; color: #999; margin-top: 4px;">
+                Reported ${new Date(hazard.created_at).toLocaleTimeString()}
+              </div>
+            </div>
+          `)
+          .addTo(map.current!);
+      });
+
+      const marker = new mapboxgl.Marker({ element: el, anchor: 'center' })
+        .setLngLat([hazard.longitude, hazard.latitude])
+        .addTo(map.current!);
+
+      hazardMarkers.current.set(hazard.id, marker);
+    });
+  }, [hazards, isLoaded]);
 
   return (
     <div className={`relative w-full h-full ${className}`}>

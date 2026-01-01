@@ -14,7 +14,7 @@ export const useMapboxGeocoding = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const search = useCallback(async (query: string) => {
+  const search = useCallback(async (query: string, proximity?: [number, number]) => {
     if (!query || query.length < 3) {
       setResults([]);
       return;
@@ -24,14 +24,21 @@ export const useMapboxGeocoding = () => {
     setError(null);
 
     try {
+      const params: Record<string, string> = {
+        access_token: MAPBOX_TOKEN,
+        autocomplete: 'true',
+        limit: '5',
+        types: 'place,address,poi,locality,neighborhood',
+      };
+      
+      // Add proximity for nearby search
+      if (proximity) {
+        params.proximity = `${proximity[0]},${proximity[1]}`;
+      }
+
       const response = await fetch(
         `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(query)}.json?` +
-          new URLSearchParams({
-            access_token: MAPBOX_TOKEN,
-            autocomplete: 'true',
-            limit: '5',
-            types: 'place,address,poi,locality,neighborhood',
-          })
+          new URLSearchParams(params)
       );
 
       if (!response.ok) {

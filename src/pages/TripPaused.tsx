@@ -43,6 +43,16 @@ const TripPaused = () => {
     return `${hours}h ${mins}m`;
   };
 
+  const formatEta = (minutes: number) => {
+    const roundedMinutes = Math.round(minutes);
+    if (roundedMinutes < 60) {
+      return `${roundedMinutes}m`;
+    }
+    const hours = Math.floor(roundedMinutes / 60);
+    const mins = roundedMinutes % 60;
+    return mins > 0 ? `${hours}h ${mins}m` : `${hours}h`;
+  };
+
   return (
     <div className="flex flex-col bg-background">
       <TripHeader backTo="/trip/active" />
@@ -80,7 +90,7 @@ const TripPaused = () => {
           <div className="space-y-1">
             <p className="text-sm text-muted-foreground">ETA</p>
             <p className="text-3xl font-bold text-foreground">
-              {tripState.eta}m
+              {formatEta(tripState.eta)}
             </p>
           </div>
         </motion.div>
