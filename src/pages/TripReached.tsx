@@ -61,11 +61,15 @@ const TripReached = () => {
         >
           <div className="space-y-1">
             <p className="text-sm text-muted-foreground">Distance covered</p>
-            <p className="text-4xl font-bold text-foreground">82 km</p>
+            <p className="text-4xl font-bold text-foreground">
+              {Math.round(tripState.distanceCovered)} km
+            </p>
           </div>
           <div className="space-y-1">
             <p className="text-sm text-muted-foreground">Time on road</p>
-            <p className="text-4xl font-bold text-foreground">2h 36m</p>
+            <p className="text-4xl font-bold text-foreground">
+              {formatTime(tripState.timeElapsed)}
+            </p>
           </div>
         </motion.div>
 
