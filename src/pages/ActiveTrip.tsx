@@ -23,6 +23,7 @@ import LiveTrackingMap, { LiveTrackingMapRef } from '@/components/map/LiveTracki
 import ConvoyPanel from '@/components/convoy/ConvoyPanel';
 import ConvoyStatusBar from '@/components/convoy/ConvoyStatusBar';
 import logoWhite from '@/assets/logo-white.svg';
+import { calculateDistance } from '@/lib/distance-utils';
 
 const ActiveTrip = () => {
   const navigate = useNavigate();
@@ -37,6 +38,7 @@ const ActiveTrip = () => {
   const [showRoute, setShowRoute] = useState(true);
   const watchIdRef = useRef<number | null>(null);
   const mapRef = useRef<LiveTrackingMapRef>(null);
+  const prevPositionRef = useRef<[number, number] | null>(null);
 
   // Get active convoy trip from database (for convoy members who joined)
   const { data: activeConvoy, isLoading: isLoadingConvoy } = useActiveConvoy();
@@ -277,21 +279,43 @@ const ActiveTrip = () => {
     }
   }, [userPosition, destinationCoordinates, getRoute]);
 
-  // Track trip progress
+  // Track elapsed time only (not fake distance)
   useEffect(() => {
     if (tripState.isPaused) return;
     
     const interval = setInterval(() => {
       setElapsedTime(prev => {
         const newTime = prev + 1;
-        updateProgress(distance + 0.05, newTime);
+        updateProgress(distance, newTime);
         return newTime;
       });
-      setDistance(prev => prev + 0.05);
     }, 1000);
 
     return () => clearInterval(interval);
   }, [tripState.isPaused, distance, updateProgress]);
+
+  // Track real distance from GPS position changes
+  useEffect(() => {
+    if (!userPosition || tripState.isPaused) return;
+    
+    // Initialize previous position on first GPS fix
+    if (!prevPositionRef.current) {
+      prevPositionRef.current = userPosition;
+      return;
+    }
+    
+    // Calculate distance from previous position
+    const [prevLng, prevLat] = prevPositionRef.current;
+    const [currLng, currLat] = userPosition;
+    
+    const distanceMoved = calculateDistance(prevLat, prevLng, currLat, currLng);
+    
+    // Only count if moved more than 10 meters (filters GPS noise)
+    if (distanceMoved > 0.01) {
+      setDistance(prev => prev + distanceMoved);
+      prevPositionRef.current = userPosition;
+    }
+  }, [userPosition, tripState.isPaused]);
 
   const handlePauseTrip = useCallback(async () => {
     await leaveConvoy();

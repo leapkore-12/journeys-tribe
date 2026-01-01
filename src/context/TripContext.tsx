@@ -184,9 +184,12 @@ export const TripProvider = ({ children }: { children: ReactNode }) => {
     setTripState(prev => ({
       ...prev,
       distanceCovered: distance,
-      distanceRemaining: Math.max(0, 241 - distance),
+      distanceRemaining: Math.max(0, (prev.routeDistance || 0) - distance),
       timeElapsed: time,
-      eta: Math.max(0, 367 - Math.floor(time / 60)),
+      // Calculate ETA based on remaining distance and current progress
+      eta: prev.routeDistance && prev.routeDuration && distance > 0
+        ? Math.max(0, Math.round(((prev.routeDistance - distance) / prev.routeDistance) * prev.routeDuration))
+        : prev.eta,
     }));
   };
 
