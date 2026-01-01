@@ -344,6 +344,50 @@ export type Database = {
         }
         Relationships: []
       }
+      road_hazards: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          expires_at: string | null
+          hazard_type: string
+          id: string
+          latitude: number
+          longitude: number
+          reporter_id: string
+          trip_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          expires_at?: string | null
+          hazard_type: string
+          id?: string
+          latitude: number
+          longitude: number
+          reporter_id: string
+          trip_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          expires_at?: string | null
+          hazard_type?: string
+          id?: string
+          latitude?: number
+          longitude?: number
+          reporter_id?: string
+          trip_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "road_hazards_trip_id_fkey"
+            columns: ["trip_id"]
+            isOneToOne: false
+            referencedRelation: "trips"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tribe_members: {
         Row: {
           created_at: string | null
