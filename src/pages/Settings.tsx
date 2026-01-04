@@ -129,7 +129,8 @@ const Settings = () => {
     },
     {
       label: 'Subscription details',
-      onClick: () => {},
+      rightContent: <span className="text-primary font-medium capitalize">{profile?.plan_type || 'Free'}</span>,
+      onClick: () => navigate('/subscription'),
     },
     {
       label: 'Manage notifications',
