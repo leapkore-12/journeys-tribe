@@ -141,7 +141,7 @@ const Settings = () => {
     },
     {
       label: 'Help',
-      onClick: () => {},
+      onClick: () => navigate('/help'),
     },
     {
       label: 'Terms of Service',

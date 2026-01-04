@@ -44,6 +44,9 @@ import CreateUser from "./pages/admin/CreateUser";
 import EditUser from "./pages/admin/EditUser";
 import TripDetail from "./pages/TripDetail";
 import EditTrip from "./pages/EditTrip";
+import PrivacyPolicy from "./pages/PrivacyPolicy";
+import TermsOfService from "./pages/TermsOfService";
+import Help from "./pages/Help";
 import { initCapacitor } from "@/lib/capacitor-init";
 
 const queryClient = new QueryClient();
@@ -102,6 +105,9 @@ const App = () => {
                   <Route path="/edit-profile" element={<ProtectedRoute><EditProfile /></ProtectedRoute>} />
                   <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
                   <Route path="/settings/credentials" element={<ProtectedRoute><ChangeCredentials /></ProtectedRoute>} />
+                  <Route path="/privacy" element={<ProtectedRoute><PrivacyPolicy /></ProtectedRoute>} />
+                  <Route path="/terms" element={<ProtectedRoute><TermsOfService /></ProtectedRoute>} />
+                  <Route path="/help" element={<ProtectedRoute><Help /></ProtectedRoute>} />
                   
                   {/* Admin Routes */}
                   <Route path="/admin" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
