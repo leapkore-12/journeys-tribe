@@ -15,7 +15,7 @@ import {
   useCancelFollowRequest,
   useMutualFollowers 
 } from '@/hooks/useFollows';
-import { useBlockUser, useIsBlocked, useUnblockUser } from '@/hooks/useBlockedUsers';
+import { useBlockUser, useIsBlocked, useUnblockUser, useIsBlockedBy } from '@/hooks/useBlockedUsers';
 import ProfileTripCard from '@/components/ProfileTripCard';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
@@ -67,6 +67,7 @@ const UserProfile = () => {
   const unfollowMutation = useUnfollowUser();
   const cancelRequestMutation = useCancelFollowRequest();
   const { data: isBlocked } = useIsBlocked(userId);
+  const { data: isBlockedByUser, isLoading: blockedByLoading } = useIsBlockedBy(userId);
   const blockUserMutation = useBlockUser();
   const unblockUserMutation = useUnblockUser();
 
@@ -189,7 +190,7 @@ const UserProfile = () => {
     },
   };
 
-  if (profileLoading) {
+  if (profileLoading || blockedByLoading) {
     return (
       <div className="flex flex-col bg-background pb-24">
         <header className="sticky top-0 z-40 bg-background">
@@ -209,6 +210,38 @@ const UserProfile = () => {
               <Skeleton className="h-4 w-48" />
             </div>
           </div>
+        </div>
+      </div>
+    );
+  }
+
+  // If the profile owner has blocked the current user, show "not found" screen
+  if (isBlockedByUser) {
+    return (
+      <div className="flex flex-col bg-background min-h-screen">
+        <header className="sticky top-0 z-40 bg-background">
+          <div className="flex items-center justify-between px-4 h-14">
+            <button onClick={goBack} className="text-primary">
+              <ArrowLeft className="h-6 w-6" />
+            </button>
+            <span className="text-primary font-medium">Profile</span>
+            <div className="w-6" />
+          </div>
+        </header>
+        <div className="flex-1 flex flex-col items-center justify-center px-4">
+          <div className="w-20 h-20 rounded-full border-2 border-muted-foreground flex items-center justify-center mb-4">
+            <ShieldOff className="h-10 w-10 text-muted-foreground" />
+          </div>
+          <h3 className="font-semibold text-lg text-foreground">User not found</h3>
+          <p className="text-sm text-muted-foreground text-center mt-2 max-w-xs">
+            This profile is not available
+          </p>
+          <Button 
+            onClick={goBack}
+            className="mt-6"
+          >
+            Go back
+          </Button>
         </div>
       </div>
     );
