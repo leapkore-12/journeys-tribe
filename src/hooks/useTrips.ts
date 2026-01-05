@@ -53,6 +53,16 @@ export const useFeedTrips = () => {
         followedIds = follows?.map(f => f.following_id) || [];
       }
 
+      // Get blocked user IDs
+      let blockedIds: string[] = [];
+      if (user?.id) {
+        const { data: blocked } = await supabase
+          .from('blocked_users')
+          .select('blocked_id')
+          .eq('blocker_id', user.id);
+        blockedIds = blocked?.map(b => b.blocked_id) || [];
+      }
+
       // Fetch trips - RLS handles visibility filtering via can_view_trip function
       // The DB function checks: public, followers (if following), tribe (if in tribe), private (owner only)
       const { data: trips, error } = await supabase
@@ -67,8 +77,11 @@ export const useFeedTrips = () => {
         return { trips: [], nextPage: null };
       }
 
+      // Filter out trips from blocked users
+      const filteredTrips = trips.filter(trip => !blockedIds.includes(trip.user_id));
+
       // Fetch profiles for all trip owners
-      const userIds = [...new Set(trips.map(t => t.user_id))];
+      const userIds = [...new Set(filteredTrips.map(t => t.user_id))];
       const { data: profiles } = userIds.length > 0
         ? await supabase.from('profiles').select('id, username, display_name, avatar_url').in('id', userIds)
         : { data: [] };
@@ -76,7 +89,7 @@ export const useFeedTrips = () => {
       profiles?.forEach(p => profileMap.set(p.id, p));
 
       // Fetch vehicles
-      const vehicleIds = [...new Set(trips.map(t => t.vehicle_id).filter((id): id is string => id !== null))];
+      const vehicleIds = [...new Set(filteredTrips.map(t => t.vehicle_id).filter((id): id is string => id !== null))];
       const { data: vehicles } = vehicleIds.length > 0 
         ? await supabase.from('vehicles').select('*, vehicle_images(image_url)').in('id', vehicleIds)
         : { data: [] };
@@ -98,12 +111,12 @@ export const useFeedTrips = () => {
           .from('trip_likes')
           .select('trip_id')
           .eq('user_id', user.id)
-          .in('trip_id', trips.map(t => t.id));
+          .in('trip_id', filteredTrips.map(t => t.id));
         likedIds = new Set(likes?.map(l => l.trip_id) || []);
       }
 
       // Fetch convoy members for all trips (include completed status for completed trips)
-      const tripIds = trips.map(t => t.id);
+      const tripIds = filteredTrips.map(t => t.id);
       const { data: convoyMembers } = tripIds.length > 0
         ? await supabase
             .from('convoy_members')
@@ -134,7 +147,7 @@ export const useFeedTrips = () => {
         convoyMemberMap.get(cm.trip_id)!.push(member);
       });
 
-      const tripsWithDetails: TripWithDetails[] = trips.map(trip => ({
+      const tripsWithDetails: TripWithDetails[] = filteredTrips.map(trip => ({
         ...trip,
         profile: profileMap.get(trip.user_id) || null,
         vehicle: trip.vehicle_id ? vehicleMap.get(trip.vehicle_id) : null,
@@ -144,7 +157,7 @@ export const useFeedTrips = () => {
 
       return {
         trips: tripsWithDetails,
-        nextPage: trips.length === PAGE_SIZE ? pageParam + 1 : null,
+        nextPage: filteredTrips.length === PAGE_SIZE ? pageParam + 1 : null,
       };
     },
     getNextPageParam: (lastPage) => lastPage.nextPage,
