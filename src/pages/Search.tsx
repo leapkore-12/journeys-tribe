@@ -37,7 +37,7 @@ const Search = () => {
               placeholder="Search users, trips, locations..."
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              className="pl-9 pr-9 h-10 bg-secondary border-0"
+              className="pl-9 pr-9 h-10 bg-secondary border-0 text-foreground"
               autoFocus
             />
             {query && (
