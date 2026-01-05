@@ -76,6 +76,30 @@ export const useIsBlocked = (userId: string | undefined) => {
   });
 };
 
+// Check if the current user is blocked BY another user (reverse check)
+export const useIsBlockedBy = (userId: string | undefined) => {
+  const { user } = useAuth();
+
+  return useQuery({
+    queryKey: ['is-blocked-by', user?.id, userId],
+    queryFn: async (): Promise<boolean> => {
+      if (!user?.id || !userId) return false;
+
+      // Check if userId (profile owner) has blocked the current user
+      const { data, error } = await supabase
+        .from('blocked_users')
+        .select('id')
+        .eq('blocker_id', userId)
+        .eq('blocked_id', user.id)
+        .maybeSingle();
+
+      if (error) throw error;
+      return !!data;
+    },
+    enabled: !!user?.id && !!userId,
+  });
+};
+
 export const useBlockUser = () => {
   const queryClient = useQueryClient();
   const { user } = useAuth();
