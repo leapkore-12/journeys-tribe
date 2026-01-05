@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useSmartBack } from '@/hooks/useSmartBack';
-import { Flag, BarChart3, Car, ArrowLeft, Lock } from 'lucide-react';
+import { Flag, BarChart3, Car, ArrowLeft, Lock, MoreVertical, ShieldOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useToast } from '@/hooks/use-toast';
@@ -15,8 +15,25 @@ import {
   useCancelFollowRequest,
   useMutualFollowers 
 } from '@/hooks/useFollows';
+import { useBlockUser, useIsBlocked, useUnblockUser } from '@/hooks/useBlockedUsers';
 import ProfileTripCard from '@/components/ProfileTripCard';
 import { Skeleton } from '@/components/ui/skeleton';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
 const formatDistance = (km: number) => {
   if (km >= 1000) return `${(km / 1000).toFixed(1)}k km`;
@@ -39,6 +56,7 @@ const UserProfile = () => {
   const { userId } = useParams();
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState<'trips' | 'stats'>('trips');
+  const [showBlockDialog, setShowBlockDialog] = useState(false);
   
   const { data: profile, isLoading: profileLoading } = useProfile(userId);
   const { data: trips, isLoading: tripsLoading } = useUserTrips(userId);
@@ -48,6 +66,9 @@ const UserProfile = () => {
   const followMutation = useFollowUser();
   const unfollowMutation = useUnfollowUser();
   const cancelRequestMutation = useCancelFollowRequest();
+  const { data: isBlocked } = useIsBlocked(userId);
+  const blockUserMutation = useBlockUser();
+  const unblockUserMutation = useUnblockUser();
 
   // Determine if this is a private account and viewer can see content
   const isPrivateAccount = profile?.is_private === true;
@@ -114,6 +135,46 @@ const UserProfile = () => {
     return 'bg-primary text-primary-foreground';
   };
 
+  const handleBlockAction = () => {
+    if (!userId) return;
+    
+    if (isBlocked) {
+      unblockUserMutation.mutate(userId, {
+        onSuccess: () => {
+          toast({
+            title: "User unblocked",
+            description: `${profile?.display_name || 'This user'} has been unblocked`,
+          });
+        },
+        onError: () => {
+          toast({
+            title: "Error",
+            description: "Failed to unblock user. Please try again.",
+            variant: "destructive",
+          });
+        }
+      });
+    } else {
+      blockUserMutation.mutate(userId, {
+        onSuccess: () => {
+          toast({
+            title: "User blocked",
+            description: `${profile?.display_name || 'This user'} has been blocked`,
+          });
+          goBack();
+        },
+        onError: () => {
+          toast({
+            title: "Error",
+            description: "Failed to block user. Please try again.",
+            variant: "destructive",
+          });
+        }
+      });
+    }
+    setShowBlockDialog(false);
+  };
+
   const stats = {
     ytd: {
       trips: profile?.trips_count || 0,
@@ -165,7 +226,22 @@ const UserProfile = () => {
             @{profile?.username || 'user'}
             {isPrivateAccount && <Lock className="h-4 w-4" />}
           </span>
-          <div className="w-6" />
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button className="text-primary">
+                <MoreVertical className="h-6 w-6" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem 
+                onClick={() => setShowBlockDialog(true)}
+                className="text-destructive focus:text-destructive"
+              >
+                <ShieldOff className="h-4 w-4 mr-2" />
+                {isBlocked ? 'Unblock user' : 'Block user'}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </header>
 
@@ -349,6 +425,31 @@ const UserProfile = () => {
           </div>
         </>
       )}
+
+      {/* Block User Confirmation Dialog */}
+      <AlertDialog open={showBlockDialog} onOpenChange={setShowBlockDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {isBlocked ? 'Unblock' : 'Block'} @{profile?.username}?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {isBlocked 
+                ? 'They will be able to find your profile, trips, and follow you again.'
+                : "They won't be able to find your profile, trips, or follow you. They won't be notified that you blocked them."}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleBlockAction}
+              className={isBlocked ? '' : 'bg-destructive text-destructive-foreground hover:bg-destructive/90'}
+            >
+              {isBlocked ? 'Unblock' : 'Block'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
