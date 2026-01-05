@@ -11,3 +11,9 @@ verify_jwt = false
 
 [functions.external-create-user]
 verify_jwt = false
+
+[functions.external-delete-user]
+verify_jwt = false
+
+[functions.external-update-user]
+verify_jwt = false
