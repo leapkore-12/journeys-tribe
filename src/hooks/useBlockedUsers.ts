@@ -93,6 +93,13 @@ export const useBlockUser = () => {
     onSuccess: (_, blockedId) => {
       queryClient.invalidateQueries({ queryKey: ['blocked-users'] });
       queryClient.invalidateQueries({ queryKey: ['is-blocked', user?.id, blockedId] });
+      // Invalidate follow queries since the trigger removes follows on block
+      queryClient.invalidateQueries({ queryKey: ['followers'] });
+      queryClient.invalidateQueries({ queryKey: ['following'] });
+      queryClient.invalidateQueries({ queryKey: ['is-following'] });
+      queryClient.invalidateQueries({ queryKey: ['pending-request'] });
+      queryClient.invalidateQueries({ queryKey: ['follow-requests'] });
+      queryClient.invalidateQueries({ queryKey: ['profile'] });
     },
   });
 };
