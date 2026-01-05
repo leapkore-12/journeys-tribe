@@ -138,7 +138,7 @@ const Settings = () => {
     },
     {
       label: 'Block accounts',
-      onClick: () => {},
+      onClick: () => navigate('/blocked-accounts'),
     },
     {
       label: 'Help',
