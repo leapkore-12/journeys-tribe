@@ -14,9 +14,21 @@ export interface CommentWithProfile {
 }
 
 export const useComments = (tripId: string) => {
+  const { user } = useAuth();
+
   return useQuery({
-    queryKey: ['comments', tripId],
+    queryKey: ['comments', tripId, user?.id],
     queryFn: async () => {
+      // Fetch blocked user IDs
+      let blockedIds: string[] = [];
+      if (user?.id) {
+        const { data: blocked } = await supabase
+          .from('blocked_users')
+          .select('blocked_id')
+          .eq('blocker_id', user.id);
+        blockedIds = blocked?.map(b => b.blocked_id) || [];
+      }
+
       const { data, error } = await supabase
         .from('comments')
         .select('*')
@@ -25,7 +37,10 @@ export const useComments = (tripId: string) => {
       
       if (error || !data) return [];
 
-      const userIds = [...new Set(data.map(c => c.user_id))];
+      // Filter out comments from blocked users
+      const filteredData = data.filter(c => !blockedIds.includes(c.user_id));
+
+      const userIds = [...new Set(filteredData.map(c => c.user_id))];
       const { data: profiles } = await supabase
         .from('profiles')
         .select('id, username, display_name, avatar_url')
@@ -33,7 +48,7 @@ export const useComments = (tripId: string) => {
       
       const profileMap = new Map(profiles?.map(p => [p.id, p]) || []);
 
-      const commentsWithProfiles: CommentWithProfile[] = data.map(c => ({ 
+      const commentsWithProfiles: CommentWithProfile[] = filteredData.map(c => ({ 
         ...c, 
         parent_id: c.parent_id || null,
         profile: profileMap.get(c.user_id) || null,

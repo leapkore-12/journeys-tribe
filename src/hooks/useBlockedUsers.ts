@@ -100,10 +100,11 @@ export const useBlockUser = () => {
       queryClient.invalidateQueries({ queryKey: ['pending-request'] });
       queryClient.invalidateQueries({ queryKey: ['follow-requests'] });
       queryClient.invalidateQueries({ queryKey: ['profile'] });
-      // Invalidate feed and search queries to hide blocked user content
+      // Invalidate feed, search, and comments queries to hide blocked user content
       queryClient.invalidateQueries({ queryKey: ['feed-trips'] });
       queryClient.invalidateQueries({ queryKey: ['search-users'] });
       queryClient.invalidateQueries({ queryKey: ['search-trips'] });
+      queryClient.invalidateQueries({ queryKey: ['comments'] });
     },
   });
 };
@@ -127,10 +128,11 @@ export const useUnblockUser = () => {
     onSuccess: (_, blockedId) => {
       queryClient.invalidateQueries({ queryKey: ['blocked-users'] });
       queryClient.invalidateQueries({ queryKey: ['is-blocked', user?.id, blockedId] });
-      // Invalidate feed and search queries to show unblocked user content
+      // Invalidate feed, search, and comments queries to show unblocked user content
       queryClient.invalidateQueries({ queryKey: ['feed-trips'] });
       queryClient.invalidateQueries({ queryKey: ['search-users'] });
       queryClient.invalidateQueries({ queryKey: ['search-trips'] });
+      queryClient.invalidateQueries({ queryKey: ['comments'] });
     },
   });
 };
