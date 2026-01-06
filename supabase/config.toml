@@ -20,3 +20,6 @@ verify_jwt = false
 
 [functions.external-list-users]
 verify_jwt = false
+
+[functions.external-get-user]
+verify_jwt = false
