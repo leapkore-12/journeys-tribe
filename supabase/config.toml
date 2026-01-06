@@ -17,3 +17,6 @@ verify_jwt = false
 
 [functions.external-update-user]
 verify_jwt = false
+
+[functions.external-list-users]
+verify_jwt = false
