@@ -217,11 +217,30 @@ const Share = () => {
         ctx.fillText(names, 60, height - 100);
       }
 
-      // Bottom-right: RoadTribe logo text
+      // Bottom-right: RoadTribe logo (icon + text)
+      const logoIcon = new Image();
+      logoIcon.crossOrigin = 'anonymous';
+      
+      await new Promise<void>((resolve) => {
+        logoIcon.onload = () => resolve();
+        logoIcon.onerror = () => resolve(); // Continue without icon if fails
+        logoIcon.src = new URL('/r-white.png', window.location.origin).href;
+      });
+
+      const iconSize = 50;
+      const textX = width - 60;
+      const textY = height - 80;
+      
+      // Draw logo icon if loaded
+      if (logoIcon.complete && logoIcon.naturalWidth > 0) {
+        ctx.drawImage(logoIcon, textX - 200, textY - 40, iconSize, iconSize);
+      }
+      
+      // Draw "RoadTribe" text
       ctx.textAlign = 'right';
       ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
       ctx.font = 'bold 32px Inter, sans-serif';
-      ctx.fillText('RoadTribe', width - 60, height - 80);
+      ctx.fillText('RoadTribe', textX, textY);
 
       // Trigger download
       const link = document.createElement('a');
