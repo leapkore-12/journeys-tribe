@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, Navigate } from 'react-router-dom';
+import { useAuth } from '@/context/AuthContext';
 import { useSmartBack } from '@/hooks/useSmartBack';
 import { Flag, BarChart3, Car, ArrowLeft, Lock, MoreVertical, ShieldOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -54,10 +55,16 @@ const UserProfile = () => {
   const navigate = useNavigate();
   const goBack = useSmartBack('/feed');
   const { userId } = useParams();
+  const { user } = useAuth();
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState<'trips' | 'stats'>('trips');
   const [showBlockDialog, setShowBlockDialog] = useState(false);
   
+  // If viewing own profile, redirect to /profile
+  if (user && userId === user.id) {
+    return <Navigate to="/profile" replace />;
+  }
+
   const { data: profile, isLoading: profileLoading } = useProfile(userId);
   const { data: trips, isLoading: tripsLoading } = useUserTrips(userId);
   const { data: isFollowing } = useIsFollowing(userId || '');
