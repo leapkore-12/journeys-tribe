@@ -314,15 +314,42 @@ const UserProfile = () => {
 
         {/* Mutual Followers */}
         {mutualFollowers && mutualFollowers.profiles && mutualFollowers.profiles.length > 0 && (
-          <p className="text-sm text-muted-foreground mt-2">
-            Followed by{' '}
-            <span className="text-foreground">
-              {mutualFollowers.profiles.map(p => p.display_name || p.username).join(', ')}
-            </span>
-            {mutualFollowers.totalCount > 3 && (
-              <span> and {mutualFollowers.totalCount - 3} others</span>
-            )}
-          </p>
+          <div className="flex items-center gap-2 mt-3">
+            {/* Stacked Avatars */}
+            <div className="flex -space-x-2">
+              {mutualFollowers.profiles.slice(0, 4).map((profile, index) => (
+                <Avatar 
+                  key={profile.id} 
+                  className="h-6 w-6 border-2 border-background"
+                  style={{ zIndex: mutualFollowers.profiles.length - index }}
+                >
+                  <AvatarImage 
+                    src={profile.avatar_url || undefined} 
+                    alt={profile.display_name || profile.username || 'User'} 
+                  />
+                  <AvatarFallback className="text-xs">
+                    {(profile.display_name?.[0] || profile.username?.[0] || 'U').toUpperCase()}
+                  </AvatarFallback>
+                </Avatar>
+              ))}
+            </div>
+            
+            {/* Text */}
+            <p className="text-sm text-muted-foreground">
+              Followed by{' '}
+              {mutualFollowers.profiles.slice(0, 3).map((p, i, arr) => (
+                <span key={p.id}>
+                  <span className="font-semibold text-foreground">
+                    {p.display_name || p.username}
+                  </span>
+                  {i < arr.length - 1 && ', '}
+                </span>
+              ))}
+              {mutualFollowers.totalCount > 3 && (
+                <span> and <span className="font-semibold text-foreground">{mutualFollowers.totalCount - 3} others</span></span>
+              )}
+            </p>
+          </div>
         )}
 
         {/* Bio */}
