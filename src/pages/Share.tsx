@@ -231,13 +231,14 @@ const Share = () => {
         logoIcon.src = rWhitePng; // Use imported asset
       });
 
-      const iconSize = 50;
+      // Scaled values to match UI preview (scale factor ~3.86x)
+      const iconSize = 90;
       const paddingRight = 60;
       const paddingBottom = 80;
-      const gap = 12;
+      const gap = 30;
       
-      // Set font first to measure text
-      ctx.font = 'bold 32px Inter, sans-serif';
+      // Set font to match UI (text-sm font-semibold scaled)
+      ctx.font = '600 54px Inter, sans-serif';
       const textWidth = ctx.measureText('RoadTribe').width;
       
       const textX = width - paddingRight;
@@ -246,7 +247,7 @@ const Share = () => {
       // Draw logo icon if loaded (positioned left of text)
       if (logoIcon.complete && logoIcon.naturalWidth > 0) {
         const iconX = textX - textWidth - gap - iconSize;
-        const iconY = textY - iconSize + 8; // Adjust to align with text baseline
+        const iconY = textY - iconSize + 18;
         ctx.drawImage(logoIcon, iconX, iconY, iconSize, iconSize);
       }
       
