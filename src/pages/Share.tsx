@@ -1,11 +1,12 @@
 import { useState, useCallback, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useSmartBack } from '@/hooks/useSmartBack';
-import { ArrowLeft, Loader2 } from 'lucide-react';
+import { ArrowLeft, Loader2, Upload, Link as LinkIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useTripById } from '@/hooks/useTrips';
+import { useAuth } from '@/context/AuthContext';
 import { toast } from 'sonner';
 import logoWhite from '@/assets/logo-white.svg';
 import iconWhite from '@/assets/icon-white.svg';
@@ -40,12 +41,20 @@ const Share = () => {
   const navigate = useNavigate();
   const goBack = useSmartBack('/feed');
   const { postId } = useParams();
+  const { user } = useAuth();
   const [carouselApi, setCarouselApi] = useState<CarouselApi>();
   const [currentSlide, setCurrentSlide] = useState(0);
   const [isDownloading, setIsDownloading] = useState(false);
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   const { data: trip, isLoading } = useTripById(postId);
+
+  // Determine if user can share as their own trip
+  const isOwner = user?.id === trip?.user_id;
+  const isConvoyMember = trip?.convoy_members?.some(
+    member => member.user_id === user?.id
+  );
+  const canShareAsOwn = isOwner || isConvoyMember;
 
   const onCarouselSelect = useCallback(() => {
     if (!carouselApi) return;
@@ -105,6 +114,44 @@ const Share = () => {
       } catch {
         toast.error('Failed to copy link');
       }
+    }
+  };
+
+  // 3rd party sharing - copy link
+  const handleCopyLink = async () => {
+    if (!trip) return;
+    try {
+      const shareUrl = `${window.location.origin}/trip/${trip.id}`;
+      await navigator.clipboard.writeText(shareUrl);
+      toast.success('Link copied to clipboard!');
+    } catch {
+      toast.error('Failed to copy link');
+    }
+  };
+
+  // 3rd party sharing - share post externally
+  const handleSharePost = async () => {
+    if (!trip) return;
+    
+    const shareText = `Check out this road trip on RoadTribe: ${trip.title || 'Amazing Journey'}`;
+    const shareUrl = `${window.location.origin}/trip/${trip.id}`;
+    
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: 'RoadTribe Trip',
+          text: shareText,
+          url: shareUrl,
+        });
+      } catch (err) {
+        if ((err as Error).name !== 'AbortError') {
+          await navigator.clipboard.writeText(shareUrl);
+          toast.success('Link copied!');
+        }
+      }
+    } else {
+      await navigator.clipboard.writeText(shareUrl);
+      toast.success('Link copied!');
     }
   };
 
@@ -431,30 +478,55 @@ const Share = () => {
           )}
         </div>
 
-        {/* Share Buttons - Dark Gray Theme */}
+        {/* Share Buttons - Contextual based on ownership */}
         <div className="space-y-3 mt-6">
-          <Button
-            onClick={handleInstagramShare}
-            className="w-full h-12 bg-secondary hover:bg-secondary/80 text-foreground font-semibold"
-          >
-            Instagram Story
-          </Button>
-          
-          <Button
-            onClick={handleDownload}
-            disabled={isDownloading}
-            variant="outline"
-            className="w-full h-12 border-border text-foreground font-semibold"
-          >
-            {isDownloading ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Downloading...
-              </>
-            ) : (
-              'Download Image'
-            )}
-          </Button>
+          {canShareAsOwn ? (
+            <>
+              {/* Owner/Convoy member - can share as their own */}
+              <Button
+                onClick={handleInstagramShare}
+                className="w-full h-12 bg-secondary hover:bg-secondary/80 text-foreground font-semibold"
+              >
+                Instagram Story
+              </Button>
+              
+              <Button
+                onClick={handleDownload}
+                disabled={isDownloading}
+                variant="outline"
+                className="w-full h-12 border-border text-foreground font-semibold"
+              >
+                {isDownloading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Downloading...
+                  </>
+                ) : (
+                  'Download Image'
+                )}
+              </Button>
+            </>
+          ) : (
+            <>
+              {/* 3rd party - can only share the post externally */}
+              <Button
+                onClick={handleSharePost}
+                className="w-full h-12 bg-secondary hover:bg-secondary/80 text-foreground font-semibold"
+              >
+                <Upload className="mr-2 h-4 w-4" />
+                Share Post
+              </Button>
+              
+              <Button
+                onClick={handleCopyLink}
+                variant="outline"
+                className="w-full h-12 border-border text-foreground font-semibold"
+              >
+                <LinkIcon className="mr-2 h-4 w-4" />
+                Copy Link
+              </Button>
+            </>
+          )}
         </div>
       </div>
       
