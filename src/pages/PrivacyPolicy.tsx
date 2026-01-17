@@ -20,7 +20,7 @@ const PrivacyPolicy = () => {
       <ScrollArea className="flex-1">
         <div className="px-4 py-6 space-y-6 pb-24">
           {/* Last Updated */}
-          <p className="text-sm text-muted-foreground">Last Updated: January 02, 2026</p>
+          <p className="text-sm text-muted-foreground">Last Updated: January 17, 2026</p>
 
           {/* Introduction */}
           <section className="space-y-3">
@@ -31,7 +31,9 @@ const PrivacyPolicy = () => {
               when you use our mobile application.
             </p>
             <p className="text-muted-foreground leading-relaxed">
-              By using RoadTribe, you consent to the practices described in this policy.
+              By using RoadTribe, you consent to the practices described in this policy. For users in 
+              the European Economic Area (EEA), this policy also describes your rights under the 
+              General Data Protection Regulation (GDPR).
             </p>
           </section>
 
@@ -73,6 +75,42 @@ const PrivacyPolicy = () => {
             </div>
           </section>
 
+          {/* Lawful Basis for Processing (GDPR) */}
+          <section className="space-y-3">
+            <h2 className="text-lg font-semibold text-foreground">Lawful Basis for Processing (GDPR)</h2>
+            <p className="text-muted-foreground leading-relaxed">
+              For users in the European Economic Area, we process your personal data based on the 
+              following legal grounds:
+            </p>
+            
+            <div className="space-y-3 mt-4">
+              <div className="bg-secondary/30 p-3 rounded-lg">
+                <h3 className="font-medium text-foreground mb-1">Contractual Necessity</h3>
+                <p className="text-sm text-muted-foreground">
+                  Account creation, trip recording, vehicle management, and social features 
+                  (follows, likes, comments) are necessary to provide the RoadTribe service.
+                </p>
+              </div>
+              
+              <div className="bg-secondary/30 p-3 rounded-lg">
+                <h3 className="font-medium text-foreground mb-1">Consent</h3>
+                <p className="text-sm text-muted-foreground">
+                  Analytics and usage tracking, marketing communications, and optional location 
+                  sharing features require your explicit consent. You can withdraw consent at any 
+                  time in Settings.
+                </p>
+              </div>
+              
+              <div className="bg-secondary/30 p-3 rounded-lg">
+                <h3 className="font-medium text-foreground mb-1">Legitimate Interest</h3>
+                <p className="text-sm text-muted-foreground">
+                  Security monitoring, fraud prevention, and app performance improvements are 
+                  processed under our legitimate interest to maintain a safe and functional service.
+                </p>
+              </div>
+            </div>
+          </section>
+
           {/* How We Use Your Information */}
           <section className="space-y-3">
             <h2 className="text-lg font-semibold text-foreground">How We Use Your Information</h2>
@@ -97,30 +135,107 @@ const PrivacyPolicy = () => {
             </p>
           </section>
 
-          {/* Third-Party Services */}
+          {/* Data Retention */}
           <section className="space-y-3">
-            <h2 className="text-lg font-semibold text-foreground">Third-Party Services</h2>
+            <h2 className="text-lg font-semibold text-foreground">Data Retention</h2>
             <p className="text-muted-foreground leading-relaxed">
-              We use third-party services for specific purposes:
+              We retain your data according to the following schedule:
             </p>
-            <ul className="list-disc list-inside text-muted-foreground space-y-2">
-              <li><span className="text-foreground">Mapbox</span> – for maps, route visualization, and geocoding</li>
-              <li><span className="text-foreground">Cloud infrastructure providers</span> – for secure data storage and backend services</li>
-              <li><span className="text-foreground">Payment processors</span> – for handling premium subscriptions (when applicable)</li>
+            <ul className="list-disc list-inside text-muted-foreground space-y-2 mt-2">
+              <li><span className="text-foreground">Account data:</span> Retained until you delete your account</li>
+              <li><span className="text-foreground">Trip data:</span> Retained until you delete the trip or your account</li>
+              <li><span className="text-foreground">Vehicle data:</span> Retained until you delete the vehicle or your account</li>
+              <li><span className="text-foreground">System logs:</span> Retained for 90 days for security and debugging</li>
+              <li><span className="text-foreground">Crash reports:</span> Retained for 90 days</li>
             </ul>
             <p className="text-muted-foreground leading-relaxed mt-2">
-              These services operate under their own privacy policies.
+              When you delete your account, all your data is permanently removed within 30 days.
             </p>
           </section>
 
-          {/* Data Retention and Control */}
+          {/* Your Rights (GDPR) */}
           <section className="space-y-3">
-            <h2 className="text-lg font-semibold text-foreground">Data Retention and Control</h2>
+            <h2 className="text-lg font-semibold text-foreground">Your Rights (GDPR)</h2>
             <p className="text-muted-foreground leading-relaxed">
-              We retain your data as long as your account is active. You may delete individual 
-              trips at any time, and you may request full account deletion, which will permanently 
-              remove your data. Requests for account deletion can be made through the app or by 
-              contacting us directly.
+              If you are located in the European Economic Area, you have the following rights:
+            </p>
+            
+            <div className="space-y-3 mt-4">
+              <div className="border-l-2 border-primary pl-3">
+                <h3 className="font-medium text-foreground">Right to Access</h3>
+                <p className="text-sm text-muted-foreground">
+                  You can download a copy of all your data from Settings → Download my data.
+                </p>
+              </div>
+              
+              <div className="border-l-2 border-primary pl-3">
+                <h3 className="font-medium text-foreground">Right to Rectification</h3>
+                <p className="text-sm text-muted-foreground">
+                  You can edit your profile, trips, and vehicles at any time in the app.
+                </p>
+              </div>
+              
+              <div className="border-l-2 border-primary pl-3">
+                <h3 className="font-medium text-foreground">Right to Erasure</h3>
+                <p className="text-sm text-muted-foreground">
+                  You can delete individual trips or your entire account from Settings → Delete account.
+                </p>
+              </div>
+              
+              <div className="border-l-2 border-primary pl-3">
+                <h3 className="font-medium text-foreground">Right to Restrict Processing</h3>
+                <p className="text-sm text-muted-foreground">
+                  You can set your account to private to restrict who can view your content.
+                </p>
+              </div>
+              
+              <div className="border-l-2 border-primary pl-3">
+                <h3 className="font-medium text-foreground">Right to Data Portability</h3>
+                <p className="text-sm text-muted-foreground">
+                  Your exported data is provided in JSON format, which can be imported into other services.
+                </p>
+              </div>
+              
+              <div className="border-l-2 border-primary pl-3">
+                <h3 className="font-medium text-foreground">Right to Object</h3>
+                <p className="text-sm text-muted-foreground">
+                  You can opt out of analytics and marketing in Settings → Privacy & Data.
+                </p>
+              </div>
+              
+              <div className="border-l-2 border-primary pl-3">
+                <h3 className="font-medium text-foreground">Right to Withdraw Consent</h3>
+                <p className="text-sm text-muted-foreground">
+                  You can change your consent preferences at any time in Settings.
+                </p>
+              </div>
+            </div>
+          </section>
+
+          {/* Third-Party Services */}
+          <section className="space-y-3">
+            <h2 className="text-lg font-semibold text-foreground">Third-Party Services (Data Processors)</h2>
+            <p className="text-muted-foreground leading-relaxed">
+              We use third-party services to provide RoadTribe:
+            </p>
+            <ul className="list-disc list-inside text-muted-foreground space-y-2">
+              <li><span className="text-foreground">Mapbox</span> – Maps, route visualization, and geocoding (USA)</li>
+              <li><span className="text-foreground">Cloud infrastructure</span> – Secure data storage and backend services (EU/USA)</li>
+              <li><span className="text-foreground">Payment processors</span> – Handling premium subscriptions (when applicable)</li>
+            </ul>
+            <p className="text-muted-foreground leading-relaxed mt-2">
+              These services operate under their own privacy policies and are bound by data processing 
+              agreements that ensure GDPR compliance.
+            </p>
+          </section>
+
+          {/* International Data Transfers */}
+          <section className="space-y-3">
+            <h2 className="text-lg font-semibold text-foreground">International Data Transfers</h2>
+            <p className="text-muted-foreground leading-relaxed">
+              Your data may be transferred to and processed in countries outside the EEA. We ensure 
+              adequate protection through Standard Contractual Clauses (SCCs) or other approved 
+              transfer mechanisms as required by GDPR.
             </p>
           </section>
 
@@ -129,7 +244,7 @@ const PrivacyPolicy = () => {
             <h2 className="text-lg font-semibold text-foreground">Data Security</h2>
             <p className="text-muted-foreground leading-relaxed">
               We implement appropriate technical and organizational measures to protect your data, 
-              including encryption of data in transit and at rest, secure authentication systems, 
+              including encryption of data in transit (TLS) and at rest, secure authentication systems, 
               and access controls. However, no system is completely secure, and we cannot guarantee 
               absolute data security.
             </p>
@@ -150,16 +265,18 @@ const PrivacyPolicy = () => {
             <h2 className="text-lg font-semibold text-foreground">Changes to This Privacy Policy</h2>
             <p className="text-muted-foreground leading-relaxed">
               We may update this Privacy Policy from time to time. Changes will be posted within the 
-              app and/or on our website. Continued use of RoadTribe after changes constitutes your 
-              acceptance of the updated policy.
+              app and/or on our website. For material changes affecting your rights, we will notify 
+              you via email or in-app notification. Continued use of RoadTribe after changes constitutes 
+              your acceptance of the updated policy.
             </p>
           </section>
 
-          {/* Contact Us */}
+          {/* Data Protection Officer */}
           <section className="space-y-3">
             <h2 className="text-lg font-semibold text-foreground">Contact Us</h2>
             <p className="text-muted-foreground leading-relaxed">
-              If you have any questions or concerns about this Privacy Policy, please contact us:
+              If you have any questions about this Privacy Policy, wish to exercise your GDPR rights, 
+              or have concerns about how we handle your data, please contact us:
             </p>
             <a 
               href="mailto:roadtribe@eyemeetslens.com"
@@ -168,6 +285,10 @@ const PrivacyPolicy = () => {
               <Mail className="h-4 w-4" />
               roadtribe@eyemeetslens.com
             </a>
+            <p className="text-muted-foreground leading-relaxed mt-2">
+              You also have the right to lodge a complaint with your local data protection authority 
+              if you believe your rights have been violated.
+            </p>
           </section>
 
           {/* View on Website */}
