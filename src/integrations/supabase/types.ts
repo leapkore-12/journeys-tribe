@@ -304,14 +304,17 @@ export type Database = {
       }
       profiles: {
         Row: {
+          analytics_consent: boolean | null
           avatar_url: string | null
           bio: string | null
+          consent_updated_at: string | null
           created_at: string | null
           display_name: string | null
           followers_count: number | null
           following_count: number | null
           id: string
           is_private: boolean | null
+          marketing_consent: boolean | null
           monthly_trip_count: number | null
           monthly_trip_reset_at: string | null
           plan_type: string
@@ -324,14 +327,17 @@ export type Database = {
           vehicles_count: number | null
         }
         Insert: {
+          analytics_consent?: boolean | null
           avatar_url?: string | null
           bio?: string | null
+          consent_updated_at?: string | null
           created_at?: string | null
           display_name?: string | null
           followers_count?: number | null
           following_count?: number | null
           id: string
           is_private?: boolean | null
+          marketing_consent?: boolean | null
           monthly_trip_count?: number | null
           monthly_trip_reset_at?: string | null
           plan_type?: string
@@ -344,14 +350,17 @@ export type Database = {
           vehicles_count?: number | null
         }
         Update: {
+          analytics_consent?: boolean | null
           avatar_url?: string | null
           bio?: string | null
+          consent_updated_at?: string | null
           created_at?: string | null
           display_name?: string | null
           followers_count?: number | null
           following_count?: number | null
           id?: string
           is_private?: boolean | null
+          marketing_consent?: boolean | null
           monthly_trip_count?: number | null
           monthly_trip_reset_at?: string | null
           plan_type?: string

@@ -1,6 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import { useSmartBack } from '@/hooks/useSmartBack';
-import { ArrowLeft, ChevronRight, Loader2 } from 'lucide-react';
+import { ArrowLeft, ChevronRight, Loader2, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
@@ -31,11 +31,19 @@ const Settings = () => {
   const [isUpdatingPrivacy, setIsUpdatingPrivacy] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  
+  // GDPR consent states
+  const [analyticsConsent, setAnalyticsConsent] = useState(false);
+  const [marketingConsent, setMarketingConsent] = useState(false);
+  const [isUpdatingConsent, setIsUpdatingConsent] = useState(false);
+  const [isExportingData, setIsExportingData] = useState(false);
 
-  // Sync privacy state with profile
+  // Sync privacy and consent states with profile
   useEffect(() => {
     if (profile) {
       setIsPrivate(profile.is_private || false);
+      setAnalyticsConsent(profile.analytics_consent || false);
+      setMarketingConsent(profile.marketing_consent || false);
     }
   }, [profile]);
 
@@ -74,6 +82,120 @@ const Settings = () => {
       });
     } finally {
       setIsUpdatingPrivacy(false);
+    }
+  };
+
+  const handleAnalyticsConsentToggle = async (checked: boolean) => {
+    if (!user?.id) return;
+    
+    setIsUpdatingConsent(true);
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ 
+          analytics_consent: checked,
+          consent_updated_at: new Date().toISOString()
+        })
+        .eq('id', user.id);
+      
+      if (error) throw error;
+      
+      setAnalyticsConsent(checked);
+      toast({
+        title: checked ? "Analytics enabled" : "Analytics disabled",
+        description: checked 
+          ? "You're helping us improve RoadTribe" 
+          : "Analytics tracking has been disabled",
+      });
+    } catch (error) {
+      console.error('Error updating analytics consent:', error);
+      toast({
+        title: "Failed to update preference",
+        description: "Please try again",
+        variant: "destructive",
+      });
+    } finally {
+      setIsUpdatingConsent(false);
+    }
+  };
+
+  const handleMarketingConsentToggle = async (checked: boolean) => {
+    if (!user?.id) return;
+    
+    setIsUpdatingConsent(true);
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ 
+          marketing_consent: checked,
+          consent_updated_at: new Date().toISOString()
+        })
+        .eq('id', user.id);
+      
+      if (error) throw error;
+      
+      setMarketingConsent(checked);
+      toast({
+        title: checked ? "Marketing emails enabled" : "Marketing emails disabled",
+        description: checked 
+          ? "You'll receive updates about new features" 
+          : "You won't receive marketing communications",
+      });
+    } catch (error) {
+      console.error('Error updating marketing consent:', error);
+      toast({
+        title: "Failed to update preference",
+        description: "Please try again",
+        variant: "destructive",
+      });
+    } finally {
+      setIsUpdatingConsent(false);
+    }
+  };
+
+  const handleExportData = async () => {
+    setIsExportingData(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        throw new Error('No active session');
+      }
+
+      const response = await supabase.functions.invoke('export-user-data', {
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
+      });
+
+      if (response.error) {
+        throw response.error;
+      }
+
+      // Create and download the JSON file
+      const blob = new Blob([JSON.stringify(response.data, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `roadtribe-data-export-${new Date().toISOString().split('T')[0]}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+
+      toast({
+        title: 'Data exported',
+        description: 'Your data has been downloaded as a JSON file.',
+      });
+    } catch (error: any) {
+      console.error('Error exporting data:', error);
+      toast({
+        title: 'Failed to export data',
+        description: error.message || 'Please try again later.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsExportingData(false);
     }
   };
 
@@ -200,6 +322,62 @@ const Settings = () => {
               )}
             </button>
           ))}
+        </div>
+
+        {/* GDPR Section */}
+        <div className="mt-8">
+          <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-4">
+            Privacy & Data
+          </h2>
+          
+          {/* Analytics Consent */}
+          <div className="flex items-center justify-between py-4 border-b border-border">
+            <div className="flex-1 pr-4">
+              <span className="text-foreground block">Analytics & Usage Data</span>
+              <span className="text-sm text-muted-foreground">Help us improve RoadTribe</span>
+            </div>
+            <Switch 
+              checked={analyticsConsent} 
+              onCheckedChange={handleAnalyticsConsentToggle}
+              disabled={isUpdatingConsent}
+            />
+          </div>
+
+          {/* Marketing Consent */}
+          <div className="flex items-center justify-between py-4 border-b border-border">
+            <div className="flex-1 pr-4">
+              <span className="text-foreground block">Marketing Communications</span>
+              <span className="text-sm text-muted-foreground">Receive updates about new features</span>
+            </div>
+            <Switch 
+              checked={marketingConsent} 
+              onCheckedChange={handleMarketingConsentToggle}
+              disabled={isUpdatingConsent}
+            />
+          </div>
+
+          {/* Download My Data */}
+          <Button
+            variant="outline"
+            onClick={handleExportData}
+            disabled={isExportingData}
+            className="w-full mt-4 h-12"
+          >
+            {isExportingData ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Exporting...
+              </>
+            ) : (
+              <>
+                <Download className="h-4 w-4 mr-2" />
+                Download my data
+              </>
+            )}
+          </Button>
+          <p className="text-xs text-muted-foreground mt-2 text-center">
+            Download a copy of all your RoadTribe data (GDPR)
+          </p>
         </div>
 
         {/* Logout Button */}

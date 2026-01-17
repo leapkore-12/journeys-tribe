@@ -68,7 +68,7 @@ serve(async (req) => {
       .delete()
       .eq("user_id", userId);
 
-    // 5. Delete trip photos for user's trips
+    // 5. Delete trip photos for user's trips (database + storage)
     const { data: userTrips } = await adminClient
       .from("trips")
       .select("id")
@@ -76,10 +76,40 @@ serve(async (req) => {
 
     if (userTrips && userTrips.length > 0) {
       const tripIds = userTrips.map((t) => t.id);
+      
+      // Delete trip photos from database
       await adminClient
         .from("trip_photos")
         .delete()
         .in("trip_id", tripIds);
+      
+      // Delete trip photos from storage bucket
+      for (const trip of userTrips) {
+        const { data: tripPhotoFiles } = await adminClient.storage
+          .from("trip-photos")
+          .list(`${userId}/${trip.id}`);
+        
+        if (tripPhotoFiles && tripPhotoFiles.length > 0) {
+          const filePaths = tripPhotoFiles.map((f) => `${userId}/${trip.id}/${f.name}`);
+          await adminClient.storage.from("trip-photos").remove(filePaths);
+        }
+      }
+      
+      // Delete trip map images from storage bucket
+      for (const trip of userTrips) {
+        const { data: tripMapFiles } = await adminClient.storage
+          .from("trip-maps")
+          .list(`${userId}`);
+        
+        if (tripMapFiles && tripMapFiles.length > 0) {
+          // Filter files that match this trip
+          const matchingFiles = tripMapFiles.filter((f) => f.name.includes(trip.id));
+          if (matchingFiles.length > 0) {
+            const filePaths = matchingFiles.map((f) => `${userId}/${f.name}`);
+            await adminClient.storage.from("trip-maps").remove(filePaths);
+          }
+        }
+      }
     }
 
     // 6. Delete trips
@@ -88,7 +118,7 @@ serve(async (req) => {
       .delete()
       .eq("user_id", userId);
 
-    // 7. Delete vehicle images for user's vehicles
+    // 7. Delete vehicle images for user's vehicles (database + storage)
     const { data: userVehicles } = await adminClient
       .from("vehicles")
       .select("id")
@@ -96,10 +126,24 @@ serve(async (req) => {
 
     if (userVehicles && userVehicles.length > 0) {
       const vehicleIds = userVehicles.map((v) => v.id);
+      
+      // Delete vehicle images from database
       await adminClient
         .from("vehicle_images")
         .delete()
         .in("vehicle_id", vehicleIds);
+      
+      // Delete vehicle images from storage bucket
+      for (const vehicle of userVehicles) {
+        const { data: vehicleImageFiles } = await adminClient.storage
+          .from("vehicle-images")
+          .list(`${userId}/${vehicle.id}`);
+        
+        if (vehicleImageFiles && vehicleImageFiles.length > 0) {
+          const filePaths = vehicleImageFiles.map((f) => `${userId}/${vehicle.id}/${f.name}`);
+          await adminClient.storage.from("vehicle-images").remove(filePaths);
+        }
+      }
     }
 
     // 8. Delete vehicles

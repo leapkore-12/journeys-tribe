@@ -9,6 +9,9 @@ verify_jwt = false
 [functions.delete-account]
 verify_jwt = false
 
+[functions.export-user-data]
+verify_jwt = false
+
 [functions.external-create-user]
 verify_jwt = false
 
