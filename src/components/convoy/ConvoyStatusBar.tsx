@@ -1,11 +1,10 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { Users, Wifi, WifiOff, Share2 } from 'lucide-react';
-import { ConvoyMemberPresence } from '@/hooks/useConvoyPresence';
-import { getMemberStatus } from './ConvoyMemberMarker';
 
 interface ConvoyStatusBarProps {
-  members: ConvoyMemberPresence[];
+  connectedCount: number;
+  totalCount: number;
   isConnected: boolean;
   isOnline: boolean;
   bufferedCount?: number;
@@ -14,25 +13,14 @@ interface ConvoyStatusBarProps {
 }
 
 const ConvoyStatusBar: React.FC<ConvoyStatusBarProps> = ({
-  members,
+  connectedCount,
+  totalCount,
   isConnected,
   isOnline,
   bufferedCount = 0,
   onShareInvite,
   className = '',
 }) => {
-  // Count members by status
-  const statusCounts = React.useMemo(() => {
-    return members.reduce(
-      (acc, member) => {
-        const status = getMemberStatus(member);
-        acc[status] = (acc[status] || 0) + 1;
-        return acc;
-      },
-      {} as Record<string, number>
-    );
-  }, [members]);
-
   return (
     <motion.div
       initial={{ opacity: 0, y: -10 }}
@@ -66,30 +54,17 @@ const ConvoyStatusBar: React.FC<ConvoyStatusBarProps> = ({
         ) : isConnected ? (
           <>
             <div className="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse" />
-            <span>{members.length} in convoy</span>
+            <span>
+              {connectedCount === totalCount 
+                ? `${totalCount} in convoy`
+                : `${connectedCount}/${totalCount} connected`
+              }
+            </span>
           </>
         ) : (
           <span>Connecting...</span>
         )}
       </div>
-
-      {/* Quick stats when connected */}
-      {isConnected && members.length > 0 && (
-        <div className="flex items-center gap-1">
-          {statusCounts.moving && (
-            <div className="flex items-center gap-1 px-2 py-1 bg-green-500/20 rounded-full text-xs text-green-400">
-              <div className="w-1.5 h-1.5 bg-green-400 rounded-full" />
-              {statusCounts.moving}
-            </div>
-          )}
-          {statusCounts.stopped && (
-            <div className="flex items-center gap-1 px-2 py-1 bg-red-500/20 rounded-full text-xs text-red-400">
-              <div className="w-1.5 h-1.5 bg-red-400 rounded-full" />
-              {statusCounts.stopped}
-            </div>
-          )}
-        </div>
-      )}
 
       {/* Share invite button */}
       {onShareInvite && (
