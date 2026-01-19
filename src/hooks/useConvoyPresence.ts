@@ -17,37 +17,91 @@ export interface ConvoyMemberPresence {
 interface UseConvoyPresenceOptions {
   tripId: string | null;
   enabled?: boolean;
-  onMemberJoin?: (member: ConvoyMemberPresence) => void;
-  onMemberLeave?: (memberId: string) => void;
 }
 
 const MAX_RETRY_ATTEMPTS = 3;
 const RETRY_DELAY = 2000;
 const STALE_THRESHOLD = 30000; // 30 seconds
+const HEARTBEAT_INTERVAL = 10000; // 10 seconds - keep presence fresh
 
 export const useConvoyPresence = ({ 
   tripId, 
   enabled = true,
-  onMemberJoin,
-  onMemberLeave,
 }: UseConvoyPresenceOptions) => {
   const { user } = useAuth();
   const [members, setMembers] = useState<ConvoyMemberPresence[]>([]);
   const [isConnected, setIsConnected] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [connectionAttempts, setConnectionAttempts] = useState(0);
+  
   const channelRef = useRef<RealtimeChannel | null>(null);
   const retryTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const heartbeatIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const connectionAttemptsRef = useRef(0);
   
-  // Store callbacks in refs to avoid dependency issues
-  const onMemberJoinRef = useRef(onMemberJoin);
-  const onMemberLeaveRef = useRef(onMemberLeave);
-  
-  // Keep refs updated
-  useEffect(() => {
-    onMemberJoinRef.current = onMemberJoin;
-    onMemberLeaveRef.current = onMemberLeave;
-  }, [onMemberJoin, onMemberLeave]);
+  // Store the last known presence payload for announce-on-connect and heartbeat
+  const lastPresenceRef = useRef<{
+    position: [number, number];
+    heading?: number | null;
+    speed?: number | null;
+    vehicleType?: 'car' | 'bike' | 'truck';
+  } | null>(null);
+
+  // Parse presence state and pick the newest update per user
+  const parsePresenceState = useCallback((presenceState: Record<string, any[]>, currentUserId: string): ConvoyMemberPresence[] => {
+    const membersList: ConvoyMemberPresence[] = [];
+
+    Object.entries(presenceState).forEach(([userId, presences]) => {
+      // Skip self
+      if (userId === currentUserId) return;
+      
+      // Pick the presence with the newest lastUpdate (in case of multiple connections)
+      const sortedPresences = [...(presences as any[])].sort(
+        (a, b) => (b.lastUpdate || 0) - (a.lastUpdate || 0)
+      );
+      const latestPresence = sortedPresences[0];
+      
+      if (latestPresence?.position) {
+        membersList.push({
+          id: userId,
+          name: latestPresence.name || 'Unknown',
+          avatar: latestPresence.avatar,
+          position: latestPresence.position,
+          heading: latestPresence.heading,
+          speed: latestPresence.speed,
+          lastUpdate: latestPresence.lastUpdate || Date.now(),
+          vehicleType: latestPresence.vehicleType || 'car',
+        });
+      }
+    });
+
+    return membersList;
+  }, []);
+
+  // Track presence (announce position)
+  const trackPresence = useCallback(async () => {
+    if (!channelRef.current || !user || !lastPresenceRef.current) {
+      console.log('[ConvoyPresence] Cannot track - missing channel, user, or position');
+      return;
+    }
+
+    const payload = {
+      user_id: user.id,
+      name: user.user_metadata?.display_name || user.email?.split('@')[0] || 'Unknown',
+      avatar: user.user_metadata?.avatar_url,
+      position: lastPresenceRef.current.position,
+      heading: lastPresenceRef.current.heading ?? undefined,
+      speed: lastPresenceRef.current.speed ?? undefined,
+      vehicleType: lastPresenceRef.current.vehicleType ?? 'car',
+      lastUpdate: Date.now(),
+    };
+
+    try {
+      console.log('[ConvoyPresence] Tracking presence:', payload.position);
+      await channelRef.current.track(payload);
+    } catch (err) {
+      console.error('[ConvoyPresence] Failed to track presence:', err);
+    }
+  }, [user]);
 
   // Update own position in the convoy
   const updatePosition = useCallback(
@@ -57,41 +111,57 @@ export const useConvoyPresence = ({
       speed?: number | null,
       vehicleType?: 'car' | 'bike' | 'truck'
     ) => {
-      if (!channelRef.current || !user || !tripId) return;
+      // Always store the latest position (even if not connected yet)
+      lastPresenceRef.current = { position, heading, speed, vehicleType };
 
-      try {
-        console.log('[ConvoyPresence] Broadcasting position:', position);
-        await channelRef.current.track({
-          user_id: user.id,
-          name: user.user_metadata?.display_name || user.email?.split('@')[0] || 'Unknown',
-          avatar: user.user_metadata?.avatar_url,
-          position,
-          heading: heading ?? undefined,
-          speed: speed ?? undefined,
-          vehicleType: vehicleType ?? 'car',
-          lastUpdate: Date.now(),
-        });
-      } catch (err) {
-        console.error('Failed to update position:', err);
-        setError('Failed to update position');
+      // If connected, track immediately
+      if (channelRef.current && user && isConnected) {
+        await trackPresence();
       }
     },
-    [user, tripId]
+    [user, isConnected, trackPresence]
   );
 
-  // Connect to convoy channel with retry logic
+  // Start heartbeat interval
+  const startHeartbeat = useCallback(() => {
+    // Clear any existing heartbeat
+    if (heartbeatIntervalRef.current) {
+      clearInterval(heartbeatIntervalRef.current);
+    }
+
+    // Re-track every HEARTBEAT_INTERVAL to keep presence fresh
+    heartbeatIntervalRef.current = setInterval(() => {
+      if (isConnected && lastPresenceRef.current) {
+        console.log('[ConvoyPresence] Heartbeat re-track');
+        trackPresence();
+      }
+    }, HEARTBEAT_INTERVAL);
+  }, [isConnected, trackPresence]);
+
+  // Stop heartbeat
+  const stopHeartbeat = useCallback(() => {
+    if (heartbeatIntervalRef.current) {
+      clearInterval(heartbeatIntervalRef.current);
+      heartbeatIntervalRef.current = null;
+    }
+  }, []);
+
+  // Connect to convoy channel
   const connect = useCallback(() => {
     if (!tripId || !user || !enabled) return;
-    if (connectionAttempts >= MAX_RETRY_ATTEMPTS) {
+    
+    if (connectionAttemptsRef.current >= MAX_RETRY_ATTEMPTS) {
       setError('Maximum connection attempts reached. Please try again.');
       return;
     }
 
     const channelName = `convoy:${tripId}`;
+    console.log('[ConvoyPresence] Connecting to channel:', channelName);
     
     // Cleanup existing channel
     if (channelRef.current) {
       supabase.removeChannel(channelRef.current);
+      channelRef.current = null;
     }
 
     const channel = supabase.channel(channelName, {
@@ -105,110 +175,94 @@ export const useConvoyPresence = ({
     channel
       .on('presence', { event: 'sync' }, () => {
         const presenceState = channel.presenceState();
-        const membersList: ConvoyMemberPresence[] = [];
-
-        Object.entries(presenceState).forEach(([userId, presences]) => {
-          const latestPresence = (presences as any[])[0];
-          if (latestPresence && userId !== user.id) {
-            membersList.push({
-              id: userId,
-              name: latestPresence.name || 'Unknown',
-              avatar: latestPresence.avatar,
-              position: latestPresence.position || [0, 0],
-              heading: latestPresence.heading,
-              speed: latestPresence.speed,
-              lastUpdate: latestPresence.lastUpdate || Date.now(),
-              vehicleType: latestPresence.vehicleType || 'car',
-            });
-          }
-        });
-
+        const membersList = parsePresenceState(presenceState, user.id);
+        console.log('[ConvoyPresence] Sync - members:', membersList.length);
         setMembers(membersList);
       })
       .on('presence', { event: 'join' }, ({ key, newPresences }) => {
-        console.log('[ConvoyPresence] Member joined convoy:', key, newPresences);
-        const presence = (newPresences as any[])[0];
-        if (presence && key !== user.id) {
-          const newMember: ConvoyMemberPresence = {
-            id: key,
-            name: presence.name || 'Unknown',
-            avatar: presence.avatar,
-            position: presence.position || [0, 0],
-            heading: presence.heading,
-            speed: presence.speed,
-            lastUpdate: presence.lastUpdate || Date.now(),
-            vehicleType: presence.vehicleType || 'car',
-          };
-          onMemberJoinRef.current?.(newMember);
-        }
+        console.log('[ConvoyPresence] Member presence joined:', key);
+        // The sync event will handle the state update
       })
       .on('presence', { event: 'leave' }, ({ key, leftPresences }) => {
-        console.log('[ConvoyPresence] Member left convoy:', key, leftPresences);
-        setMembers((prev) => prev.filter((m) => m.id !== key));
-        if (key !== user.id) {
-          onMemberLeaveRef.current?.(key);
-        }
+        console.log('[ConvoyPresence] Member presence left:', key);
+        // The sync event will handle the state update
       })
       .subscribe(async (status) => {
         console.log('[ConvoyPresence] Subscription status:', status, 'for trip:', tripId);
+        
         if (status === 'SUBSCRIBED') {
           setIsConnected(true);
           setError(null);
-          setConnectionAttempts(0);
+          connectionAttemptsRef.current = 0;
           channelRef.current = channel;
+          
+          // Announce on connect - immediately track if we have a position
+          if (lastPresenceRef.current) {
+            console.log('[ConvoyPresence] Announcing on connect');
+            // Small delay to ensure channel is fully ready
+            setTimeout(() => trackPresence(), 100);
+          }
+          
+          // Start heartbeat to keep presence fresh
+          startHeartbeat();
         } else if (status === 'CHANNEL_ERROR') {
+          console.error('[ConvoyPresence] Channel error');
           setError('Failed to connect to convoy channel');
           setIsConnected(false);
-          setConnectionAttempts((prev) => prev + 1);
+          stopHeartbeat();
+          connectionAttemptsRef.current += 1;
           
           // Retry connection
-          if (connectionAttempts < MAX_RETRY_ATTEMPTS) {
+          if (connectionAttemptsRef.current < MAX_RETRY_ATTEMPTS) {
             retryTimeoutRef.current = setTimeout(() => {
               connect();
-            }, RETRY_DELAY * (connectionAttempts + 1));
+            }, RETRY_DELAY * connectionAttemptsRef.current);
           }
         } else if (status === 'CLOSED') {
           setIsConnected(false);
+          stopHeartbeat();
         }
       });
-
-    return () => {
-      channel.unsubscribe();
-    };
-  }, [tripId, user, enabled, connectionAttempts]);
+  }, [tripId, user, enabled, parsePresenceState, trackPresence, startHeartbeat, stopHeartbeat]);
 
   // Subscribe to convoy channel
   useEffect(() => {
     if (!tripId || !user || !enabled) {
       setMembers([]);
       setIsConnected(false);
+      stopHeartbeat();
       return;
     }
 
+    // Reset connection attempts on new connection
+    connectionAttemptsRef.current = 0;
     connect();
 
     return () => {
       if (retryTimeoutRef.current) {
         clearTimeout(retryTimeoutRef.current);
+        retryTimeoutRef.current = null;
       }
+      stopHeartbeat();
       if (channelRef.current) {
-        channelRef.current.unsubscribe();
+        supabase.removeChannel(channelRef.current);
         channelRef.current = null;
       }
       setIsConnected(false);
     };
-  }, [tripId, user, enabled, connect]);
+  }, [tripId, user?.id, enabled]); // Only depend on user.id, not the whole user object
 
   // Leave convoy
   const leaveConvoy = useCallback(async () => {
     if (channelRef.current) {
       await channelRef.current.untrack();
     }
-  }, []);
+    stopHeartbeat();
+  }, [stopHeartbeat]);
 
   // Retry connection manually
   const retryConnection = useCallback(() => {
-    setConnectionAttempts(0);
+    connectionAttemptsRef.current = 0;
     setError(null);
     connect();
   }, [connect]);
@@ -232,6 +286,6 @@ export const useConvoyPresence = ({
     updatePosition,
     leaveConvoy,
     retryConnection,
-    connectionAttempts,
+    connectionAttempts: connectionAttemptsRef.current,
   };
 };

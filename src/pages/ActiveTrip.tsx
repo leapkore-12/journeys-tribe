@@ -10,9 +10,9 @@ import { Button } from '@/components/ui/button';
 import { useTrip } from '@/context/TripContext';
 import { useGeolocation } from '@/hooks/useGeolocation';
 import { useMapboxRoute } from '@/hooks/useMapboxRoute';
-import { useConvoyPresence } from '@/hooks/useConvoyPresence';
+import { useConvoyPresence, ConvoyMemberPresence } from '@/hooks/useConvoyPresence';
 import { useConvoyInvites } from '@/hooks/useConvoyInvites';
-import { useConvoyMembers, useTransferLeadership, useIsConvoyLeader } from '@/hooks/useConvoyMembers';
+import { useConvoyMembers, useTransferLeadership, useIsConvoyLeader, ConvoyMember } from '@/hooks/useConvoyMembers';
 import { useOfflineTracking } from '@/hooks/useOfflineTracking';
 import { useActiveTrip } from '@/hooks/useActiveTrip';
 import { useActiveConvoy, ActiveConvoyTrip } from '@/hooks/useActiveConvoy';
@@ -27,6 +27,21 @@ import ReportHazardSheet from '@/components/trip/ReportHazardSheet';
 import { useRoadHazards, RoadHazard } from '@/hooks/useRoadHazards';
 import logoWhite from '@/assets/logo-white.svg';
 import { calculateDistance } from '@/lib/distance-utils';
+
+// Merged convoy member type: roster (database) + presence (realtime)
+export interface MergedConvoyMember {
+  id: string;
+  name: string;
+  avatar?: string;
+  isLeader: boolean;
+  // Presence data (if connected)
+  isConnected: boolean;
+  position?: [number, number];
+  heading?: number;
+  speed?: number;
+  lastUpdate?: number;
+  vehicleType?: 'car' | 'bike' | 'truck';
+}
 
 const ActiveTrip = () => {
   const navigate = useNavigate();
@@ -49,19 +64,15 @@ const ActiveTrip = () => {
   const { data: activeConvoy, isLoading: isLoadingConvoy } = useActiveConvoy();
 
   // Determine the trip ID with proper priority order (context > convoy > backend)
-  // NEVER generate a random UUID - we need a real trip ID
   const activeTripId = useMemo(() => {
-    // Priority 1: Context trip ID (set when trip was created via TripReview)
     if (tripState.activeTripId) {
       console.log('[ActiveTrip] Using context tripId:', tripState.activeTripId);
       return tripState.activeTripId;
     }
-    // Priority 2: Active convoy trip ID (for convoy members who joined)
     if (activeConvoy?.trip_id) {
       console.log('[ActiveTrip] Using activeConvoy tripId:', activeConvoy.trip_id);
       return activeConvoy.trip_id;
     }
-    // Return null instead of generating random UUID - we'll handle this in the loading state
     console.log('[ActiveTrip] No trip ID available yet');
     return null;
   }, [tripState.activeTripId, activeConvoy?.trip_id]);
@@ -77,18 +88,15 @@ const ActiveTrip = () => {
 
   // Detect when trip transitions from active to completed (for convoy members)
   useEffect(() => {
-    // Only track after we've had at least one value
     if (prevActiveConvoyRef.current === undefined) {
       prevActiveConvoyRef.current = activeConvoy;
       return;
     }
 
-    // Detect when trip transitions from active to completed/null
     const wasActive = prevActiveConvoyRef.current?.trip?.status === 'active';
     const isNowCompleted = !activeConvoy || activeConvoy.trip?.status !== 'active';
     const wasConvoyMember = prevActiveConvoyRef.current && !prevActiveConvoyRef.current.is_leader;
 
-    // If we were a convoy member and trip just became completed
     if (wasActive && isNowCompleted && wasConvoyMember) {
       console.log('[ActiveTrip] Convoy trip completed by leader, navigating member away');
       toast({
@@ -99,7 +107,6 @@ const ActiveTrip = () => {
       navigate('/trip/complete');
     }
 
-    // Update the ref for next comparison
     prevActiveConvoyRef.current = activeConvoy;
   }, [activeConvoy, navigate, toast, resetTrip]);
 
@@ -180,36 +187,21 @@ const ActiveTrip = () => {
   // Active trip DB persistence
   const { updatePosition: updateTripPosition } = useActiveTrip();
 
-  // Real-time convoy presence tracking
+  // Real-time convoy presence tracking (NO callbacks - presence events are too noisy)
   const { 
-    members: convoyMembers, 
-    activeMembers,
+    members: convoyPresenceMembers, 
+    activeMembers: activePresenceMembers,
     isConnected: isConvoyConnected,
     updatePosition,
     leaveConvoy,
   } = useConvoyPresence({ 
     tripId: activeTripId || undefined, 
     enabled: !!activeTripId && (tripState.isActive || !!activeConvoy) && isOnline,
-    onMemberJoin: (member) => {
-      toast({
-        title: 'Rider joined',
-        description: `${member.name} joined the convoy`,
-      });
-    },
-    onMemberLeave: (memberId) => {
-      const member = convoyMembers.find(m => m.id === memberId);
-      if (member) {
-        toast({
-          title: 'Rider left',
-          description: `${member.name} left the convoy`,
-          variant: 'destructive',
-        });
-      }
-    },
   });
 
-  // Real-time convoy members from database (for join notifications)
-  useConvoyMembers(activeTripId || undefined, {
+  // Convoy roster from database (the truth of who's in the convoy)
+  const { data: convoyRoster = [] } = useConvoyMembers(activeTripId || undefined, {
+    // Only show toast for DB-based membership changes (not presence)
     onMemberJoin: (member) => {
       // Only show toast if we're the leader and it's not us
       if (isLeader && member.user_id !== user?.id) {
@@ -219,12 +211,97 @@ const ActiveTrip = () => {
         });
       }
     },
+    onMemberLeave: (memberId) => {
+      // Only notify about real membership leave (not presence disconnects)
+      const member = convoyRoster.find(m => m.user_id === memberId);
+      if (member && member.user_id !== user?.id) {
+        toast({
+          title: 'Rider left',
+          description: `${member.profile?.display_name || member.profile?.username || 'A rider'} left the convoy`,
+        });
+      }
+    },
   });
+
+  // Find the leader from roster
+  const leaderId = useMemo(() => {
+    const leader = convoyRoster.find(m => m.is_leader);
+    return leader?.user_id || user?.id;
+  }, [convoyRoster, user?.id]);
+
+  // Merge roster (database) with presence (realtime) for accurate display
+  const mergedConvoyMembers = useMemo((): MergedConvoyMember[] => {
+    // Start with roster members (excluding self)
+    const mergedMap = new Map<string, MergedConvoyMember>();
+    
+    convoyRoster
+      .filter(m => m.user_id !== user?.id && m.status === 'active')
+      .forEach(m => {
+        mergedMap.set(m.user_id, {
+          id: m.user_id,
+          name: m.profile?.display_name || m.profile?.username || 'Unknown',
+          avatar: m.profile?.avatar_url || undefined,
+          isLeader: m.is_leader,
+          isConnected: false, // Will be updated from presence
+        });
+      });
+
+    // Merge presence data
+    convoyPresenceMembers.forEach(p => {
+      const existing = mergedMap.get(p.id);
+      if (existing) {
+        // Update with presence data
+        existing.isConnected = true;
+        existing.position = p.position;
+        existing.heading = p.heading;
+        existing.speed = p.speed;
+        existing.lastUpdate = p.lastUpdate;
+        existing.vehicleType = p.vehicleType;
+      } else {
+        // Member has presence but not in roster yet (rare edge case)
+        mergedMap.set(p.id, {
+          id: p.id,
+          name: p.name,
+          avatar: p.avatar,
+          isLeader: false,
+          isConnected: true,
+          position: p.position,
+          heading: p.heading,
+          speed: p.speed,
+          lastUpdate: p.lastUpdate,
+          vehicleType: p.vehicleType,
+        });
+      }
+    });
+
+    return Array.from(mergedMap.values());
+  }, [convoyRoster, convoyPresenceMembers, user?.id]);
+
+  // Connected members count (for UI)
+  const connectedMembersCount = mergedConvoyMembers.filter(m => m.isConnected).length;
+  const totalMembersCount = mergedConvoyMembers.length;
+
+  // For the map, we only show members with live position data
+  const mapConvoyMembers: ConvoyMemberPresence[] = useMemo(() => {
+    return mergedConvoyMembers
+      .filter(m => m.isConnected && m.position)
+      .map(m => ({
+        id: m.id,
+        name: m.name,
+        avatar: m.avatar,
+        position: m.position!,
+        heading: m.heading,
+        speed: m.speed,
+        lastUpdate: m.lastUpdate || Date.now(),
+        vehicleType: m.vehicleType,
+      }));
+  }, [mergedConvoyMembers]);
 
   // Debug convoy members
   useEffect(() => {
-    console.log('[ActiveTrip] convoyMembers:', convoyMembers.length, convoyMembers);
-  }, [convoyMembers]);
+    console.log('[ActiveTrip] Merged convoy members:', mergedConvoyMembers.length, 
+      'Connected:', connectedMembersCount, 'Total:', totalMembersCount);
+  }, [mergedConvoyMembers, connectedMembersCount, totalMembersCount]);
 
   // Convoy invites
   const { createInvite, copyInviteLink, getShareLink } = useConvoyInvites();
@@ -253,7 +330,6 @@ const ActiveTrip = () => {
   useEffect(() => {
     if (isOnline && bufferedCount > 0) {
       syncBufferedPoints(async (points) => {
-        // Update last position in active_trips table
         const lastPoint = points[points.length - 1];
         if (lastPoint) {
           await updateTripPosition.mutateAsync({
@@ -306,19 +382,16 @@ const ActiveTrip = () => {
   useEffect(() => {
     if (!userPosition || tripState.isPaused) return;
     
-    // Initialize previous position on first GPS fix
     if (!prevPositionRef.current) {
       prevPositionRef.current = userPosition;
       return;
     }
     
-    // Calculate distance from previous position
     const [prevLng, prevLat] = prevPositionRef.current;
     const [currLng, currLat] = userPosition;
     
     const distanceMoved = calculateDistance(prevLat, prevLng, currLat, currLng);
     
-    // Only count if moved more than 10 meters (filters GPS noise)
     if (distanceMoved > 0.01) {
       setDistance(prev => prev + distanceMoved);
       prevPositionRef.current = userPosition;
@@ -378,7 +451,7 @@ const ActiveTrip = () => {
           userPosition={userPosition}
           destination={destinationCoordinates || undefined}
           routeCoordinates={route?.coordinates || tripState.routeCoordinates || undefined}
-          convoyMembers={convoyMembers}
+          convoyMembers={mapConvoyMembers}
           hazards={hazards}
           heading={heading}
           compassMode={compassMode}
@@ -534,9 +607,10 @@ const ActiveTrip = () => {
 
       {/* Re-centre Button and Convoy Status */}
       <div className="absolute left-4 bottom-56 z-10 space-y-2">
-        {(isConvoyConnected && activeMembers.length > 0) || !isOnline ? (
+        {(isConvoyConnected && totalMembersCount > 0) || !isOnline ? (
           <ConvoyStatusBar
-            members={activeMembers}
+            connectedCount={connectedMembersCount}
+            totalCount={totalMembersCount}
             isConnected={isConvoyConnected}
             isOnline={isOnline}
             bufferedCount={bufferedCount}
@@ -574,9 +648,9 @@ const ActiveTrip = () => {
               className="w-10 h-10 bg-secondary rounded-full flex items-center justify-center relative"
             >
               <Users className="h-5 w-5 text-foreground" />
-              {activeMembers.length > 0 && (
+              {totalMembersCount > 0 && (
                 <div className="absolute -top-1 -right-1 w-5 h-5 bg-primary rounded-full flex items-center justify-center">
-                  <span className="text-xs text-primary-foreground font-medium">{activeMembers.length}</span>
+                  <span className="text-xs text-primary-foreground font-medium">{totalMembersCount}</span>
                 </div>
               )}
             </button>
@@ -621,7 +695,12 @@ const ActiveTrip = () => {
             >
               <div className="bg-card rounded-t-2xl border-t border-border/50">
                 <div className="p-4 border-b border-border/50 flex justify-between items-center">
-                  <h2 className="text-lg font-semibold text-foreground">Convoy Members</h2>
+                  <div>
+                    <h2 className="text-lg font-semibold text-foreground">Convoy Members</h2>
+                    <p className="text-xs text-muted-foreground">
+                      {connectedMembersCount} connected / {totalMembersCount} total
+                    </p>
+                  </div>
                   <Button
                     variant="outline"
                     size="sm"
@@ -634,7 +713,7 @@ const ActiveTrip = () => {
                   </Button>
                 </div>
                 <ConvoyPanel
-                  members={convoyMembers}
+                  members={mergedConvoyMembers}
                   userPosition={userPosition}
                   isExpanded={true}
                   onToggle={() => setShowConvoyPanel(false)}
@@ -642,7 +721,7 @@ const ActiveTrip = () => {
                     console.log('Clicked member:', member);
                   }}
                   tripId={activeTripId}
-                  currentLeaderId={user?.id}
+                  currentLeaderId={leaderId}
                 />
               </div>
             </motion.div>

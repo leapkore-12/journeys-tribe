@@ -1,8 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronUp, ChevronDown, Users, MapPin, Navigation, Crown } from 'lucide-react';
-import { ConvoyMemberPresence } from '@/hooks/useConvoyPresence';
-import { getMemberStatus, getStatusColor } from './ConvoyMemberMarker';
+import { ChevronUp, ChevronDown, Users, MapPin, Navigation, Crown, WifiOff } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import {
@@ -18,13 +16,14 @@ import {
 import { useTransferLeadership } from '@/hooks/useConvoyMembers';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/hooks/use-toast';
+import { MergedConvoyMember } from '@/pages/ActiveTrip';
 
 interface ConvoyPanelProps {
-  members: ConvoyMemberPresence[];
+  members: MergedConvoyMember[];
   userPosition: [number, number] | null;
   isExpanded: boolean;
   onToggle: () => void;
-  onMemberClick?: (member: ConvoyMemberPresence) => void;
+  onMemberClick?: (member: MergedConvoyMember) => void;
   tripId?: string;
   currentLeaderId?: string;
 }
@@ -52,18 +51,28 @@ const formatDistance = (km: number): string => {
   return `${km.toFixed(1)}km`;
 };
 
-// Determine relative position (ahead/behind)
-const getRelativePosition = (
-  userPos: [number, number] | null,
-  memberPos: [number, number],
-  destination?: [number, number]
-): 'ahead' | 'behind' | 'unknown' => {
-  if (!userPos || !destination) return 'unknown';
+// Get member status based on speed and connection
+const getMemberStatus = (member: MergedConvoyMember): 'moving' | 'slow' | 'stopped' | 'offline' => {
+  if (!member.isConnected) return 'offline';
   
-  const userToDestDist = calculateDistance(userPos, destination);
-  const memberToDestDist = calculateDistance(memberPos, destination);
+  // Check if stale (no update in 30 seconds)
+  if (member.lastUpdate && Date.now() - member.lastUpdate > 30000) {
+    return 'offline';
+  }
   
-  return memberToDestDist < userToDestDist ? 'ahead' : 'behind';
+  if (!member.speed || member.speed < 2) return 'stopped';
+  if (member.speed < 20) return 'slow';
+  return 'moving';
+};
+
+// Get status color
+const getStatusColor = (status: 'moving' | 'slow' | 'stopped' | 'offline'): string => {
+  switch (status) {
+    case 'moving': return '#22c55e';
+    case 'slow': return '#f59e0b';
+    case 'stopped': return '#ef4444';
+    case 'offline': return '#6b7280';
+  }
 };
 
 const ConvoyPanel: React.FC<ConvoyPanelProps> = ({
@@ -78,20 +87,32 @@ const ConvoyPanel: React.FC<ConvoyPanelProps> = ({
   const { user } = useAuth();
   const { toast } = useToast();
   const transferLeadership = useTransferLeadership();
-  const [transferTarget, setTransferTarget] = useState<ConvoyMemberPresence | null>(null);
+  const [transferTarget, setTransferTarget] = useState<MergedConvoyMember | null>(null);
   
   const isCurrentUserLeader = user?.id === currentLeaderId;
 
-  // Sort members by distance from user
-  const sortedMembers = React.useMemo(() => {
-    if (!userPosition) return members;
-    
+  // Sort members: connected first, then by distance
+  const sortedMembers = useMemo(() => {
     return [...members].sort((a, b) => {
-      const distA = calculateDistance(userPosition, a.position);
-      const distB = calculateDistance(userPosition, b.position);
-      return distA - distB;
+      // Connected members first
+      if (a.isConnected !== b.isConnected) {
+        return a.isConnected ? -1 : 1;
+      }
+      
+      // Then by distance if we have positions
+      if (userPosition && a.position && b.position) {
+        const distA = calculateDistance(userPosition, a.position);
+        const distB = calculateDistance(userPosition, b.position);
+        return distA - distB;
+      }
+      
+      return 0;
     });
   }, [members, userPosition]);
+
+  // Count connected vs total
+  const connectedCount = members.filter(m => m.isConnected).length;
+  const totalCount = members.length;
 
   const handleTransferLeadership = async () => {
     if (!tripId || !transferTarget) return;
@@ -137,7 +158,10 @@ const ConvoyPanel: React.FC<ConvoyPanelProps> = ({
               Convoy Members
             </p>
             <p className="text-xs text-muted-foreground">
-              {members.length} {members.length === 1 ? 'rider' : 'riders'} connected
+              {connectedCount === totalCount 
+                ? `${totalCount} ${totalCount === 1 ? 'rider' : 'riders'} connected`
+                : `${connectedCount}/${totalCount} connected`
+              }
             </p>
           </div>
         </div>
@@ -146,12 +170,17 @@ const ConvoyPanel: React.FC<ConvoyPanelProps> = ({
           {/* Quick status indicators */}
           <div className="flex -space-x-2">
             {sortedMembers.slice(0, 3).map((member) => (
-              <Avatar key={member.id} className="w-6 h-6 border-2 border-card">
-                <AvatarImage src={member.avatar} />
-                <AvatarFallback className="text-xs bg-primary text-primary-foreground">
-                  {member.name[0]}
-                </AvatarFallback>
-              </Avatar>
+              <div key={member.id} className="relative">
+                <Avatar className="w-6 h-6 border-2 border-card">
+                  <AvatarImage src={member.avatar} />
+                  <AvatarFallback className="text-xs bg-primary text-primary-foreground">
+                    {member.name[0]}
+                  </AvatarFallback>
+                </Avatar>
+                {!member.isConnected && (
+                  <div className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-muted-foreground rounded-full border border-card" />
+                )}
+              </div>
             ))}
             {members.length > 3 && (
               <div className="w-6 h-6 rounded-full bg-muted flex items-center justify-center text-xs font-medium border-2 border-card">
@@ -182,23 +211,25 @@ const ConvoyPanel: React.FC<ConvoyPanelProps> = ({
               {sortedMembers.map((member) => {
                 const status = getMemberStatus(member);
                 const statusColor = getStatusColor(status);
-                const distance = userPosition
+                const distance = userPosition && member.position
                   ? calculateDistance(userPosition, member.position)
                   : null;
                 const isLeader = member.id === currentLeaderId;
-                const canTransfer = isCurrentUserLeader && !isLeader && tripId;
+                const canTransfer = isCurrentUserLeader && !isLeader && tripId && member.isConnected;
 
                 return (
                   <div
                     key={member.id}
-                    className="w-full flex items-center gap-3 p-2 rounded-lg bg-secondary/50 hover:bg-secondary transition-colors"
+                    className={`w-full flex items-center gap-3 p-2 rounded-lg transition-colors ${
+                      member.isConnected ? 'bg-secondary/50 hover:bg-secondary' : 'bg-muted/30'
+                    }`}
                   >
                     {/* Avatar with status */}
                     <button
                       onClick={() => onMemberClick?.(member)}
                       className="relative"
                     >
-                      <Avatar className="w-10 h-10">
+                      <Avatar className={`w-10 h-10 ${!member.isConnected ? 'opacity-50' : ''}`}>
                         <AvatarImage src={member.avatar} />
                         <AvatarFallback className="bg-primary text-primary-foreground font-semibold">
                           {member.name[0]}
@@ -221,7 +252,7 @@ const ConvoyPanel: React.FC<ConvoyPanelProps> = ({
                       className="flex-1 text-left"
                     >
                       <div className="flex items-center gap-2">
-                        <p className="text-sm font-medium text-foreground">
+                        <p className={`text-sm font-medium ${member.isConnected ? 'text-foreground' : 'text-muted-foreground'}`}>
                           {member.name}
                         </p>
                         {isLeader && (
@@ -229,7 +260,12 @@ const ConvoyPanel: React.FC<ConvoyPanelProps> = ({
                         )}
                       </div>
                       <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                        {member.speed ? (
+                        {!member.isConnected ? (
+                          <span className="flex items-center gap-1">
+                            <WifiOff className="h-3 w-3" />
+                            Offline
+                          </span>
+                        ) : member.speed ? (
                           <span className="flex items-center gap-1">
                             <Navigation className="h-3 w-3" />
                             {Math.round(member.speed)} km/h
@@ -237,7 +273,7 @@ const ConvoyPanel: React.FC<ConvoyPanelProps> = ({
                         ) : (
                           <span className="capitalize">{status}</span>
                         )}
-                        {distance !== null && (
+                        {distance !== null && member.isConnected && (
                           <span className="flex items-center gap-1">
                             <MapPin className="h-3 w-3" />
                             {formatDistance(distance)}
