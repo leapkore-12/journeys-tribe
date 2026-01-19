@@ -13,7 +13,7 @@ import { useAuth } from '@/context/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import FixedBottomActions from '@/components/layout/FixedBottomActions';
-
+import { OfflineMapDownload } from '@/components/trip/OfflineMapDownload';
 const TripReview = () => {
   const navigate = useNavigate();
   const { tripState, startTrip, resetTrip, setActiveTripId } = useTrip();
@@ -261,6 +261,14 @@ const TripReview = () => {
             </div>
           )}
         </motion.div>
+
+        {/* Offline Maps Download */}
+        {tripState.routeCoordinates && tripState.routeCoordinates.length > 0 && (
+          <OfflineMapDownload
+            routeCoordinates={tripState.routeCoordinates}
+            routeDistanceKm={tripState.routeDistance ? Math.round(tripState.routeDistance) : undefined}
+          />
+        )}
       </div>
 
       {/* Bottom Buttons */}

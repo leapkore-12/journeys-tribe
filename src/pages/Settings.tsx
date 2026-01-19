@@ -1,6 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import { useSmartBack } from '@/hooks/useSmartBack';
-import { ArrowLeft, ChevronRight, Loader2, Download } from 'lucide-react';
+import { ArrowLeft, ChevronRight, Loader2, Download, MapPin, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
@@ -19,6 +19,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { supabase } from '@/integrations/supabase/client';
+import { useOfflineMaps } from '@/hooks/useOfflineMaps';
 
 const Settings = () => {
   const navigate = useNavigate();
@@ -37,6 +38,16 @@ const Settings = () => {
   const [marketingConsent, setMarketingConsent] = useState(false);
   const [isUpdatingConsent, setIsUpdatingConsent] = useState(false);
   const [isExportingData, setIsExportingData] = useState(false);
+  const [isClearingCache, setIsClearingCache] = useState(false);
+  
+  // Offline maps
+  const { 
+    isSupported: offlineMapsSupported, 
+    isReady: offlineMapsReady,
+    cacheSize, 
+    getCacheSize, 
+    clearCache 
+  } = useOfflineMaps();
 
   // Sync privacy and consent states with profile
   useEffect(() => {
@@ -47,7 +58,46 @@ const Settings = () => {
     }
   }, [profile]);
 
+  // Fetch cache size on mount
+  useEffect(() => {
+    if (offlineMapsReady) {
+      getCacheSize();
+    }
+  }, [offlineMapsReady, getCacheSize]);
+
   const tribeCount = profile?.tribe_count || 0;
+
+  const handleClearOfflineCache = async () => {
+    setIsClearingCache(true);
+    try {
+      await clearCache();
+      toast({
+        title: 'Offline maps cleared',
+        description: 'All cached map tiles have been removed.',
+      });
+    } catch (error) {
+      console.error('Error clearing cache:', error);
+      toast({
+        title: 'Failed to clear cache',
+        description: 'Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsClearingCache(false);
+    }
+  };
+
+  const formatCacheSize = () => {
+    if (!cacheSize) return 'Unknown';
+    if (cacheSize.estimatedSize) {
+      const mb = cacheSize.estimatedSize / (1024 * 1024);
+      return mb < 1 ? `${Math.round(cacheSize.estimatedSize / 1024)} KB` : `${mb.toFixed(1)} MB`;
+    }
+    if (cacheSize.tileCount !== undefined) {
+      return `${cacheSize.tileCount} tiles`;
+    }
+    return 'Unknown';
+  };
 
   const handleLogout = async () => {
     await signOut();
@@ -379,6 +429,51 @@ const Settings = () => {
             Download a copy of all your RoadTribe data (GDPR)
           </p>
         </div>
+
+        {/* Offline Maps Section */}
+        {offlineMapsSupported && (
+          <div className="mt-8">
+            <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-4">
+              Offline Maps
+            </h2>
+            
+            <div className="flex items-center justify-between py-4 border-b border-border">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                  <MapPin className="h-5 w-5 text-primary" />
+                </div>
+                <div>
+                  <span className="text-foreground block">Cached Map Data</span>
+                  <span className="text-sm text-muted-foreground">
+                    {cacheSize ? formatCacheSize() : 'Loading...'}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <Button
+              variant="outline"
+              onClick={handleClearOfflineCache}
+              disabled={isClearingCache || !offlineMapsReady}
+              className="w-full mt-4 h-12 border-destructive/50 text-destructive hover:bg-destructive/10"
+            >
+              {isClearingCache ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Clearing...
+                </>
+              ) : (
+                <>
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Clear offline maps
+                </>
+              )}
+            </Button>
+            <p className="text-xs text-muted-foreground mt-2 text-center">
+              Free up storage by removing downloaded map tiles
+            </p>
+          </div>
+        )}
 
         {/* Logout Button */}
         <div className="mt-8">
