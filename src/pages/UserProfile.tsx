@@ -60,11 +60,7 @@ const UserProfile = () => {
   const [activeTab, setActiveTab] = useState<'trips' | 'stats'>('trips');
   const [showBlockDialog, setShowBlockDialog] = useState(false);
   
-  // If viewing own profile, redirect to /profile
-  if (user && userId === user.id) {
-    return <Navigate to="/profile" replace />;
-  }
-
+  // All hooks must be called before any conditional returns
   const { data: profile, isLoading: profileLoading } = useProfile(userId);
   const { data: trips, isLoading: tripsLoading } = useUserTrips(userId);
   const { data: isFollowing } = useIsFollowing(userId || '');
@@ -77,6 +73,11 @@ const UserProfile = () => {
   const { data: isBlockedByUser, isLoading: blockedByLoading } = useIsBlockedBy(userId);
   const blockUserMutation = useBlockUser();
   const unblockUserMutation = useUnblockUser();
+
+  // If viewing own profile, redirect to /profile (after all hooks are called)
+  if (user && userId === user.id) {
+    return <Navigate to="/profile" replace />;
+  }
 
   // Determine if this is a private account and viewer can see content
   const isPrivateAccount = profile?.is_private === true;
