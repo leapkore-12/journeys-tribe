@@ -309,3 +309,55 @@ export const useAdminStats = () => {
     },
   });
 };
+
+// Fetch user email from auth.users (admin only)
+export const useAdminUserEmail = (userId: string | undefined) => {
+  return useQuery({
+    queryKey: ['adminUserEmail', userId],
+    queryFn: async () => {
+      if (!userId) return null;
+      
+      const response = await supabase.functions.invoke('admin-get-user-email', {
+        body: { userId },
+      });
+      
+      if (response.error) {
+        throw new Error(response.error.message);
+      }
+      
+      if (response.data.error) {
+        throw new Error(response.data.error);
+      }
+      
+      return response.data.email as string;
+    },
+    enabled: !!userId,
+  });
+};
+
+// Send password reset email to user (admin only)
+export const useAdminResetPassword = () => {
+  return useMutation({
+    mutationFn: async ({ userId, redirectUrl }: { userId: string; redirectUrl?: string }) => {
+      const response = await supabase.functions.invoke('admin-reset-user-password', {
+        body: { userId, redirectUrl },
+      });
+      
+      if (response.error) {
+        throw new Error(response.error.message);
+      }
+      
+      if (response.data.error) {
+        throw new Error(response.data.error);
+      }
+      
+      return response.data;
+    },
+    onSuccess: () => {
+      toast.success('Password reset email sent');
+    },
+    onError: (error: Error) => {
+      toast.error('Failed to send reset email: ' + error.message);
+    },
+  });
+};

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { useAdminUser, useAdminUpdateProfile, useToggleAdminRole, useDeleteUser } from '@/hooks/useAdmin';
+import { useAdminUser, useAdminUpdateProfile, useToggleAdminRole, useDeleteUser, useAdminUserEmail, useAdminResetPassword } from '@/hooks/useAdmin';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -28,19 +28,25 @@ import {
   Trash2, 
   Map, 
   Car, 
-  Users 
+  Users,
+  Mail,
+  Copy,
+  KeyRound,
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import AdminBottomNav from '@/components/admin/AdminBottomNav';
+import { toast } from 'sonner';
 
 const EditUser = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { user: currentUser } = useAuth();
   const { data: user, isLoading } = useAdminUser(id);
+  const { data: userEmail, isLoading: isLoadingEmail } = useAdminUserEmail(id);
   const updateProfile = useAdminUpdateProfile();
   const toggleAdmin = useToggleAdminRole();
   const deleteUser = useDeleteUser();
+  const resetPassword = useAdminResetPassword();
 
   const [username, setUsername] = useState('');
   const [displayName, setDisplayName] = useState('');
@@ -99,6 +105,20 @@ const EditUser = () => {
       updates: { monthly_trip_count: 0 },
     });
     setMonthlyTripCount(0);
+  };
+
+  const handleCopyEmail = () => {
+    if (userEmail) {
+      navigator.clipboard.writeText(userEmail);
+      toast.success('Email copied to clipboard');
+    }
+  };
+
+  const handleSendPasswordReset = async () => {
+    if (!id) return;
+    
+    const redirectUrl = `${window.location.origin}/reset-password`;
+    await resetPassword.mutateAsync({ userId: id, redirectUrl });
   };
 
   if (isLoading) {
@@ -172,6 +192,59 @@ const EditUser = () => {
             </CardContent>
           </Card>
         )}
+
+        {/* Account Details Card */}
+        <Card className="border-border/50">
+          <CardHeader>
+            <CardTitle className="text-lg flex items-center gap-2">
+              <Mail className="h-5 w-5 text-primary" />
+              Account Details
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label className="text-muted-foreground text-sm">Email Address</Label>
+              <div className="flex items-center gap-2">
+                <div className="flex-1 bg-secondary rounded-md px-3 py-2 text-sm">
+                  {isLoadingEmail ? (
+                    <span className="text-muted-foreground">Loading...</span>
+                  ) : userEmail ? (
+                    userEmail
+                  ) : (
+                    <span className="text-muted-foreground">Unable to fetch email</span>
+                  )}
+                </div>
+                <Button 
+                  variant="outline" 
+                  size="icon"
+                  onClick={handleCopyEmail}
+                  disabled={!userEmail}
+                >
+                  <Copy className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+            
+            <div className="pt-2 border-t border-border/50">
+              <Button 
+                variant="outline" 
+                className="w-full"
+                onClick={handleSendPasswordReset}
+                disabled={resetPassword.isPending || !userEmail}
+              >
+                {resetPassword.isPending ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <KeyRound className="h-4 w-4 mr-2" />
+                )}
+                Send Password Reset Email
+              </Button>
+              <p className="text-xs text-muted-foreground mt-2">
+                User will receive a link to set a new password.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Stats - Only show for regular users */}
         {!isAdmin && (

@@ -31,6 +31,7 @@ const ChangeCredentials = () => {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isChangingPassword, setIsChangingPassword] = useState(false);
   const [passwordError, setPasswordError] = useState('');
+  const [isSendingResetLink, setIsSendingResetLink] = useState(false);
 
   const handleEmailChange = async () => {
     setEmailError('');
@@ -130,6 +131,39 @@ const ChangeCredentials = () => {
     }
   };
 
+  const handleForgotCurrentPassword = async () => {
+    if (!user?.email) {
+      toast({
+        title: 'Unable to send reset link',
+        description: 'No email address found for your account.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setIsSendingResetLink(true);
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(user.email, {
+        redirectTo: `${window.location.origin}/reset-password`,
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: 'Reset link sent',
+        description: 'Check your email inbox for a link to reset your password.',
+      });
+    } catch (error: any) {
+      toast({
+        title: 'Failed to send reset link',
+        description: error.message || 'Please try again',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsSendingResetLink(false);
+    }
+  };
+
   return (
     <div className="flex flex-col bg-background">
       {/* Header */}
@@ -218,6 +252,14 @@ const ChangeCredentials = () => {
                 {showCurrentPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
               </button>
             </div>
+            <button
+              type="button"
+              onClick={handleForgotCurrentPassword}
+              disabled={isSendingResetLink}
+              className="text-xs text-primary hover:underline disabled:opacity-50"
+            >
+              {isSendingResetLink ? 'Sending...' : 'Forgot your current password?'}
+            </button>
           </div>
 
           <div className="space-y-2">
