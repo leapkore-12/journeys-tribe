@@ -177,6 +177,7 @@ export type Database = {
           status: string | null
           trip_id: string
           user_id: string
+          vehicle_id: string | null
         }
         Insert: {
           id?: string
@@ -186,6 +187,7 @@ export type Database = {
           status?: string | null
           trip_id: string
           user_id: string
+          vehicle_id?: string | null
         }
         Update: {
           id?: string
@@ -195,6 +197,7 @@ export type Database = {
           status?: string | null
           trip_id?: string
           user_id?: string
+          vehicle_id?: string | null
         }
         Relationships: [
           {
@@ -209,6 +212,13 @@ export type Database = {
             columns: ["trip_id"]
             isOneToOne: false
             referencedRelation: "trips"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "convoy_members_vehicle_id_fkey"
+            columns: ["vehicle_id"]
+            isOneToOne: false
+            referencedRelation: "vehicles"
             referencedColumns: ["id"]
           },
         ]

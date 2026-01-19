@@ -21,9 +21,9 @@ const JoinConvoy = () => {
 
     try {
       await acceptInvite.mutateAsync({ inviteCode });
-      // Navigate to the trip
+      // Navigate to vehicle selection before joining active trip
       if (invite?.trip_id) {
-        navigate(`/trip/active?convoy=${invite.trip_id}`);
+        navigate(`/convoy-vehicle-select/${invite.trip_id}`);
       } else {
         navigate('/feed');
       }

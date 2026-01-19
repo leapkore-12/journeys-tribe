@@ -36,6 +36,7 @@ import ChangeCredentials from "./pages/ChangeCredentials";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
 import JoinConvoy from "./pages/JoinConvoy";
+import ConvoyVehicleSelect from "./pages/ConvoyVehicleSelect";
 import NotFound from "./pages/NotFound";
 
 import AdminDashboard from "./pages/admin/AdminDashboard";
@@ -93,6 +94,7 @@ const App = () => {
                   
                   {/* Protected Routes - Standalone Pages */}
                   <Route path="/join-convoy/:inviteCode" element={<ProtectedRoute><JoinConvoy /></ProtectedRoute>} />
+                  <Route path="/convoy-vehicle-select/:tripId" element={<ProtectedRoute><ConvoyVehicleSelect /></ProtectedRoute>} />
                   <Route path="/search" element={<ProtectedRoute><Search /></ProtectedRoute>} />
                   <Route path="/notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
                   <Route path="/trip/:tripId" element={<ProtectedRoute><TripDetail /></ProtectedRoute>} />
