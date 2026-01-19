@@ -10,11 +10,19 @@ export interface ConvoyMember {
   is_leader: boolean;
   joined_at: string | null;
   status: string | null;
+  vehicle_id: string | null;
   profile?: {
     id: string;
     username: string | null;
     display_name: string | null;
     avatar_url: string | null;
+  };
+  vehicle?: {
+    id: string;
+    name: string;
+    make: string | null;
+    model: string | null;
+    color: string | null;
   };
 }
 
@@ -153,12 +161,22 @@ export const useConvoyMembers = (tripId: string | undefined, options?: UseConvoy
         ? await supabase.from('profiles').select('id, username, display_name, avatar_url').in('id', userIds)
         : { data: [] };
 
+      // Fetch vehicles for members
+      const vehicleIds = data.map(m => m.vehicle_id).filter(Boolean) as string[];
+      const { data: vehicles } = vehicleIds.length > 0
+        ? await supabase.from('vehicles').select('id, name, make, model, color').in('id', vehicleIds)
+        : { data: [] };
+
       const profileMap = new Map<string, { id: string; username: string | null; display_name: string | null; avatar_url: string | null }>();
       profiles?.forEach(p => profileMap.set(p.id, p));
+
+      const vehicleMap = new Map<string, { id: string; name: string; make: string | null; model: string | null; color: string | null }>();
+      vehicles?.forEach(v => vehicleMap.set(v.id, v));
 
       const members = data.map(member => ({
         ...member,
         profile: profileMap.get(member.user_id),
+        vehicle: member.vehicle_id ? vehicleMap.get(member.vehicle_id) : undefined,
       })) as ConvoyMember[];
 
       // Update known member IDs and mark initial load complete
@@ -225,6 +243,28 @@ export const useUntagFromTrip = () => {
       queryClient.invalidateQueries({ queryKey: ['participated-trips'] });
       queryClient.invalidateQueries({ queryKey: ['profile'] });
       queryClient.invalidateQueries({ queryKey: ['convoy-members'] });
+    },
+  });
+};
+
+export const useUpdateConvoyMemberVehicle = () => {
+  const queryClient = useQueryClient();
+  const { user } = useAuth();
+
+  return useMutation({
+    mutationFn: async ({ tripId, vehicleId }: { tripId: string; vehicleId: string | null }) => {
+      if (!user?.id) throw new Error('Not authenticated');
+
+      const { error } = await supabase
+        .from('convoy_members')
+        .update({ vehicle_id: vehicleId })
+        .eq('trip_id', tripId)
+        .eq('user_id', user.id);
+
+      if (error) throw error;
+    },
+    onSuccess: (_, { tripId }) => {
+      queryClient.invalidateQueries({ queryKey: ['convoy-members', tripId] });
     },
   });
 };
