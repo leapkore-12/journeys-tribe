@@ -1,4 +1,5 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback } from 'react';
+import { Capacitor } from '@capacitor/core';
 
 interface GeolocationState {
   position: [number, number] | null;
@@ -31,67 +32,158 @@ export const useGeolocation = (options: UseGeolocationOptions = {}) => {
     maximumAge = 0,
   } = options;
 
-  const handleSuccess = useCallback((pos: GeolocationPosition) => {
+  const handleSuccess = useCallback((coords: {
+    longitude: number;
+    latitude: number;
+    heading: number | null;
+    speed: number | null;
+    accuracy: number;
+  }) => {
     setState((prev) => ({
       ...prev,
-      position: [pos.coords.longitude, pos.coords.latitude],
-      heading: pos.coords.heading,
-      speed: pos.coords.speed,
-      accuracy: pos.coords.accuracy,
+      position: [coords.longitude, coords.latitude],
+      heading: coords.heading,
+      speed: coords.speed,
+      accuracy: coords.accuracy,
       error: null,
     }));
   }, []);
 
-  const handleError = useCallback((error: GeolocationPositionError) => {
+  const handleError = useCallback((error: string) => {
     setState((prev) => ({
       ...prev,
-      error: error.message,
+      error: error,
     }));
   }, []);
 
-  const startWatching = useCallback(() => {
-    if (!navigator.geolocation) {
-      setState((prev) => ({
-        ...prev,
-        error: 'Geolocation is not supported by your browser',
-      }));
-      return null;
-    }
-
+  const startWatching = useCallback(async (): Promise<string | number | null> => {
     setState((prev) => ({ ...prev, isWatching: true }));
 
-    const watchId = navigator.geolocation.watchPosition(
-      handleSuccess,
-      handleError,
-      {
-        enableHighAccuracy,
-        timeout,
-        maximumAge,
-      }
-    );
+    if (Capacitor.isNativePlatform()) {
+      // Use Capacitor Geolocation for native iOS/Android
+      try {
+        const { Geolocation } = await import('@capacitor/geolocation');
+        
+        // Request permissions first
+        const permStatus = await Geolocation.requestPermissions();
+        if (permStatus.location !== 'granted') {
+          handleError('Location permission denied');
+          setState((prev) => ({ ...prev, isWatching: false }));
+          return null;
+        }
 
-    return watchId;
+        const watchId = await Geolocation.watchPosition(
+          { enableHighAccuracy, timeout, maximumAge },
+          (position, err) => {
+            if (err) {
+              handleError(err.message);
+              return;
+            }
+            if (position) {
+              handleSuccess({
+                longitude: position.coords.longitude,
+                latitude: position.coords.latitude,
+                heading: position.coords.heading,
+                speed: position.coords.speed,
+                accuracy: position.coords.accuracy,
+              });
+            }
+          }
+        );
+
+        return watchId;
+      } catch (error: any) {
+        handleError(error.message || 'Failed to start GPS');
+        setState((prev) => ({ ...prev, isWatching: false }));
+        return null;
+      }
+    } else {
+      // Use browser Geolocation API for web
+      if (!navigator.geolocation) {
+        handleError('Geolocation is not supported by your browser');
+        setState((prev) => ({ ...prev, isWatching: false }));
+        return null;
+      }
+
+      const watchId = navigator.geolocation.watchPosition(
+        (pos) => {
+          handleSuccess({
+            longitude: pos.coords.longitude,
+            latitude: pos.coords.latitude,
+            heading: pos.coords.heading,
+            speed: pos.coords.speed,
+            accuracy: pos.coords.accuracy,
+          });
+        },
+        (error) => handleError(error.message),
+        { enableHighAccuracy, timeout, maximumAge }
+      );
+
+      return watchId;
+    }
   }, [enableHighAccuracy, timeout, maximumAge, handleSuccess, handleError]);
 
-  const stopWatching = useCallback((watchId: number) => {
-    navigator.geolocation.clearWatch(watchId);
+  const stopWatching = useCallback(async (watchId: string | number) => {
+    if (Capacitor.isNativePlatform()) {
+      try {
+        const { Geolocation } = await import('@capacitor/geolocation');
+        await Geolocation.clearWatch({ id: watchId as string });
+      } catch (error) {
+        console.error('Error stopping Capacitor watch:', error);
+      }
+    } else {
+      navigator.geolocation.clearWatch(watchId as number);
+    }
     setState((prev) => ({ ...prev, isWatching: false }));
   }, []);
 
-  const getCurrentPosition = useCallback(() => {
-    if (!navigator.geolocation) {
-      setState((prev) => ({
-        ...prev,
-        error: 'Geolocation is not supported by your browser',
-      }));
-      return;
-    }
+  const getCurrentPosition = useCallback(async () => {
+    if (Capacitor.isNativePlatform()) {
+      try {
+        const { Geolocation } = await import('@capacitor/geolocation');
+        
+        const permStatus = await Geolocation.requestPermissions();
+        if (permStatus.location !== 'granted') {
+          handleError('Location permission denied');
+          return;
+        }
 
-    navigator.geolocation.getCurrentPosition(handleSuccess, handleError, {
-      enableHighAccuracy,
-      timeout,
-      maximumAge,
-    });
+        const position = await Geolocation.getCurrentPosition({
+          enableHighAccuracy,
+          timeout,
+          maximumAge,
+        });
+
+        handleSuccess({
+          longitude: position.coords.longitude,
+          latitude: position.coords.latitude,
+          heading: position.coords.heading,
+          speed: position.coords.speed,
+          accuracy: position.coords.accuracy,
+        });
+      } catch (error: any) {
+        handleError(error.message || 'Failed to get position');
+      }
+    } else {
+      if (!navigator.geolocation) {
+        handleError('Geolocation is not supported by your browser');
+        return;
+      }
+
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          handleSuccess({
+            longitude: pos.coords.longitude,
+            latitude: pos.coords.latitude,
+            heading: pos.coords.heading,
+            speed: pos.coords.speed,
+            accuracy: pos.coords.accuracy,
+          });
+        },
+        (error) => handleError(error.message),
+        { enableHighAccuracy, timeout, maximumAge }
+      );
+    }
   }, [enableHighAccuracy, timeout, maximumAge, handleSuccess, handleError]);
 
   return {

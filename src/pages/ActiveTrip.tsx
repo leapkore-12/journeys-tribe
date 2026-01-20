@@ -56,7 +56,7 @@ const ActiveTrip = () => {
   const [showRoute, setShowRoute] = useState(true);
   const [showNearbySearch, setShowNearbySearch] = useState(false);
   const [showReportHazard, setShowReportHazard] = useState(false);
-  const watchIdRef = useRef<number | null>(null);
+  const watchIdRef = useRef<string | number | null>(null);
   const mapRef = useRef<LiveTrackingMapRef>(null);
   const prevPositionRef = useRef<[number, number] | null>(null);
 
@@ -345,12 +345,16 @@ const ActiveTrip = () => {
 
   // Start GPS tracking on mount
   useEffect(() => {
-    const id = startWatching();
-    if (id) {
-      watchIdRef.current = id;
-    }
+    const initGPS = async () => {
+      const id = await startWatching();
+      if (id !== null) {
+        watchIdRef.current = id;
+      }
+    };
+    initGPS();
+    
     return () => {
-      if (watchIdRef.current) {
+      if (watchIdRef.current !== null) {
         stopWatching(watchIdRef.current);
       }
     };
