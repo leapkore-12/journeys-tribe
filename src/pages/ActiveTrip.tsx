@@ -8,7 +8,7 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useTrip } from '@/context/TripContext';
-import { useGeolocation } from '@/hooks/useGeolocation';
+import { useBackgroundGeolocation } from '@/hooks/useBackgroundGeolocation';
 import { useMapboxRoute } from '@/hooks/useMapboxRoute';
 import { useConvoyPresence, ConvoyMemberPresence } from '@/hooks/useConvoyPresence';
 import { useConvoyInvites } from '@/hooks/useConvoyInvites';
@@ -56,7 +56,7 @@ const ActiveTrip = () => {
   const [showRoute, setShowRoute] = useState(true);
   const [showNearbySearch, setShowNearbySearch] = useState(false);
   const [showReportHazard, setShowReportHazard] = useState(false);
-  const watchIdRef = useRef<string | number | null>(null);
+  
   const mapRef = useRef<LiveTrackingMapRef>(null);
   const prevPositionRef = useRef<[number, number] | null>(null);
 
@@ -161,16 +161,40 @@ const ActiveTrip = () => {
 
   const destinationName = activeConvoy?.trip?.end_location || tripState.destination || 'Destination';
 
-  // Real GPS tracking
+  // Background GPS tracking state
+  const [userPosition, setUserPosition] = useState<[number, number] | null>(null);
+  const [heading, setHeading] = useState<number | null>(null);
+  const [speed, setSpeed] = useState<number | null>(null);
+  const [geoError, setGeoError] = useState<string | null>(null);
+
+  // Background GPS tracking - continues when app is minimized
   const { 
-    position: userPosition, 
-    heading,
-    speed,
-    startWatching, 
-    stopWatching,
-    getCurrentPosition,
-    error: geoError 
-  } = useGeolocation({ enableHighAccuracy: true });
+    isTracking,
+    startTracking, 
+    stopTracking,
+    error: bgGeoError 
+  } = useBackgroundGeolocation({
+    distanceFilter: 30, // Update every 30 meters (battery optimization)
+    backgroundTitle: 'RoadTribe Trip',
+    backgroundMessage: 'Recording your route in background',
+    onPosition: useCallback((position, newHeading, newSpeed, accuracy) => {
+      console.log('[ActiveTrip] Background position update:', position, 'accuracy:', accuracy);
+      setUserPosition(position);
+      setHeading(newHeading);
+      setSpeed(newSpeed);
+    }, []),
+    onError: useCallback((error) => {
+      console.error('[ActiveTrip] Background geo error:', error);
+      setGeoError(error);
+    }, []),
+  });
+
+  // Sync background geo error to state
+  useEffect(() => {
+    if (bgGeoError) {
+      setGeoError(bgGeoError);
+    }
+  }, [bgGeoError]);
 
   // Route fetching
   const { route, getRoute } = useMapboxRoute();
@@ -343,22 +367,16 @@ const ActiveTrip = () => {
     }
   }, [isOnline, bufferedCount, syncBufferedPoints, updateTripPosition, activeTripId]);
 
-  // Start GPS tracking on mount
+  // Start background GPS tracking on mount
   useEffect(() => {
-    const initGPS = async () => {
-      const id = await startWatching();
-      if (id !== null) {
-        watchIdRef.current = id;
-      }
-    };
-    initGPS();
+    console.log('[ActiveTrip] Starting background GPS tracking...');
+    startTracking();
     
     return () => {
-      if (watchIdRef.current !== null) {
-        stopWatching(watchIdRef.current);
-      }
+      console.log('[ActiveTrip] Stopping background GPS tracking...');
+      stopTracking();
     };
-  }, [startWatching, stopWatching]);
+  }, [startTracking, stopTracking]);
 
   // Fetch route when we have position and destination
   useEffect(() => {
