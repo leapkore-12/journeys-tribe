@@ -332,7 +332,7 @@ const Settings = () => {
   ];
 
   return (
-    <div className="flex flex-col bg-background pb-24">
+    <div className="flex flex-col h-full bg-background">
       {/* Header */}
       <header className="sticky top-0 z-40 bg-background">
         <div className="flex items-center gap-3 px-4 h-14">
@@ -343,7 +343,7 @@ const Settings = () => {
         </div>
       </header>
 
-      <div className="flex-1 px-4 py-4">
+      <div className="flex-1 overflow-y-auto px-4 py-4 pb-24">
         {/* Private Account Toggle */}
         <div className="flex items-center justify-between py-4 border-b border-border">
           <span className="text-foreground">Switch account to private</span>
