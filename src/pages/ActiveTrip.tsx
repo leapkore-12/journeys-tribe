@@ -27,6 +27,7 @@ import ReportHazardSheet from '@/components/trip/ReportHazardSheet';
 import { useRoadHazards, RoadHazard } from '@/hooks/useRoadHazards';
 import logoWhite from '@/assets/logo-white.svg';
 import { calculateDistance } from '@/lib/distance-utils';
+import { useDeviceSpacing } from '@/hooks/useDeviceInfo';
 
 // Merged convoy member type: roster (database) + presence (realtime)
 export interface MergedConvoyMember {
@@ -48,6 +49,7 @@ const ActiveTrip = () => {
   const { tripState, pauseTrip, updateProgress, resetTrip } = useTrip();
   const { user } = useAuth();
   const { toast } = useToast();
+  const { safeAreaTop } = useDeviceSpacing();
   const [showSOS, setShowSOS] = useState(false);
   const [showConvoyPanel, setShowConvoyPanel] = useState(false);
   const [elapsedTime, setElapsedTime] = useState(tripState.timeElapsed);
@@ -482,11 +484,18 @@ const ActiveTrip = () => {
       </div>
 
       {/* Header Overlay */}
-      <div className="absolute top-0 left-0 right-0 safe-top z-20">
+      {/* Header Overlay - Dynamic safe area for all iPhone sizes */}
+      <div 
+        className="absolute left-0 right-0 z-20"
+        style={{ 
+          top: 0,
+          paddingTop: `max(env(safe-area-inset-top, ${safeAreaTop}px), ${safeAreaTop}px)`
+        }}
+      >
         <div className="flex items-center justify-between px-4 h-14">
           <button 
             onClick={() => navigate('/feed')}
-            className="w-10 h-10 flex items-center justify-center"
+            className="min-h-11 min-w-11 flex items-center justify-center active:opacity-70"
           >
             <ChevronLeft className="h-6 w-6 text-foreground" />
           </button>
@@ -498,16 +507,16 @@ const ActiveTrip = () => {
             <button 
               onClick={handleShareInvite}
               disabled={createInvite.isPending}
-              className="w-10 h-10 flex items-center justify-center bg-card/80 backdrop-blur rounded-full"
+              className="min-h-11 min-w-11 flex items-center justify-center bg-card/80 backdrop-blur rounded-full active:opacity-70"
             >
-              <Share2 className="h-4 w-4 text-foreground" />
+              <Share2 className="h-5 w-5 text-foreground" />
             </button>
             
             <button 
               onClick={() => setShowSOS(true)}
-              className="w-10 h-10 flex items-center justify-center bg-primary rounded-full"
+              className="min-h-11 min-w-11 flex items-center justify-center bg-primary rounded-full active:opacity-70"
             >
-              <Phone className="h-4 w-4 text-primary-foreground" />
+              <Phone className="h-5 w-5 text-primary-foreground" />
             </button>
           </div>
         </div>
@@ -520,7 +529,8 @@ const ActiveTrip = () => {
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
-            className="absolute top-16 left-4 right-4 z-30"
+            className="absolute left-4 right-4 z-30"
+            style={{ top: `calc(${safeAreaTop}px + 56px)` }}
           >
             <div className="bg-yellow-600 rounded-lg px-4 py-2 flex items-center gap-2 shadow-lg">
               <WifiOff className="h-4 w-4 text-white flex-shrink-0" />
@@ -544,7 +554,8 @@ const ActiveTrip = () => {
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
-            className="absolute top-16 left-4 right-4 z-30"
+            className="absolute left-4 right-4 z-30"
+            style={{ top: `calc(${safeAreaTop}px + 56px)` }}
           >
             <div className="bg-primary rounded-lg px-4 py-2 flex items-center gap-2 shadow-lg">
               <Loader2 className="h-4 w-4 text-primary-foreground animate-spin" />
@@ -557,7 +568,10 @@ const ActiveTrip = () => {
       </AnimatePresence>
 
       {/* Direction Banner */}
-      <div className={`absolute ${!isOnline || isSyncing ? 'top-32' : 'top-20'} left-4 right-4 z-10 transition-all`}>
+      <div 
+        className="absolute left-4 right-4 z-10 transition-all"
+        style={{ top: `calc(${safeAreaTop}px + ${!isOnline || isSyncing ? '128' : '80'}px)` }}
+      >
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
