@@ -3,7 +3,7 @@ platforms:
     targets:
       App:
         plist:
-          - file: App/Info.plist
+          - replace: false
             entries:
               - NSCameraUsageDescription: "RoadTribe needs camera access to take photos of your vehicle"
               - NSPhotoLibraryUsageDescription: "RoadTribe needs photo library access to select vehicle photos"
