@@ -1,6 +1,5 @@
-import { useState, useMemo } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useSmartBack } from '@/hooks/useSmartBack';
 import { ArrowLeft, Search as SearchIcon, X } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -10,9 +9,16 @@ import { useDebounce } from '@/hooks/useDebounce';
 
 const Search = () => {
   const navigate = useNavigate();
-  const goBack = useSmartBack('/feed');
   const [query, setQuery] = useState('');
   const [activeTab, setActiveTab] = useState<'users' | 'trips'>('users');
+  
+  const handleBack = () => {
+    if (window.history.length > 1) {
+      navigate(-1);
+    } else {
+      navigate('/feed', { replace: true });
+    }
+  };
   
   const debouncedQuery = useDebounce(query, 300);
   
@@ -25,8 +31,8 @@ const Search = () => {
       <header className="sticky top-0 z-40 bg-background border-b border-border">
         <div className="flex items-center gap-3 px-4 h-14">
           <button
-            onClick={goBack}
-            className="text-foreground"
+            onClick={handleBack}
+            className="text-foreground min-h-11 min-w-11 flex items-center justify-center active:opacity-70"
           >
             <ArrowLeft className="h-6 w-6" />
           </button>
