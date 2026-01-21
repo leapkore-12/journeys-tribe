@@ -348,15 +348,24 @@ const TripDetail = () => {
           <div className="h-0.5 bg-primary/30 mx-4" />
 
           {/* Action Row */}
-          <div className="flex items-center justify-around py-3">
-            <button onClick={handleLike} className={cn("flex-1 flex items-center justify-center gap-2 py-2 transition-colors", trip.is_liked ? "text-primary" : "text-muted-foreground hover:text-foreground")}>
-              <Flag className={cn("h-5 w-5", trip.is_liked && "fill-primary")} />
+          <div className="flex items-center justify-around py-2">
+            <button 
+              onClick={handleLike} 
+              className={cn(
+                "flex-1 flex items-center justify-center min-h-11 transition-colors active:opacity-70",
+                trip.is_liked ? "text-primary" : "text-muted-foreground"
+              )}
+            >
+              <Flag className={cn("h-6 w-6", trip.is_liked && "fill-primary")} />
             </button>
-            <button className="flex-1 flex items-center justify-center gap-2 py-2 text-primary">
-              <MessageCircle className="h-5 w-5" />
+            <button className="flex-1 flex items-center justify-center min-h-11 text-primary active:opacity-70">
+              <MessageCircle className="h-6 w-6" />
             </button>
-            <button onClick={handleShare} className="flex-1 flex items-center justify-center gap-2 py-2 text-muted-foreground hover:text-foreground transition-colors">
-              <Upload className="h-5 w-5" />
+            <button 
+              onClick={handleShare} 
+              className="flex-1 flex items-center justify-center min-h-11 text-muted-foreground transition-colors active:opacity-70"
+            >
+              <Upload className="h-6 w-6" />
             </button>
           </div>
         </motion.article>
