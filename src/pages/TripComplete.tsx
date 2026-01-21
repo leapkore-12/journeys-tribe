@@ -10,10 +10,12 @@ import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { formatDistance, formatDuration, mockVehicles, mockUsers } from '@/lib/mock-data';
+import { useDeviceSpacing } from '@/hooks/useDeviceInfo';
 
 const TripComplete = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { safeAreaTop } = useDeviceSpacing();
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [isPosting, setIsPosting] = useState(false);
@@ -50,9 +52,14 @@ const TripComplete = () => {
   };
 
   return (
-    <div className="bg-background safe-bottom">
+    <div className="flex flex-col h-full bg-background">
       {/* Success Header */}
-      <div className="bg-primary/10 border-b border-primary/20">
+      <div 
+        className="bg-primary/10 border-b border-primary/20"
+        style={{ 
+          paddingTop: `max(env(safe-area-inset-top, ${safeAreaTop}px), ${safeAreaTop}px)` 
+        }}
+      >
         <div className="py-8 px-4 text-center">
           <motion.div
             initial={{ scale: 0 }}
@@ -67,7 +74,7 @@ const TripComplete = () => {
         </div>
       </div>
 
-      <div className="p-4 space-y-6">
+      <div className="flex-1 overflow-y-auto p-4 space-y-6 safe-bottom">
         {/* Trip Summary Card */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
