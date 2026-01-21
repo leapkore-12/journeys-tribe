@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { useNavigate, useParams, Navigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
-import { useSmartBack } from '@/hooks/useSmartBack';
 import { Flag, BarChart3, Car, ArrowLeft, Lock, MoreVertical, ShieldOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -53,7 +52,13 @@ const formatStatsTime = (minutes: number) => {
 
 const UserProfile = () => {
   const navigate = useNavigate();
-  const goBack = useSmartBack('/feed');
+  const handleBack = () => {
+    if (window.history.length > 1) {
+      navigate(-1);
+    } else {
+      navigate('/feed', { replace: true });
+    }
+  };
   const { userId } = useParams();
   const { user } = useAuth();
   const { toast } = useToast();
@@ -170,7 +175,7 @@ const UserProfile = () => {
             title: "User blocked",
             description: `${profile?.display_name || 'This user'} has been blocked`,
           });
-          goBack();
+          handleBack();
         },
         onError: () => {
           toast({
@@ -203,7 +208,7 @@ const UserProfile = () => {
       <div className="flex flex-col bg-background pb-24">
         <header className="sticky top-0 z-40 bg-background">
           <div className="flex items-center justify-between px-4 h-14">
-            <button onClick={goBack} className="text-primary">
+            <button onClick={handleBack} className="text-primary min-h-11 min-w-11 flex items-center justify-center active:opacity-70">
               <ArrowLeft className="h-6 w-6" />
             </button>
             <Skeleton className="h-4 w-24" />
@@ -229,7 +234,7 @@ const UserProfile = () => {
       <div className="flex flex-col bg-background min-h-screen">
         <header className="sticky top-0 z-40 bg-background">
           <div className="flex items-center justify-between px-4 h-14">
-            <button onClick={goBack} className="text-primary">
+            <button onClick={handleBack} className="text-primary min-h-11 min-w-11 flex items-center justify-center active:opacity-70">
               <ArrowLeft className="h-6 w-6" />
             </button>
             <span className="text-primary font-medium">Profile</span>
@@ -245,7 +250,7 @@ const UserProfile = () => {
             This profile is not available
           </p>
           <Button 
-            onClick={goBack}
+            onClick={handleBack}
             className="mt-6"
           >
             Go back
@@ -260,7 +265,7 @@ const UserProfile = () => {
       {/* Header */}
       <header className="sticky top-0 z-40 bg-background">
         <div className="flex items-center justify-between px-4 h-14">
-          <button onClick={goBack} className="text-primary">
+          <button onClick={handleBack} className="text-primary min-h-11 min-w-11 flex items-center justify-center active:opacity-70">
             <ArrowLeft className="h-6 w-6" />
           </button>
           <span className="text-primary font-medium flex items-center gap-1">

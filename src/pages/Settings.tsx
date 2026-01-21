@@ -1,5 +1,4 @@
 import { useNavigate } from 'react-router-dom';
-import { useSmartBack } from '@/hooks/useSmartBack';
 import { ArrowLeft, ChevronRight, Loader2, Download, MapPin, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
@@ -23,7 +22,13 @@ import { useOfflineMaps } from '@/hooks/useOfflineMaps';
 
 const Settings = () => {
   const navigate = useNavigate();
-  const goBack = useSmartBack('/profile');
+  const handleBack = () => {
+    if (window.history.length > 1) {
+      navigate(-1);
+    } else {
+      navigate('/profile', { replace: true });
+    }
+  };
   const { toast } = useToast();
   const { signOut, user } = useAuth();
   const { data: profile } = useCurrentProfile();
@@ -336,7 +341,7 @@ const Settings = () => {
       {/* Header */}
       <header className="sticky top-0 z-40 bg-background">
         <div className="flex items-center gap-3 px-4 h-14">
-          <button onClick={goBack} className="text-foreground">
+          <button onClick={handleBack} className="text-foreground min-h-11 min-w-11 flex items-center justify-center active:opacity-70">
             <ArrowLeft className="h-6 w-6" />
           </button>
           <h1 className="text-lg font-semibold text-foreground">Settings page</h1>
