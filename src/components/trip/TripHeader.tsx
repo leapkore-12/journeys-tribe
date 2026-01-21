@@ -1,6 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import { ChevronLeft, Bell, Phone } from 'lucide-react';
 import logoWhite from '@/assets/logo-white.svg';
+import { useDeviceSpacing } from '@/hooks/useDeviceInfo';
 
 interface TripHeaderProps {
   showBack?: boolean;
@@ -20,14 +21,20 @@ const TripHeader = ({
   onBack,
 }: TripHeaderProps) => {
   const navigate = useNavigate();
+  const { safeAreaTop } = useDeviceSpacing();
 
   return (
-    <header className="flex items-center justify-between px-4 h-14 bg-background">
-      <div className="w-10">
+    <header 
+      className="flex items-center justify-between px-4 h-14 bg-background"
+      style={{ 
+        paddingTop: `max(env(safe-area-inset-top, ${safeAreaTop}px), ${safeAreaTop}px)` 
+      }}
+    >
+      <div className="w-11">
         {showBack && (
           <button 
             onClick={() => onBack ? onBack() : navigate(backTo)}
-            className="w-10 h-10 flex items-center justify-center"
+            className="min-h-11 min-w-11 flex items-center justify-center active:opacity-70"
           >
             <ChevronLeft className="h-6 w-6 text-foreground" />
           </button>
@@ -36,21 +43,21 @@ const TripHeader = ({
       
       <img src={logoWhite} alt="RoadTribe" className="h-6" />
       
-      <div className="w-10">
+      <div className="w-11">
         {showBell && (
           <button 
             onClick={() => navigate('/notifications')}
-            className="w-10 h-10 flex items-center justify-center"
+            className="min-h-11 min-w-11 flex items-center justify-center active:opacity-70"
           >
-            <Bell className="h-5 w-5 text-foreground" />
+            <Bell className="h-6 w-6 text-foreground" />
           </button>
         )}
         {showSOS && (
           <button 
             onClick={onSOSClick}
-            className="w-10 h-10 flex items-center justify-center bg-primary rounded-full"
+            className="min-h-11 min-w-11 flex items-center justify-center bg-primary rounded-full active:opacity-70"
           >
-            <Phone className="h-4 w-4 text-primary-foreground" />
+            <Phone className="h-5 w-5 text-primary-foreground" />
           </button>
         )}
       </div>
