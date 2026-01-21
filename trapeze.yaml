@@ -1,0 +1,12 @@
+platforms:
+  ios:
+    targets:
+      App:
+        plist:
+          - file: Info.plist
+            entries:
+              - NSCameraUsageDescription: "RoadTribe needs camera access to take photos of your vehicle"
+              - NSPhotoLibraryUsageDescription: "RoadTribe needs photo library access to select vehicle photos"
+              - NSPhotoLibraryAddUsageDescription: "RoadTribe needs permission to save photos"
+              - NSLocationWhenInUseUsageDescription: "RoadTribe needs your location to track your trips and show nearby points of interest"
+              - NSLocationAlwaysAndWhenInUseUsageDescription: "RoadTribe needs background location access to track your trips even when the app is minimized"
