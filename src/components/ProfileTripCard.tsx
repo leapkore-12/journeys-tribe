@@ -115,7 +115,7 @@ const ProfileTripCard = ({ trip, showOwner = false, isTagged = false }: ProfileT
           {/* Vehicle badge */}
           {trip.vehicle && (
             <div className="absolute top-2 left-2 bg-background/80 backdrop-blur-sm px-2 py-1 rounded-full text-xs text-foreground flex items-center gap-1">
-              🚗 {trip.vehicle.make} {trip.vehicle.model}
+              🚗 {trip.vehicle.name}
             </div>
           )}
           {/* Tagged badge */}
