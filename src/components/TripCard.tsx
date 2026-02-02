@@ -168,7 +168,7 @@ const TripCard = ({ trip, index, onLike, onComment, onShare, onUserClick, contex
   // Build slides array
   const slides = [
     ...(trip.map_image_url ? [{ type: 'map' as const, src: trip.map_image_url, label: 'Route map' }] : []),
-    ...(trip.vehicle?.images?.[0] ? [{ type: 'vehicle' as const, src: trip.vehicle.images[0], label: `${trip.vehicle.make} ${trip.vehicle.model}` }] : []),
+    ...(trip.vehicle?.images?.[0] ? [{ type: 'vehicle' as const, src: trip.vehicle.images[0], label: trip.vehicle.name }] : []),
     ...(trip.trip_photos?.map((photo, idx) => ({ type: 'photo' as const, src: photo.image_url, label: `Trip photo ${idx + 1}` })) || []),
   ];
 
