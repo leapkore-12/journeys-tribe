@@ -37,10 +37,17 @@ export const useSearchUsers = (query: string) => {
         blockedIds = blocked?.map(b => b.blocked_id) || [];
       }
 
+      // Get admin user IDs to exclude from search
+      const { data: adminRoles } = await supabase
+        .from('user_roles')
+        .select('user_id')
+        .eq('role', 'admin');
+      const adminIds = new Set(adminRoles?.map(r => r.user_id) || []);
+
       const { data } = await supabase.from('profiles').select('id, username, display_name, avatar_url').or(`display_name.ilike.%${query}%,username.ilike.%${query}%`).limit(20);
       
-      // Filter out blocked users
-      return (data || []).filter(u => !blockedIds.includes(u.id)) as SearchProfile[];
+      // Filter out blocked users AND admin users
+      return (data || []).filter(u => !blockedIds.includes(u.id) && !adminIds.has(u.id)) as SearchProfile[];
     },
     enabled: query.length > 0,
   });
