@@ -1,68 +1,55 @@
 
 
-## Fix Vehicle Make/Model Display on Profile Trip Cards
+## Simplify Search Page - Users Only, Exclude Admins
 
-### Problem Identified
-The trip cards on your profile are showing engine specs like "1498 cc | 4 Cylinders Inline..." instead of the vehicle make and name (e.g., "Skoda Kushaq").
+### Overview
+Remove the Trips tab from the search page and filter out admin users from search results. This will make the search simpler and ensure admin accounts are not discoverable by regular users.
 
-### Root Cause
-The EditVehicle form is mapping fields incorrectly to database columns:
+### Changes Required
 
-| Form Field | Saved To | Should Be |
-|------------|----------|-----------|
-| "Make and model" | `name` column | Correct |
-| "Description" | `make` column | Wrong - should go to a `description` column |
+**1. Update `src/hooks/useSearch.ts`**
+- Modify `useSearchUsers` to fetch admin user IDs from the `user_roles` table
+- Filter out admin users along with blocked users before returning results
+- Remove the `useSearchTrips` hook export (or keep it for potential future use but it won't be called)
 
-When you entered "1.5 TSI with Active Cylinder Technology..." in the Description field, it got saved to the `make` column. Then the trip card displays `vehicle.make` + `vehicle.model`, showing the engine specs instead of the actual make.
+**2. Update `src/pages/Search.tsx`**
+- Remove the `activeTab` state (no longer needed)
+- Remove the Trips tab button from the header
+- Remove the `useSearchTrips` import and hook call
+- Remove all the Trips-related UI code (lines 126-179)
+- Update the search placeholder text from "Search users, trips, locations..." to "Search users..."
 
-### Solution
+### Implementation Details
 
-**Step 1: Fix the EditVehicle Form Field Mapping**
+**useSearch.ts changes:**
+```typescript
+// Add admin filtering to useSearchUsers
+const { data: adminRoles } = await supabase
+  .from('user_roles')
+  .select('user_id')
+  .eq('role', 'admin');
+const adminIds = new Set(adminRoles?.map(r => r.user_id) || []);
 
-Update `src/pages/EditVehicle.tsx` to use proper field mapping:
-- Parse the "Make and model" input to extract `make` and `model` separately
-- OR use the `name` field for display since it already contains "Skoda Kushaq"
-
-**Step 2: Update ProfileTripCard Display**
-
-Change line 118 in `src/components/ProfileTripCard.tsx`:
-```tsx
-// Current (broken):
-🚗 {trip.vehicle.make} {trip.vehicle.model}
-
-// Fixed - use vehicle.name which stores "Skoda Kushaq":
-🚗 {trip.vehicle.name}
+// Then filter both blocked AND admin users
+return (data || []).filter(u => 
+  !blockedIds.includes(u.id) && !adminIds.has(u.id)
+);
 ```
 
-**Step 3: Also Update TripCard.tsx (Feed Card)**
-
-The same fix in `src/components/TripCard.tsx` line 171 and 227 to use `vehicle.name` instead of `make/model`.
-
-**Step 4: Fix Your Existing Vehicle Data**
-
-After the code fix, you'll need to update your existing vehicles in the database:
-- Go to **Garage → Edit your Skoda Kushaq**
-- Clear the Description field (or move the engine specs there properly)
-- The "Make and model" field should have "Skoda Kushaq"
+**Search.tsx changes:**
+- Remove tabs UI completely (lines 60-82)
+- Remove trips loading state and results UI
+- Simplify to show only user search results
 
 ### Files to Modify
 
-| File | Change |
-|------|--------|
-| `src/components/ProfileTripCard.tsx` | Line 118: Use `vehicle.name` instead of `make + model` |
-| `src/components/TripCard.tsx` | Lines 171, 227: Same fix |
-| `src/pages/EditVehicle.tsx` | Fix field mapping so `make` stores actual make, not description |
+| File | Changes |
+|------|---------|
+| `src/hooks/useSearch.ts` | Add admin user filtering in `useSearchUsers` |
+| `src/pages/Search.tsx` | Remove tabs, trips import, and trips UI |
 
-### Immediate Workaround
-
-If you want it fixed right now before the code update:
-1. Open your Garage
-2. Edit the Skoda Kushaq
-3. Put "Skoda" in a new field or clear the description
-
-### Expected Result
-
-| Before | After |
-|--------|-------|
-| 🚗 1498 cc | 4 Cylinders... | 🚗 Skoda Kushaq |
+### Result
+- Search page will only show user search with no tabs
+- Admin users will not appear in search results
+- Simpler, cleaner user experience
 
