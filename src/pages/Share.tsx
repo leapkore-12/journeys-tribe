@@ -127,9 +127,9 @@ const Share = () => {
     if (!trip) return;
     
     const shareText = `${trip.start_location || 'Start'} → ${trip.end_location || 'End'} | ${formatDistance(trip.distance_km)} | RoadTribe`;
-    const shareUrl = window.location.href;
+    const shareUrl = `${window.location.origin}/trip/${trip.id}`;
 
-    // Check if Web Share API is available
+    // Try Web Share API first (works best on mobile, can share directly to Instagram)
     if (navigator.share && navigator.canShare) {
       try {
         await navigator.share({
@@ -138,22 +138,21 @@ const Share = () => {
           url: shareUrl,
         });
         toast.success('Shared successfully!');
+        return;
       } catch (err) {
-        // User cancelled or share failed
-        if ((err as Error).name !== 'AbortError') {
-          // Fallback to clipboard
-          await navigator.clipboard.writeText(`${shareText}\n${shareUrl}`);
-          toast.success('Link copied! Share it on Instagram.');
-        }
+        if ((err as Error).name === 'AbortError') return;
+        // Fall through to Instagram URL scheme
       }
-    } else {
-      // Fallback: Copy link to clipboard
-      try {
-        await navigator.clipboard.writeText(`${shareText}\n${shareUrl}`);
-        toast.success('Link copied! Share it on Instagram.');
-      } catch {
-        toast.error('Failed to copy link');
-      }
+    }
+
+    // Try opening Instagram app via URL scheme
+    try {
+      await navigator.clipboard.writeText(`${shareText}\n${shareUrl}`);
+      // Open Instagram - on mobile this opens the app, on desktop opens website
+      window.open('https://www.instagram.com/', '_blank');
+      toast.success('Link copied! Paste it in your Instagram story.');
+    } catch {
+      toast.error('Failed to share');
     }
   };
 
@@ -368,10 +367,14 @@ const Share = () => {
       ctx.fillText('RoadTribe', textX, textY);
 
       // Trigger download
+      const dataUrl = canvas.toDataURL('image/png');
       const link = document.createElement('a');
       link.download = `roadtribe-trip-${trip.id}.png`;
-      link.href = canvas.toDataURL('image/png');
+      link.href = dataUrl;
+      link.style.display = 'none';
+      document.body.appendChild(link);
       link.click();
+      document.body.removeChild(link);
 
       toast.success('Image downloaded!');
     } catch (error) {
