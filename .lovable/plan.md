@@ -1,28 +1,25 @@
 
 
-## Answers and Plan
+## Fix: Show Stops in Trip Review + Add Spacing
 
-### Offline Maps "Not available in this browser"
-This message appears because the `OfflineMapDownload` component checks `isSupported` from `useOfflineMaps`, which requires **Service Workers** to be available (`'serviceWorker' in navigator`). In the Lovable preview iframe and many mobile webview contexts, service workers are not supported. This is a browser/environment limitation, not a beta restriction. It will work in production when accessed as a standalone PWA or in browsers that support service workers (Chrome, Firefox, Safari on iOS 11.3+). On native Capacitor builds, service worker support varies.
+### Issue 1: Stops not shown in TripReview
 
-### Plan: Add Coordinates Input to LocationSearchInput
+The `TripReview.tsx` page reads `tripState.stops` but never renders them. It only shows start and destination cards, then an "Add stops" button. Stops added during planning are in `tripState.stops` but aren't displayed.
 
-Allow users to type raw latitude,longitude (e.g. `12.9716, 77.5946`) in the destination box and have it recognized as a valid location.
+### Issue 2: Spacing between logo and "Trip Planner"
 
-**File: `src/components/trip/LocationSearchInput.tsx`**
+The header and title are too close together. Need more vertical padding.
 
-1. Add a coordinate detection regex that matches patterns like `12.9716, 77.5946` or `12.9716,77.5946`
-2. In the search effect (line 33-38), before calling Mapbox geocoding, check if the input matches lat,lng format
-3. If it matches, create a synthetic `GeocodingResult` using reverse geocoding to get a place name, and display it as a dropdown result
-4. This way users can paste or type coordinates directly and select the result
+---
 
-**File: `src/hooks/useMapboxGeocoding.ts`**
+### Changes
 
-No changes needed — the existing `reverseGeocode` method already supports converting coordinates to place names.
+**File: `src/pages/TripReview.tsx`**
 
-**Implementation detail:**
-- Regex: `/^(-?\d+\.?\d*)\s*,\s*(-?\d+\.?\d*)$/`
-- Validate lat is -90 to 90, lng is -180 to 180
-- Show a result like "12.9716, 77.5946" with the reverse-geocoded address below it
-- On select, pass the coordinates through `onSelect` as usual
+1. Between the Destination Card and "Add stops" button (after line 211), render `tripState.stops` as cards with a `MapPin` icon, showing each stop's address — same card style as start/destination
+2. Increase spacing between the header (logo) and "Trip Planner" title by changing `pt-2` to `pt-6` on the title div (line 160)
+
+**File: `src/pages/TripPlanner.tsx`**
+
+3. Same spacing fix — change `pt-2` to `pt-6` on the title div (line 289) to keep consistency
 
