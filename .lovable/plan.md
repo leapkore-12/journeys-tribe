@@ -1,25 +1,50 @@
 
 
-## Fix: Show Stops in Trip Review + Add Spacing
+## Save Trip Stops to Database
 
-### Issue 1: Stops not shown in TripReview
+### 1. Create `trip_stops` table (migration)
 
-The `TripReview.tsx` page reads `tripState.stops` but never renders them. It only shows start and destination cards, then an "Add stops" button. Stops added during planning are in `tripState.stops` but aren't displayed.
+```sql
+CREATE TABLE public.trip_stops (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  trip_id uuid NOT NULL REFERENCES public.trips(id) ON DELETE CASCADE,
+  address text NOT NULL,
+  latitude double precision,
+  longitude double precision,
+  stop_order integer NOT NULL DEFAULT 0,
+  created_at timestamptz DEFAULT now()
+);
 
-### Issue 2: Spacing between logo and "Trip Planner"
+ALTER TABLE public.trip_stops ENABLE ROW LEVEL SECURITY;
 
-The header and title are too close together. Need more vertical padding.
+CREATE POLICY "Trip stops viewable by everyone" ON public.trip_stops FOR SELECT USING (true);
+CREATE POLICY "Users can manage own trip stops" ON public.trip_stops FOR ALL 
+  USING (EXISTS (SELECT 1 FROM public.trips WHERE trips.id = trip_stops.trip_id AND trips.user_id = auth.uid()));
+```
 
----
+### 2. Insert stops on trip start (`src/pages/TripReview.tsx`)
 
-### Changes
+After trip creation succeeds (line ~98), insert stops from `tripState.stops` into `trip_stops`:
 
-**File: `src/pages/TripReview.tsx`**
+```ts
+if (tripState.stops.length > 0) {
+  await supabase.from('trip_stops').insert(
+    tripState.stops.map((stop, index) => ({
+      trip_id: tripId,
+      address: stop.address,
+      latitude: stop.coordinates?.[1] ?? null,
+      longitude: stop.coordinates?.[0] ?? null,
+      stop_order: index,
+    }))
+  );
+}
+```
 
-1. Between the Destination Card and "Add stops" button (after line 211), render `tripState.stops` as cards with a `MapPin` icon, showing each stop's address — same card style as start/destination
-2. Increase spacing between the header (logo) and "Trip Planner" title by changing `pt-2` to `pt-6` on the title div (line 160)
+### 3. Fetch stops in trip detail (`src/hooks/useTrips.ts`)
 
-**File: `src/pages/TripPlanner.tsx`**
+In `useTripById`, join `trip_stops` ordered by `stop_order` and include them in the returned trip object.
 
-3. Same spacing fix — change `pt-2` to `pt-6` on the title div (line 289) to keep consistency
+### 4. Display stops in TripDetail (`src/pages/TripDetail.tsx`)
+
+After the stats row (~line 305), render stops if present — similar cards with MapPin icon showing each stop address.
 
