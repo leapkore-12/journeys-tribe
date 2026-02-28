@@ -1,37 +1,50 @@
 
 
-## Create a Manage Notifications Settings Page
+## Fix: JSON Data Export Not Accessible on iOS
 
-Currently "Manage notifications" just navigates to the notifications inbox. It needs its own dedicated page with toggles to control which notifications the user receives.
+### Problem
+The current implementation creates a hidden `<a>` element and triggers `.click()` to download the file. On iOS Safari (and in-app WebViews), this approach either silently fails or downloads to an inaccessible location. Users see the "Data exported" toast but can't find the file.
 
-### 1. Database Migration — Add notification preference columns to `profiles`
+### Solution
+Replace the invisible download link with a visible approach that works on iOS:
 
-Add these boolean columns (all defaulting to `true`):
-- `notify_likes` — receive notifications when someone likes your trip
-- `notify_comments` — receive notifications on comments
-- `notify_follows` — receive notifications for follow requests/accepts
-- `notify_convoy_invites` — receive notifications for convoy invites
+1. **Use `window.open()` with a Blob URL** as a fallback — this opens the JSON in a new tab on iOS, where the user can use the share sheet to save it.
+2. **Better approach**: Use the **Web Share API** when available (iOS Safari supports it), offering users the native share sheet to save/send the file. Fall back to the current download method on desktop.
 
-### 2. New Page — `src/pages/NotificationSettings.tsx`
+### Changes — `src/pages/Settings.tsx`
 
-A settings-style page with:
-- Back arrow header titled "Manage Notifications"
-- Toggle switches for each notification type:
-  - **Likes** — "Get notified when someone likes your trip"
-  - **Comments** — "Get notified when someone comments on your trip"
-  - **Follows** — "Get notified about follow requests"
-  - **Convoy Invites** — "Get notified about convoy invitations"
-- Each toggle reads from and writes to the user's profile
+Update `handleExportData` (lines 230-239):
 
-### 3. Update `src/pages/Settings.tsx`
+```typescript
+const blob = new Blob([JSON.stringify(response.data, null, 2)], { type: 'application/json' });
+const fileName = `roadtribe-data-export-${new Date().toISOString().split('T')[0]}.json`;
 
-Change the "Manage notifications" item to navigate to `/settings/notifications` instead of `/notifications`.
+// Use Web Share API on mobile (iOS Safari supports this)
+if (navigator.share && navigator.canShare) {
+  const file = new File([blob], fileName, { type: 'application/json' });
+  const shareData = { files: [file] };
+  if (navigator.canShare(shareData)) {
+    await navigator.share(shareData);
+  } else {
+    // Fallback: open in new tab
+    const url = URL.createObjectURL(blob);
+    window.open(url, '_blank');
+    setTimeout(() => URL.revokeObjectURL(url), 60000);
+  }
+} else {
+  // Desktop: use standard download
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = fileName;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+```
 
-### 4. Update `src/App.tsx`
+This gives iOS users the native share sheet (Save to Files, AirDrop, etc.) while keeping the current desktop download behavior.
 
-Add route: `/settings/notifications` → `NotificationSettings`
-
-### 5. Update notification triggers (optional enhancement)
-
-The database triggers that create notifications (`notify_on_trip_like`, `notify_on_comment`, `notify_on_follow_request_accepted`) should check the recipient's preference before inserting. This ensures toggling off actually stops notifications.
+One file changed, ~15 lines modified.
 
