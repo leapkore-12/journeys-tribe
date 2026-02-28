@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Crosshair, Flag, Plus, Loader2, MapPin } from 'lucide-react';
+import { Crosshair, Flag, Plus, Loader2, MapPin, Car } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import TripHeader from '@/components/trip/TripHeader';
@@ -196,7 +196,7 @@ const TripReview = () => {
                 <p className="text-foreground font-medium">{tripState.startLocation}</p>
                 <p className="text-sm text-muted-foreground mt-1">Mumbai, Maharashtra</p>
                 {tripState.vehicle && (
-                  <p className="text-sm text-foreground mt-2">🚗 {tripState.vehicle.name}</p>
+                  <p className="text-sm text-foreground mt-2 flex items-center gap-1"><Car className="h-3.5 w-3.5 text-primary" /> {tripState.vehicle.name}</p>
                 )}
               </div>
             </div>

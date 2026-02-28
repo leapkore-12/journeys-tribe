@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useSmartBack } from '@/hooks/useSmartBack';
-import { ArrowLeft, MoreHorizontal, Flag, MessageCircle, Upload, Send, Trash2, MapPin } from 'lucide-react';
+import { ArrowLeft, MoreHorizontal, Flag, MessageCircle, Upload, Send, Trash2, MapPin, Car } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Input } from '@/components/ui/input';
@@ -253,8 +253,8 @@ const TripDetail = () => {
                 <div className="flex items-center gap-2">
                   <p className="font-semibold text-foreground text-sm">{trip.profile?.display_name || 'User'}</p>
                   {trip.vehicle && (
-                    <span className="text-muted-foreground text-xs">
-                      🚗 {trip.vehicle.name}
+                    <span className="text-muted-foreground text-xs flex items-center gap-1">
+                      <Car className="h-3.5 w-3.5 text-primary" /> {trip.vehicle.name}
                     </span>
                   )}
                 </div>

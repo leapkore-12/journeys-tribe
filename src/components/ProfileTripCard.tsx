@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Clock, Route, Globe, Users, Star, Lock, MoreHorizontal, UserMinus } from 'lucide-react';
+import { Clock, Route, Globe, Users, Star, Lock, MoreHorizontal, UserMinus, Car } from 'lucide-react';
 import { TripWithDetails } from '@/hooks/useTrips';
 import { formatDistanceToNow } from 'date-fns';
 import { useUntagFromTrip } from '@/hooks/useConvoyMembers';
@@ -115,7 +115,7 @@ const ProfileTripCard = ({ trip, showOwner = false, isTagged = false }: ProfileT
           {/* Vehicle badge */}
           {trip.vehicle && (
             <div className="absolute top-2 left-2 bg-background/80 backdrop-blur-sm px-2 py-1 rounded-full text-xs text-foreground flex items-center gap-1">
-              🚗 {trip.vehicle.name}
+              <Car className="h-3 w-3 text-primary" /> {trip.vehicle.name}
             </div>
           )}
           {/* Tagged badge */}
