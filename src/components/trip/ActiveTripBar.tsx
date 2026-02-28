@@ -31,6 +31,7 @@ const ActiveTripBar = ({ bottomOffset = 80 }: ActiveTripBarProps) => {
   const { data: activeConvoy, isLoading } = useActiveConvoy();
   const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
   const [isDismissing, setIsDismissing] = useState(false);
+  const [isConvoy, setIsConvoy] = useState(false);
 
   const cleanupMembership = async () => {
     if (!user?.id || !activeConvoy) return;
@@ -65,6 +66,12 @@ const ActiveTripBar = ({ bottomOffset = 80 }: ActiveTripBarProps) => {
         await cleanupMembership();
         toast({ title: "Trip ended", description: "This trip is no longer active" });
       } else {
+        const { count } = await supabase
+          .from('convoy_members')
+          .select('*', { count: 'exact', head: true })
+          .eq('trip_id', activeConvoy.trip_id)
+          .eq('status', 'active');
+        setIsConvoy((count || 0) > 1);
         setShowLeaveConfirm(true);
       }
     } catch (error) {
@@ -77,7 +84,8 @@ const ActiveTripBar = ({ bottomOffset = 80 }: ActiveTripBarProps) => {
 
   const handleLeaveConvoy = async () => {
     await cleanupMembership();
-    toast({ title: "Left convoy", description: "You have left the convoy" });
+    const label = isConvoy ? 'convoy' : 'trip';
+    toast({ title: `Left ${label}`, description: `You have left the ${label}` });
     setShowLeaveConfirm(false);
   };
 
@@ -135,15 +143,15 @@ const ActiveTripBar = ({ bottomOffset = 80 }: ActiveTripBarProps) => {
       <AlertDialog open={showLeaveConfirm} onOpenChange={setShowLeaveConfirm}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Leave Convoy?</AlertDialogTitle>
+            <AlertDialogTitle>Leave {isConvoy ? 'Convoy' : 'Trip'}?</AlertDialogTitle>
             <AlertDialogDescription>
-              This trip is still active. Are you sure you want to leave the convoy?
+              This trip is still active. Are you sure you want to leave the {isConvoy ? 'convoy' : 'trip'}?
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction onClick={handleLeaveConvoy}>
-              Leave Convoy
+              Leave {isConvoy ? 'Convoy' : 'Trip'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
