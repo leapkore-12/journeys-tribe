@@ -1,30 +1,41 @@
 
 
-## Show Trip Stops on Route Map in Trip Detail
+## Fix Invite Button Not Working
 
-### Approach
+### Root Causes
 
-Replace the static map image in the carousel with an interactive Mapbox map that displays the route line (from start to destination) plus markers for each stop along the route. The trip already has `start_lat/lng`, `end_lat/lng`, and `trip_stops` with `latitude/longitude`.
+1. **`activeTripId` can be `null`** — `handleShareInvite` passes `activeTripId` (which is `string | null`) directly to `createInvite.mutateAsync({ tripId: activeTripId })`. When null, the insert fails silently.
 
-### Changes
+2. **Silent failure** — The catch block only does `console.error`, so the user sees no feedback when the invite fails.
 
-**File: `src/pages/TripDetail.tsx`**
+3. **No null guard on button** — The invite button is always clickable even when `activeTripId` is null.
 
-1. Import `RoutePreviewMap` component
-2. In the slides array (line 97), replace the static `map_image_url` slide with an interactive map slide using a new type `'interactive-map'`
-3. In the carousel rendering (line 330-338), add a conditional: if `slide.type === 'interactive-map'`, render a `RoutePreviewMap` instead of an `<img>` tag, passing `startCoordinates`, `destinationCoordinates`, and `routeCoordinates` from the trip data
+### Changes — `src/pages/ActiveTrip.tsx`
 
-**File: `src/components/trip/RoutePreviewMap.tsx`**
+**1. Guard `handleShareInvite` against null tripId (line 432-448)**
+- Add early return if `!activeTripId`
+- Add user-facing toast on error instead of silent `console.error`
 
-1. Add a new `stops` prop: `Array<{ latitude: number; longitude: number; address: string }>`
-2. Add a `useEffect` that creates orange/amber circle markers for each stop (similar to start/dest markers but styled distinctly — e.g. amber with a number label)
-3. Include stop coordinates in the `fitBounds` calculation so the map viewport includes all stops
-4. Store stop markers in a ref array and clean them up on unmount
+```ts
+const handleShareInvite = useCallback(async () => {
+  if (!activeTripId) {
+    toast({ title: 'No active trip', description: 'Cannot create invite without an active trip.', variant: 'destructive' });
+    return;
+  }
+  try {
+    const result = await createInvite.mutateAsync({ tripId: activeTripId });
+    if (navigator.share) {
+      await navigator.share({ ... });
+    } else {
+      await copyInviteLink(result.invite_code);
+    }
+  } catch (error) {
+    console.error('Share failed:', error);
+    toast({ title: 'Invite failed', description: 'Could not create invite. Please try again.', variant: 'destructive' });
+  }
+}, [createInvite, copyInviteLink, getShareLink, activeTripId, toast]);
+```
 
-### Visual Design
-
-- Start marker: green circle (existing)
-- Stop markers: amber/primary circle with stop number
-- Destination marker: red circle (existing)
-- Route line: blue (existing)
+**2. Disable invite buttons when no tripId (lines 508-509, 733-734)**
+- Add `!activeTripId` to the `disabled` prop on both the header share button and the convoy panel invite button
 
