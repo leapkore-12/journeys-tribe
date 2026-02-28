@@ -430,6 +430,10 @@ const ActiveTrip = () => {
 
   // Handle share invite
   const handleShareInvite = useCallback(async () => {
+    if (!activeTripId) {
+      toast({ title: 'No active trip', description: 'Cannot create invite without an active trip.', variant: 'destructive' });
+      return;
+    }
     try {
       const result = await createInvite.mutateAsync({ tripId: activeTripId });
       
@@ -444,8 +448,9 @@ const ActiveTrip = () => {
       }
     } catch (error) {
       console.error('Share failed:', error);
+      toast({ title: 'Invite failed', description: 'Could not create invite. Please try again.', variant: 'destructive' });
     }
-  }, [createInvite, copyInviteLink, getShareLink, activeTripId]);
+  }, [createInvite, copyInviteLink, getShareLink, activeTripId, toast]);
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -506,8 +511,8 @@ const ActiveTrip = () => {
             {/* Share invite button */}
             <button 
               onClick={handleShareInvite}
-              disabled={createInvite.isPending}
-              className="min-h-11 min-w-11 flex items-center justify-center bg-card/80 backdrop-blur rounded-full active:opacity-70"
+              disabled={createInvite.isPending || !activeTripId}
+              className="min-h-11 min-w-11 flex items-center justify-center bg-card/80 backdrop-blur rounded-full active:opacity-70 disabled:opacity-50"
             >
               <Share2 className="h-5 w-5 text-foreground" />
             </button>
@@ -731,7 +736,7 @@ const ActiveTrip = () => {
                     variant="outline"
                     size="sm"
                     onClick={handleShareInvite}
-                    disabled={createInvite.isPending}
+                    disabled={createInvite.isPending || !activeTripId}
                     className="gap-2"
                   >
                     <Share2 className="h-4 w-4" />
