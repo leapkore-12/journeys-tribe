@@ -513,6 +513,44 @@ export type Database = {
           },
         ]
       }
+      trip_stops: {
+        Row: {
+          address: string
+          created_at: string | null
+          id: string
+          latitude: number | null
+          longitude: number | null
+          stop_order: number
+          trip_id: string
+        }
+        Insert: {
+          address: string
+          created_at?: string | null
+          id?: string
+          latitude?: number | null
+          longitude?: number | null
+          stop_order?: number
+          trip_id: string
+        }
+        Update: {
+          address?: string
+          created_at?: string | null
+          id?: string
+          latitude?: number | null
+          longitude?: number | null
+          stop_order?: number
+          trip_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "trip_stops_trip_id_fkey"
+            columns: ["trip_id"]
+            isOneToOne: false
+            referencedRelation: "trips"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       trips: {
         Row: {
           comments_count: number | null
