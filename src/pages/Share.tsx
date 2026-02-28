@@ -123,36 +123,169 @@ const Share = () => {
     slides.push({ type: 'map', src: trip.map_image_url });
   }
 
-  const handleInstagramShare = async () => {
-    if (!trip) return;
+  // Shared canvas rendering logic for both Download and Instagram Story
+  const generateStoryImage = async (): Promise<Blob | null> => {
+    if (!trip || slides.length === 0) return null;
     
-    const shareText = `${trip.start_location || 'Start'} → ${trip.end_location || 'End'} | ${formatDistance(trip.distance_km)} | RoadTribe`;
-    const shareUrl = `${window.location.origin}/trip/${trip.id}`;
+    const currentSlideData = slides[currentSlide];
+    if (!currentSlideData) return null;
 
-    // Try Web Share API first (works best on mobile, can share directly to Instagram)
-    if (navigator.share && navigator.canShare) {
-      try {
-        await navigator.share({
-          title: 'Check out my road trip!',
-          text: shareText,
-          url: shareUrl,
-        });
-        toast.success('Shared successfully!');
-        return;
-      } catch (err) {
-        if ((err as Error).name === 'AbortError') return;
-        // Fall through to Instagram URL scheme
+    try {
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return null;
+
+      const width = 1080;
+      const height = 1920;
+      canvas.width = width;
+      canvas.height = height;
+
+      // Load and draw background image
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      await new Promise<void>((resolve, reject) => {
+        img.onload = () => resolve();
+        img.onerror = () => reject(new Error('Failed to load image'));
+        img.src = currentSlideData.src;
+      });
+
+      const imgRatio = img.width / img.height;
+      const canvasRatio = width / height;
+      let drawWidth, drawHeight, drawX, drawY;
+      if (imgRatio > canvasRatio) {
+        drawHeight = height;
+        drawWidth = height * imgRatio;
+        drawX = (width - drawWidth) / 2;
+        drawY = 0;
+      } else {
+        drawWidth = width;
+        drawHeight = width / imgRatio;
+        drawX = 0;
+        drawY = (height - drawHeight) / 2;
       }
+      ctx.drawImage(img, drawX, drawY, drawWidth, drawHeight);
+
+      // Gradient overlays
+      const topGradient = ctx.createLinearGradient(0, 0, 0, 400);
+      topGradient.addColorStop(0, 'rgba(0, 0, 0, 0.7)');
+      topGradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
+      ctx.fillStyle = topGradient;
+      ctx.fillRect(0, 0, width, 400);
+
+      const bottomGradient = ctx.createLinearGradient(0, height - 400, 0, height);
+      bottomGradient.addColorStop(0, 'rgba(0, 0, 0, 0)');
+      bottomGradient.addColorStop(1, 'rgba(0, 0, 0, 0.7)');
+      ctx.fillStyle = bottomGradient;
+      ctx.fillRect(0, height - 400, width, 400);
+
+      // Text overlays
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+      ctx.font = '28px Inter, sans-serif';
+      ctx.textAlign = 'left';
+      ctx.fillText('Distance', 60, 100);
+      ctx.fillStyle = 'white';
+      ctx.font = 'bold 48px Inter, sans-serif';
+      ctx.fillText(formatDistance(trip.distance_km), 60, 160);
+
+      if (currentSlideData.type === 'map' && trip.start_location) {
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+        ctx.font = '24px Inter, sans-serif';
+        ctx.fillText(trip.start_location, 60, 200);
+      }
+
+      ctx.textAlign = 'right';
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+      ctx.font = '28px Inter, sans-serif';
+      ctx.fillText('Time on road', width - 60, 100);
+      ctx.fillStyle = 'white';
+      ctx.font = 'bold 48px Inter, sans-serif';
+      ctx.fillText(formatDuration(trip.duration_minutes), width - 60, 160);
+
+      if (currentSlideData.type === 'map' && trip.end_location) {
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+        ctx.font = '24px Inter, sans-serif';
+        ctx.fillText(trip.end_location, width - 60, 200);
+      }
+
+      // Convoy members
+      if (trip.convoy_members && trip.convoy_members.length > 0) {
+        ctx.textAlign = 'left';
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+        ctx.font = '24px Inter, sans-serif';
+        ctx.fillText('Convoy with', 60, height - 140);
+        const names = trip.convoy_members.slice(0, 3).map(m => m.profile?.display_name || 'User').join(', ');
+        ctx.fillStyle = 'white';
+        ctx.font = '28px Inter, sans-serif';
+        ctx.fillText(names, 60, height - 100);
+      }
+
+      // RoadTribe logo
+      const logoIcon = new Image();
+      logoIcon.crossOrigin = 'anonymous';
+      await new Promise<void>((resolve) => {
+        logoIcon.onload = () => resolve();
+        logoIcon.onerror = () => resolve();
+        logoIcon.src = rWhitePng;
+      });
+
+      const iconSize = 90;
+      const paddingRight = 60;
+      const paddingBottom = 80;
+      const gap = 30;
+      ctx.font = '600 54px Inter, sans-serif';
+      const textWidth = ctx.measureText('RoadTribe').width;
+      const textX = width - paddingRight;
+      const textY = height - paddingBottom;
+
+      if (logoIcon.complete && logoIcon.naturalWidth > 0) {
+        const iconX = textX - textWidth - gap - iconSize;
+        const iconY = textY - iconSize + 18;
+        ctx.drawImage(logoIcon, iconX, iconY, iconSize, iconSize);
+      }
+
+      ctx.textAlign = 'right';
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+      ctx.fillText('RoadTribe', textX, textY);
+
+      // Convert to blob
+      return await new Promise<Blob | null>((resolve) => {
+        canvas.toBlob((blob) => resolve(blob), 'image/png');
+      });
+    } catch (error) {
+      console.error('Image generation error:', error);
+      return null;
+    }
+  };
+
+  const handleInstagramShare = async () => {
+    if (!trip || slides.length === 0) return;
+
+    const imageBlob = await generateStoryImage();
+    if (!imageBlob) {
+      toast.error('Failed to generate image');
+      return;
     }
 
-    // Try opening Instagram app via URL scheme
-    try {
-      await navigator.clipboard.writeText(`${shareText}\n${shareUrl}`);
-      // Open Instagram - on mobile this opens the app, on desktop opens website
-      window.open('https://www.instagram.com/', '_blank');
-      toast.success('Link copied! Paste it in your Instagram story.');
-    } catch {
-      toast.error('Failed to share');
+    const file = new File([imageBlob], 'roadtribe-story.png', { type: 'image/png' });
+
+    if (navigator.share && navigator.canShare?.({ files: [file] })) {
+      try {
+        await navigator.share({ files: [file], title: 'RoadTribe Trip' });
+      } catch (err) {
+        if ((err as Error).name === 'AbortError') return;
+        toast.error('Failed to share');
+      }
+    } else {
+      // Fallback: copy link and try Instagram URL scheme
+      const shareUrl = `${window.location.origin}/trip/${trip.id}`;
+      try {
+        await navigator.clipboard.writeText(shareUrl);
+      } catch { /* ignore */ }
+      window.location.href = 'instagram://story-camera';
+      setTimeout(() => {
+        window.open('https://www.instagram.com/', '_blank');
+      }, 2000);
+      toast.success('Link copied! Share it on Instagram.');
     }
   };
 
@@ -220,166 +353,35 @@ const Share = () => {
 
   const handleDownload = async () => {
     if (!trip || slides.length === 0) return;
-    
-    const currentSlideData = slides[currentSlide];
-    if (!currentSlideData) return;
 
     setIsDownloading(true);
 
     try {
-      // Create canvas
-      const canvas = document.createElement('canvas');
-      const ctx = canvas.getContext('2d');
-      if (!ctx) throw new Error('Canvas not supported');
+      const imageBlob = await generateStoryImage();
+      if (!imageBlob) throw new Error('Failed to generate image');
 
-      // Set canvas to 9:16 aspect ratio (story format)
-      const width = 1080;
-      const height = 1920;
-      canvas.width = width;
-      canvas.height = height;
+      const file = new File([imageBlob], `roadtribe-trip-${trip.id}.png`, { type: 'image/png' });
 
-      // Load and draw background image
-      const img = new Image();
-      img.crossOrigin = 'anonymous';
-      
-      await new Promise<void>((resolve, reject) => {
-        img.onload = () => resolve();
-        img.onerror = () => reject(new Error('Failed to load image'));
-        img.src = currentSlideData.src;
-      });
-
-      // Draw image covering canvas
-      const imgRatio = img.width / img.height;
-      const canvasRatio = width / height;
-      
-      let drawWidth, drawHeight, drawX, drawY;
-      if (imgRatio > canvasRatio) {
-        drawHeight = height;
-        drawWidth = height * imgRatio;
-        drawX = (width - drawWidth) / 2;
-        drawY = 0;
+      if (navigator.share && navigator.canShare?.({ files: [file] })) {
+        await navigator.share({ files: [file], title: 'RoadTribe Trip' });
+        toast.success('Image shared!');
       } else {
-        drawWidth = width;
-        drawHeight = width / imgRatio;
-        drawX = 0;
-        drawY = (height - drawHeight) / 2;
+        // Desktop fallback
+        const dataUrl = URL.createObjectURL(imageBlob);
+        const link = document.createElement('a');
+        link.download = `roadtribe-trip-${trip.id}.png`;
+        link.href = dataUrl;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(dataUrl);
+        toast.success('Image downloaded!');
       }
-      
-      ctx.drawImage(img, drawX, drawY, drawWidth, drawHeight);
-
-      // Draw gradient overlays
-      const topGradient = ctx.createLinearGradient(0, 0, 0, 400);
-      topGradient.addColorStop(0, 'rgba(0, 0, 0, 0.7)');
-      topGradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
-      ctx.fillStyle = topGradient;
-      ctx.fillRect(0, 0, width, 400);
-
-      const bottomGradient = ctx.createLinearGradient(0, height - 400, 0, height);
-      bottomGradient.addColorStop(0, 'rgba(0, 0, 0, 0)');
-      bottomGradient.addColorStop(1, 'rgba(0, 0, 0, 0.7)');
-      ctx.fillStyle = bottomGradient;
-      ctx.fillRect(0, height - 400, width, 400);
-
-      // Draw text overlays
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
-      ctx.font = '28px Inter, sans-serif';
-      
-      // Top-left: Distance
-      ctx.textAlign = 'left';
-      ctx.fillText('Distance', 60, 100);
-      ctx.fillStyle = 'white';
-      ctx.font = 'bold 48px Inter, sans-serif';
-      ctx.fillText(formatDistance(trip.distance_km), 60, 160);
-      
-      // Location on map slide
-      if (currentSlideData.type === 'map' && trip.start_location) {
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
-        ctx.font = '24px Inter, sans-serif';
-        ctx.fillText(trip.start_location, 60, 200);
-      }
-
-      // Top-right: Time on road
-      ctx.textAlign = 'right';
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
-      ctx.font = '28px Inter, sans-serif';
-      ctx.fillText('Time on road', width - 60, 100);
-      ctx.fillStyle = 'white';
-      ctx.font = 'bold 48px Inter, sans-serif';
-      ctx.fillText(formatDuration(trip.duration_minutes), width - 60, 160);
-      
-      // End location on map slide
-      if (currentSlideData.type === 'map' && trip.end_location) {
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
-        ctx.font = '24px Inter, sans-serif';
-        ctx.fillText(trip.end_location, width - 60, 200);
-      }
-
-      // Bottom-left: Convoy members
-      if (trip.convoy_members && trip.convoy_members.length > 0) {
-        ctx.textAlign = 'left';
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
-        ctx.font = '24px Inter, sans-serif';
-        ctx.fillText('Convoy with', 60, height - 140);
-        
-        // Draw convoy member names
-        const names = trip.convoy_members.slice(0, 3).map(m => m.profile?.display_name || 'User').join(', ');
-        ctx.fillStyle = 'white';
-        ctx.font = '28px Inter, sans-serif';
-        ctx.fillText(names, 60, height - 100);
-      }
-
-      // Bottom-right: RoadTribe logo (icon + text)
-      const logoIcon = new Image();
-      logoIcon.crossOrigin = 'anonymous';
-      
-      await new Promise<void>((resolve) => {
-        logoIcon.onload = () => resolve();
-        logoIcon.onerror = () => {
-          console.warn('Logo icon failed to load');
-          resolve();
-        };
-        logoIcon.src = rWhitePng; // Use imported asset
-      });
-
-      // Scaled values to match UI preview (scale factor ~3.86x)
-      const iconSize = 90;
-      const paddingRight = 60;
-      const paddingBottom = 80;
-      const gap = 30;
-      
-      // Set font to match UI (text-sm font-semibold scaled)
-      ctx.font = '600 54px Inter, sans-serif';
-      const textWidth = ctx.measureText('RoadTribe').width;
-      
-      const textX = width - paddingRight;
-      const textY = height - paddingBottom;
-      
-      // Draw logo icon if loaded (positioned left of text)
-      if (logoIcon.complete && logoIcon.naturalWidth > 0) {
-        const iconX = textX - textWidth - gap - iconSize;
-        const iconY = textY - iconSize + 18;
-        ctx.drawImage(logoIcon, iconX, iconY, iconSize, iconSize);
-      }
-      
-      // Draw "RoadTribe" text
-      ctx.textAlign = 'right';
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
-      ctx.fillText('RoadTribe', textX, textY);
-
-      // Trigger download
-      const dataUrl = canvas.toDataURL('image/png');
-      const link = document.createElement('a');
-      link.download = `roadtribe-trip-${trip.id}.png`;
-      link.href = dataUrl;
-      link.style.display = 'none';
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-
-      toast.success('Image downloaded!');
     } catch (error) {
-      console.error('Download error:', error);
-      toast.error('Failed to download image');
+      if ((error as Error).name !== 'AbortError') {
+        console.error('Download error:', error);
+        toast.error('Failed to download image');
+      }
     } finally {
       setIsDownloading(false);
     }
