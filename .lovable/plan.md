@@ -1,34 +1,26 @@
 
 
-## Fix PostTrip Scrolling & Vehicle Emoji
+## Fix "Leave Convoy" → "Leave Trip" for Solo Trips
 
-### Problem 1: Page not scrollable
-The outer container on line 274 uses `flex flex-col bg-background` but is missing `h-full`. The inner content div on line 277 has `overflow-y-auto` but without a height constraint on the parent, it won't scroll.
+### Problem
+The dismiss confirmation dialog always says "Leave Convoy?" regardless of whether the user is on a solo trip or a group convoy trip.
 
-### Problem 2: Vehicle emoji too large/colorful
-The `🚗` emoji at `text-2xl` size (line 364) is visually dominant. Replace all `🚗` usages across the app with a simpler car icon from Lucide (`Car`) styled in the primary/turquoise color.
+### Changes — `src/components/trip/ActiveTripBar.tsx`
 
-### Changes
+1. **Check if solo trip**: Compare `activeConvoy.trip.user_id === user.id` and add a query to count active convoy members for the trip. If only 1 member (the user), it's a solo trip.
 
-**`src/pages/PostTrip.tsx`**
-- Line 274: Change outer div to `flex flex-col h-full bg-background` to enable scrolling
-- Line 364: Replace `<span className="text-2xl">🚗</span>` with a Lucide `Car` icon sized appropriately and colored `text-primary`
-- Import `Car` from `lucide-react`
+2. **Simpler approach**: Since the `useActiveConvoy` hook already tells us `is_leader` and `trip.user_id`, we can fetch the member count inline. But the simplest: if the user owns the trip (`trip.user_id === user.id`), check member count. Or even simpler — just count members in the dismiss handler when we already hit the DB.
 
-**`src/components/TripCard.tsx`** (line 247)
-- Replace `🚗` with `<Car className="h-3.5 w-3.5 text-primary inline" />` 
+3. **Determine `isConvoy`**: In `handleDismiss`, after fetching the trip status, also fetch `convoy_members` count for the trip. If count > 1, it's a convoy. Store in state.
 
-**`src/pages/TripDetail.tsx`** (line 257)
-- Same replacement as TripCard
+4. **Update dialog text dynamically**:
+   - Solo: Title = "Leave Trip?", Description = "...leave the trip?", Button = "Leave Trip", toast = "Left trip"
+   - Convoy: Title = "Leave Convoy?", Description = "...leave the convoy?", Button = "Leave Convoy", toast = "Left convoy"
 
-**`src/pages/TripReview.tsx`** (line 199)
-- Replace `🚗 {tripState.vehicle.name}` with Car icon + text
+### Implementation
+- Add `const [isConvoy, setIsConvoy] = useState(false)` state
+- In `handleDismiss`, after confirming trip is active, query `convoy_members` count where `trip_id` matches and `status = 'active'`. Set `isConvoy = count > 1`
+- Replace hardcoded "Convoy" strings in dialog with conditional: `isConvoy ? 'Convoy' : 'Trip'`
 
-**`src/pages/TripPlanner.tsx`** (lines 348, 382)
-- Replace both `🚗` instances with Car icon
-
-**`src/components/ProfileTripCard.tsx`** (line 118)
-- Replace `🚗` with Car icon
-
-6 files, ~12 lines changed. The `LiveTrackingMap.tsx` uses it in raw HTML strings for map popups — will leave that as-is since it's a different rendering context.
+One file changed, ~10 lines added.
 
