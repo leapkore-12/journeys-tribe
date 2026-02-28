@@ -138,7 +138,7 @@ const EditUser = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background pb-20">
+    <div className="flex flex-col h-full bg-background">
       {/* Header */}
       <header className="sticky top-0 z-50 border-b border-border/50 bg-background/95 backdrop-blur">
         <div className="flex items-center justify-between p-4">
@@ -165,7 +165,8 @@ const EditUser = () => {
         </div>
       </header>
 
-      <main className="p-4 space-y-6">
+      <div className="flex-1 overflow-y-auto">
+      <main className="p-4 pb-32 space-y-6">
         {/* User Header */}
         <div className="flex items-center gap-4">
           <Avatar className="h-16 w-16">
@@ -419,6 +420,7 @@ const EditUser = () => {
           </Card>
         )}
       </main>
+      </div>
 
       <AdminBottomNav />
     </div>

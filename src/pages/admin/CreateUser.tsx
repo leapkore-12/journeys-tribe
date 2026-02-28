@@ -50,7 +50,7 @@ const CreateUser = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background pb-32">
+    <div className="flex flex-col h-full bg-background">
       {/* Header */}
       <header className="sticky top-0 z-50 border-b border-border/50 bg-background/95 backdrop-blur">
         <div className="flex items-center gap-2 p-4">
@@ -64,7 +64,8 @@ const CreateUser = () => {
         </div>
       </header>
 
-      <main className="p-4">
+      <div className="flex-1 overflow-y-auto">
+      <main className="p-4 pb-32">
         <form onSubmit={handleSubmit} className="space-y-6">
           <Card className="border-border/50">
             <CardHeader>
@@ -191,6 +192,7 @@ const CreateUser = () => {
           </Button>
         </form>
       </main>
+      </div>
 
       <AdminBottomNav />
     </div>
