@@ -1,31 +1,18 @@
 
 
-## Fix Edge-to-Edge Display for ActiveTrip and Share Screens
+## Fix PostTrip Bottom Buttons Positioning
 
 ### Problem
-`MobileContainer` adds `paddingTop: env(safe-area-inset-top)` on native, creating a visible gap at the top for immersive/full-screen pages (ActiveTrip map, Share screen). The current negative margin fix on ActiveTrip may not fully work because the container also loses height due to the padding.
+The "Delete trip" and "Post trip" buttons use `FixedBottomActions` with `aboveNav={true}` (default), which adds `bottomNavHeight` offset — but PostTrip has no bottom nav, so the buttons float too high with a visible gap from the bottom. The visibility dropdown also sits below the buttons in the scroll area, making it look disconnected.
 
-### Solution
-For both immersive screens, use a combination of negative margin AND added padding compensation to truly fill edge-to-edge:
+### Changes — `src/pages/PostTrip.tsx`
 
-**`src/pages/ActiveTrip.tsx`** — Refine the fix:
-```tsx
-<div 
-  className="bg-background relative overflow-hidden"
-  style={{ 
-    height: `calc(100vh + env(safe-area-inset-top, ${safeAreaTop}px))`,
-    marginTop: `calc(-1 * env(safe-area-inset-top, ${safeAreaTop}px))`,
-  }}
->
-```
-Adding `env(safe-area-inset-top)` to the height ensures the container actually fills the reclaimed space.
+1. **Move visibility dropdown below the buttons** — Move it into the `FixedBottomActions` area so it sits at the very bottom with the action buttons above it, keeping everything anchored together.
 
-**`src/pages/Share.tsx`** — Apply the same pattern:
-- Import `useDeviceSpacing` 
-- Change root `<div className="flex flex-col h-full bg-black">` to use the same negative-margin + expanded-height style
-- Adjust the floating back button top position to account for safe area: `top: max(env(safe-area-inset-top), 16px) + 8px`
+2. **Set `aboveNav={false}`** on `FixedBottomActions` — This positions the buttons at the screen bottom with only safe-area padding, not the bottom-nav offset.
 
-### Files changed
-1. `src/pages/ActiveTrip.tsx` — fix height calculation (1 line)
-2. `src/pages/Share.tsx` — add negative margin + height fix, adjust back button positioning (~5 lines)
+3. **Adjust scroll area padding** — Update `pb-24` to account for the new bottom layout (buttons + visibility together).
+
+### Result
+Buttons and visibility will be flush at the bottom of the screen with only safe-area clearance, matching proper iPhone layout.
 
