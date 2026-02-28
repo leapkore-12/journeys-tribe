@@ -2,11 +2,12 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useSmartBack } from '@/hooks/useSmartBack';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, MoreHorizontal, Plus, Car, Star, ChevronUp } from 'lucide-react';
+import { ArrowLeft, MoreHorizontal, Plus, Car, Star, ChevronUp, X } from 'lucide-react';
 import { useVehicles } from '@/hooks/useVehicles';
 import { useCurrentProfile } from '@/hooks/useProfile';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
 
 const Garage = () => {
   const navigate = useNavigate();
@@ -14,6 +15,7 @@ const Garage = () => {
   const { data: vehicles, isLoading } = useVehicles();
   const { data: profile } = useCurrentProfile();
   const [expandedVehicleId, setExpandedVehicleId] = useState<string | null>(null);
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
 
   const toggleExpand = (vehicleId: string) => {
     setExpandedVehicleId(prev => prev === vehicleId ? null : vehicleId);
@@ -108,16 +110,17 @@ const Garage = () => {
                           className="grid grid-cols-3 gap-1"
                         >
                           {displayPhotos.map((img, i) => (
-                            <div 
+                            <button 
                               key={img.id} 
                               className="aspect-square rounded-lg overflow-hidden bg-secondary"
+                              onClick={() => setSelectedImage(img.image_url)}
                             >
                               <img 
                                 src={img.image_url} 
                                 alt={`${vehicle.name} photo ${i + 1}`}
                                 className="w-full h-full object-cover"
                               />
-                            </div>
+                            </button>
                           ))}
                           
                           {/* View More/Less Button - only show if more than 5 photos */}
@@ -177,6 +180,21 @@ const Garage = () => {
           </div>
         )}
       </div>
+
+      {/* Fullscreen Image Viewer */}
+      <Dialog open={!!selectedImage} onOpenChange={() => setSelectedImage(null)}>
+        <DialogContent className="max-w-none w-screen h-screen p-0 border-none bg-black/95 rounded-none [&>button]:z-50 [&>button]:text-white [&>button]:top-4 [&>button]:right-4">
+          {selectedImage && (
+            <div className="w-full h-full flex items-center justify-center p-4">
+              <img
+                src={selectedImage}
+                alt="Vehicle photo"
+                className="max-w-full max-h-full object-contain"
+              />
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
