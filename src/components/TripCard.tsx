@@ -181,7 +181,6 @@ const TripCard = ({ trip, index, onLike, onComment, onShare, onUserClick, contex
   // Build slides array
   const slides = [
     ...(trip.map_image_url ? [{ type: 'map' as const, src: trip.map_image_url, label: 'Route map' }] : []),
-    ...(trip.vehicle?.images?.[0] ? [{ type: 'vehicle' as const, src: trip.vehicle.images[0], label: trip.vehicle.name }] : []),
     ...(trip.trip_photos?.map((photo, idx) => ({ type: 'photo' as const, src: photo.image_url, label: `Trip photo ${idx + 1}` })) || []),
   ];
 
@@ -335,7 +334,7 @@ const TripCard = ({ trip, index, onLike, onComment, onShare, onUserClick, contex
                   <div className="relative h-48 rounded-xl overflow-hidden bg-secondary">
                     <img src={slide.src} alt={slide.label} className="w-full h-full object-cover" />
                     <div className="absolute top-2 left-2 bg-background/80 backdrop-blur-sm px-2 py-0.5 rounded text-xs text-foreground">
-                      {slide.type === 'map' ? '🗺️ Route' : slide.type === 'vehicle' ? '🚗 Vehicle' : '📷 Photo'}
+                      {slide.type === 'map' ? '🗺️ Route' : '📷 Photo'}
                     </div>
                   </div>
                 </CarouselItem>
@@ -483,14 +482,14 @@ const TripCard = ({ trip, index, onLike, onComment, onShare, onUserClick, contex
         )}
       </AnimatePresence>
 
-      <div className="h-0.5 bg-primary/30 mx-4" />
+      <div className="h-px bg-border mx-4" />
 
       {/* Action Row */}
       <div className="flex items-center justify-around py-2">
         <button 
           onClick={onLike} 
           className={cn(
-            "flex-1 flex items-center justify-center min-h-11 transition-colors active:opacity-70",
+            "flex-1 flex items-center justify-center min-h-11 min-w-11 transition-colors active:opacity-70",
             trip.is_liked ? "text-primary" : "text-muted-foreground"
           )}
         >
@@ -498,19 +497,19 @@ const TripCard = ({ trip, index, onLike, onComment, onShare, onUserClick, contex
         </button>
         <button 
           onClick={onComment} 
-          className="flex-1 flex items-center justify-center min-h-11 text-muted-foreground transition-colors active:opacity-70"
+          className="flex-1 flex items-center justify-center min-h-11 min-w-11 text-muted-foreground transition-colors active:opacity-70"
         >
           <MessageCircle className="h-6 w-6" />
         </button>
         <button 
           onClick={onShare} 
-          className="flex-1 flex items-center justify-center min-h-11 text-muted-foreground transition-colors active:opacity-70"
+          className="flex-1 flex items-center justify-center min-h-11 min-w-11 text-muted-foreground transition-colors active:opacity-70"
         >
           <Upload className="h-6 w-6" />
         </button>
       </div>
 
-      <div className="h-2 bg-primary/20" />
+      <div className="h-2 bg-border" />
 
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>

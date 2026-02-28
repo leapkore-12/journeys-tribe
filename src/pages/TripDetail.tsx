@@ -100,7 +100,6 @@ const TripDetail = () => {
     ...(hasCoordinates
       ? [{ type: 'interactive-map' as const, src: '', label: 'Route map' }]
       : trip.map_image_url ? [{ type: 'map' as const, src: trip.map_image_url, label: 'Route map' }] : []),
-    ...(trip.vehicle?.images?.[0] ? [{ type: 'vehicle' as const, src: trip.vehicle.images[0], label: `${trip.vehicle.make} ${trip.vehicle.model}` }] : []),
     ...(trip.trip_photos?.map((photo, idx) => ({ type: 'photo' as const, src: photo.image_url, label: `Trip photo ${idx + 1}` })) || []),
   ] : [];
 
@@ -349,7 +348,7 @@ const TripDetail = () => {
                           <img src={slide.src} alt={slide.label} className="w-full h-full object-cover" />
                         )}
                         <div className="absolute top-2 left-2 bg-background/80 backdrop-blur-sm px-2 py-0.5 rounded text-xs text-foreground">
-                          {slide.type === 'interactive-map' || slide.type === 'map' ? '🗺️ Route' : slide.type === 'vehicle' ? '🚗 Vehicle' : '📷 Photo'}
+                          {slide.type === 'interactive-map' || slide.type === 'map' ? '🗺️ Route' : '📷 Photo'}
                         </div>
                       </div>
                     </CarouselItem>
@@ -380,25 +379,25 @@ const TripDetail = () => {
             <span className="text-sm text-muted-foreground">{trip.comments_count || 0} Comments</span>
           </div>
 
-          <div className="h-0.5 bg-primary/30 mx-4" />
+          <div className="h-px bg-border mx-4" />
 
           {/* Action Row */}
           <div className="flex items-center justify-around py-2">
             <button 
               onClick={handleLike} 
               className={cn(
-                "flex-1 flex items-center justify-center min-h-11 transition-colors active:opacity-70",
+                "flex-1 flex items-center justify-center min-h-11 min-w-11 transition-colors active:opacity-70",
                 trip.is_liked ? "text-primary" : "text-muted-foreground"
               )}
             >
               <Flag className={cn("h-6 w-6", trip.is_liked && "fill-primary")} />
             </button>
-            <button className="flex-1 flex items-center justify-center min-h-11 text-primary active:opacity-70">
+            <button className="flex-1 flex items-center justify-center min-h-11 min-w-11 text-primary active:opacity-70">
               <MessageCircle className="h-6 w-6" />
             </button>
             <button 
               onClick={handleShare} 
-              className="flex-1 flex items-center justify-center min-h-11 text-muted-foreground transition-colors active:opacity-70"
+              className="flex-1 flex items-center justify-center min-h-11 min-w-11 text-muted-foreground transition-colors active:opacity-70"
             >
               <Upload className="h-6 w-6" />
             </button>
@@ -406,7 +405,7 @@ const TripDetail = () => {
         </motion.article>
 
         {/* Divider */}
-        <div className="h-2 bg-primary/20" />
+        <div className="h-2 bg-border" />
 
         {/* Comments Section */}
         <div className="px-4 py-3 border-b border-border">
