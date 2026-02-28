@@ -84,6 +84,7 @@ const Share = () => {
   const [carouselApi, setCarouselApi] = useState<CarouselApi>();
   const [currentSlide, setCurrentSlide] = useState(0);
   const [isDownloading, setIsDownloading] = useState(false);
+  const [isGeneratingStory, setIsGeneratingStory] = useState(false);
   const [isShareSheetOpen, setIsShareSheetOpen] = useState(false);
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
@@ -260,6 +261,8 @@ const Share = () => {
   const handleInstagramShare = async () => {
     if (!trip || slides.length === 0) return;
 
+    setIsGeneratingStory(true);
+    try {
     const imageBlob = await generateStoryImage();
     if (!imageBlob) {
       toast.error('Failed to generate image');
@@ -286,6 +289,9 @@ const Share = () => {
         window.open('https://www.instagram.com/', '_blank');
       }, 2000);
       toast.success('Link copied! Share it on Instagram.');
+    }
+    } finally {
+      setIsGeneratingStory(false);
     }
   };
 
@@ -554,9 +560,17 @@ const Share = () => {
               {/* Owner/Convoy member - can share as their own */}
               <Button
                 onClick={handleInstagramShare}
+                disabled={isGeneratingStory}
                 className="w-full h-12 bg-secondary hover:bg-secondary/80 text-foreground font-semibold"
               >
-                Instagram Story
+                {isGeneratingStory ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Generating…
+                  </>
+                ) : (
+                  'Instagram Story'
+                )}
               </Button>
               
               <Button
