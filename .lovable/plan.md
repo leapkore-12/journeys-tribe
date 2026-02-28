@@ -1,32 +1,34 @@
 
 
-## Issues to Fix
+## Fix PostTrip Scrolling & Vehicle Emoji
 
-### 1. Vehicle image showing as first slide (should only show user-selected photos)
-In `TripCard.tsx` line 184, the slides array includes the vehicle image from the garage (`trip.vehicle?.images?.[0]`). The user wants only the map route and user-uploaded trip photos — no automatic vehicle image injection.
+### Problem 1: Page not scrollable
+The outer container on line 274 uses `flex flex-col bg-background` but is missing `h-full`. The inner content div on line 277 has `overflow-y-auto` but without a height constraint on the parent, it won't scroll.
 
-**Fix in `TripCard.tsx` (line 182-186):** Remove the vehicle image slide from the slides array. Only include map and trip_photos.
+### Problem 2: Vehicle emoji too large/colorful
+The `🚗` emoji at `text-2xl` size (line 364) is visually dominant. Replace all `🚗` usages across the app with a simpler car icon from Lucide (`Car`) styled in the primary/turquoise color.
 
-**Fix in `TripDetail.tsx` (similar slides array ~line 242):** Same change — remove vehicle slide.
+### Changes
 
-### 2. No map route snippet as first slide
-The map_image_url may not be getting generated/stored properly during posting. Looking at `PostTrip.tsx` lines 139-152, the static map URL is generated from Mapbox and stored as `map_image_url`. If the URL is present, TripCard already shows it first. The issue might be that `map_image_url` is null for some trips, so only the vehicle image shows.
+**`src/pages/PostTrip.tsx`**
+- Line 274: Change outer div to `flex flex-col h-full bg-background` to enable scrolling
+- Line 364: Replace `<span className="text-2xl">🚗</span>` with a Lucide `Car` icon sized appropriately and colored `text-primary`
+- Import `Car` from `lucide-react`
 
-**No code change needed for ordering** — once vehicle image is removed, map will naturally be first if present. If map_image_url is missing for existing trips, that's a data issue from the posting flow.
+**`src/components/TripCard.tsx`** (line 247)
+- Replace `🚗` with `<Car className="h-3.5 w-3.5 text-primary inline" />` 
 
-### 3. Remove green line and green background dividers
-- `TripCard.tsx` line 486: `bg-primary/30` thin green line → change to `bg-border`
-- `TripCard.tsx` line 513: `bg-primary/20` thick green divider → change to `bg-border`
-- `TripDetail.tsx` line 383: `bg-primary/30` thin green line → change to `bg-border`  
-- `TripDetail.tsx` line 409: `bg-primary/20` thick green divider → change to `bg-border`
+**`src/pages/TripDetail.tsx`** (line 257)
+- Same replacement as TripCard
 
-### 4. Like button touch target too small
-The like button in the action row already has `min-h-11` but lacks `min-w-11`. The issue is the `flex-1` buttons share space but the Flag icon itself is small. Add `min-w-11` to all three action buttons in both `TripCard.tsx` and `TripDetail.tsx` for consistent 44px touch targets.
+**`src/pages/TripReview.tsx`** (line 199)
+- Replace `🚗 {tripState.vehicle.name}` with Car icon + text
 
-### Summary of Changes
+**`src/pages/TripPlanner.tsx`** (lines 348, 382)
+- Replace both `🚗` instances with Car icon
 
-| File | Change |
-|------|--------|
-| `src/components/TripCard.tsx` | Remove vehicle slide from carousel; change green dividers to `bg-border`; ensure action button touch targets |
-| `src/pages/TripDetail.tsx` | Remove vehicle slide from carousel; change green dividers to `bg-border`; ensure action button touch targets |
+**`src/components/ProfileTripCard.tsx`** (line 118)
+- Replace `🚗` with Car icon
+
+6 files, ~12 lines changed. The `LiveTrackingMap.tsx` uses it in raw HTML strings for map popups — will leave that as-is since it's a different rendering context.
 
