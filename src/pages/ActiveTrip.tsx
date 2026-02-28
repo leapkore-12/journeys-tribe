@@ -474,7 +474,13 @@ const ActiveTrip = () => {
   const remainingDistance = route ? (route.distance / 1000).toFixed(1) : (15 - distance).toFixed(1);
 
   return (
-    <div className="min-h-screen bg-background relative overflow-hidden">
+    <div 
+      className="bg-background relative overflow-hidden"
+      style={{ 
+        height: '100vh',
+        marginTop: `calc(-1 * env(safe-area-inset-top, ${safeAreaTop}px))`,
+      }}
+    >
       {/* Live Mapbox Map */}
       <div className="absolute inset-0">
         <LiveTrackingMap
