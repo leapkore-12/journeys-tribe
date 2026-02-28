@@ -1,45 +1,34 @@
 
 
-## Make Share Screen Immersive — Image-Only View
+## Fix Active Trip Map Not Filling From Top
 
 ### Problem
-The Share page currently shows a full page layout with header bar (back button, logo), the image carousel at a constrained size, and action buttons below. The user wants an immersive, edge-to-edge view where only the trip image with its overlays (distance, time on road, RoadTribe watermark) is prominent — matching the second screenshot.
+`MobileContainer` adds `paddingTop: env(safe-area-inset-top)` to all pages. For the ActiveTrip map page, this creates a black gap at the top because the map should go edge-to-edge behind the status bar. The header overlay already handles its own safe area padding.
 
-### Changes — `src/pages/Share.tsx`
+### Solution — `src/pages/ActiveTrip.tsx`
 
-1. **Remove the top header bar** (back button + logo bar) — replace with a floating back button overlaid on the image
-2. **Make the image full-screen / edge-to-edge** — remove `px-4 py-6` padding, remove `max-h-[500px]` constraint, make the image fill the viewport
-3. **Float action buttons at the bottom** — overlay the Instagram Story / Download buttons at the bottom of the screen over the image, or place them in a minimal bottom area
-4. **Remove the separate stats display outside the image** — the overlays on the image itself already show distance and time on road
-5. **Keep pagination dots** — but overlay them on the image or just below
+Change the root container from `min-h-screen` to `h-screen` with negative margin to pull the content up behind MobileContainer's padding:
 
-### Layout (new structure)
-```text
-┌──────────────────────┐
-│ ← (floating)         │
-│                      │
-│   Distance   Time    │  ← overlay on image
-│   339 km    6h 24m   │
-│                      │
-│                      │
-│     [TRIP IMAGE]     │  ← full screen
-│                      │
-│                      │
-│         RT RoadTribe │  ← overlay on image
-│  ● ○                 │  ← dots
-├──────────────────────┤
-│  [Instagram Story]   │  ← minimal bottom area
-│  [Download Image]    │
-└──────────────────────┘
+Actually, the cleaner fix is in `MobileContainer.tsx` — but that affects all pages.
+
+The best approach: Override the MobileContainer padding on ActiveTrip by using a negative top margin or absolute positioning to break out of the padding.
+
+**Change line 477** in `ActiveTrip.tsx`:
+```tsx
+// From:
+<div className="min-h-screen bg-background relative overflow-hidden">
+
+// To:
+<div 
+  className="bg-background relative overflow-hidden"
+  style={{ 
+    height: '100vh',
+    marginTop: `-env(safe-area-inset-top, ${safeAreaTop}px)`,
+  }}
+>
 ```
 
-### Implementation
-- Container: `flex flex-col h-full bg-black` (black background for immersive feel)
-- Image area: `flex-1 relative` with no padding, image fills available space
-- Back button: `absolute top-4 left-4 z-50` floating on image
-- Action buttons: fixed bottom section with minimal padding, semi-transparent background
-- Dots: overlaid at bottom of image area
-- Remove the header `<header>` element entirely
+This pulls the map container up to cover the safe area gap that MobileContainer creates, while the header overlay's own `paddingTop` still keeps the buttons in the correct position.
 
-One file changed (~30 lines modified).
+One file, ~3 lines changed.
 
