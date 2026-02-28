@@ -1,6 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { useSmartBack } from '@/hooks/useSmartBack';
 import { ArrowLeft, MoreHorizontal, Flag, MessageCircle, Upload, Send, Trash2, MapPin, Car } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -54,7 +53,10 @@ const formatDuration = (minutes: number | null) => {
 
 const TripDetail = () => {
   const navigate = useNavigate();
-  const goBack = useSmartBack('/feed');
+  const handleBack = () => {
+    if (window.history.length > 1) navigate(-1);
+    else navigate('/feed', { replace: true });
+  };
   const { tripId } = useParams();
   const { user } = useAuth();
   const { toast } = useToast();
@@ -180,7 +182,7 @@ const TripDetail = () => {
       <div className="flex flex-col bg-background">
         <header className="sticky top-0 z-40 bg-background border-b border-border">
           <div className="flex items-center justify-between px-4 h-14">
-            <button onClick={goBack} className="text-foreground min-h-11 min-w-11 flex items-center justify-center active:opacity-70">
+            <button onClick={handleBack} className="text-foreground min-h-11 min-w-11 flex items-center justify-center active:opacity-70">
               <ArrowLeft className="h-6 w-6" />
             </button>
             <img src={logoWhite} alt="RoadTribe" className="h-6" />
@@ -207,7 +209,7 @@ const TripDetail = () => {
       <div className="flex flex-col bg-background">
         <header className="sticky top-0 z-40 bg-background border-b border-border">
           <div className="flex items-center justify-between px-4 h-14">
-            <button onClick={goBack} className="text-foreground min-h-11 min-w-11 flex items-center justify-center active:opacity-70">
+            <button onClick={handleBack} className="text-foreground min-h-11 min-w-11 flex items-center justify-center active:opacity-70">
               <ArrowLeft className="h-6 w-6" />
             </button>
             <img src={logoWhite} alt="RoadTribe" className="h-6" />
@@ -226,7 +228,7 @@ const TripDetail = () => {
       {/* Header */}
       <header className="sticky top-0 z-40 bg-background border-b border-border">
         <div className="flex items-center justify-between px-4 h-14">
-          <button onClick={goBack} className="text-foreground min-h-11 min-w-11 flex items-center justify-center active:opacity-70">
+          <button onClick={handleBack} className="text-foreground min-h-11 min-w-11 flex items-center justify-center active:opacity-70">
             <ArrowLeft className="h-6 w-6" />
           </button>
           <img src={logoWhite} alt="RoadTribe" className="h-6" />

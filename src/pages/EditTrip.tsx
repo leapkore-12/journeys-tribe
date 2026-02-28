@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { useSmartBack } from '@/hooks/useSmartBack';
 import { ArrowLeft, MapPin, Clock, Navigation } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -35,7 +34,10 @@ const formatDuration = (minutes: number | null) => {
 
 const EditTrip = () => {
   const navigate = useNavigate();
-  const goBack = useSmartBack('/feed');
+  const handleBack = () => {
+    if (window.history.length > 1) navigate(-1);
+    else navigate('/feed', { replace: true });
+  };
   const { tripId } = useParams();
   const { toast } = useToast();
   const { data: trip, isLoading } = useTripById(tripId);
@@ -77,7 +79,7 @@ const EditTrip = () => {
       <div className="flex flex-col bg-background">
         <header className="sticky top-0 z-40 bg-background border-b border-border">
           <div className="flex items-center justify-between px-4 h-14">
-            <button onClick={goBack} className="text-foreground p-2 -ml-2">
+            <button onClick={handleBack} className="text-foreground p-2 -ml-2">
               <ArrowLeft className="h-6 w-6" />
             </button>
             <img src={logoWhite} alt="RoadTribe" className="h-6" />
@@ -98,7 +100,7 @@ const EditTrip = () => {
       <div className="flex flex-col bg-background">
         <header className="sticky top-0 z-40 bg-background border-b border-border">
           <div className="flex items-center justify-between px-4 h-14">
-            <button onClick={goBack} className="text-foreground p-2 -ml-2">
+            <button onClick={handleBack} className="text-foreground p-2 -ml-2">
               <ArrowLeft className="h-6 w-6" />
             </button>
             <img src={logoWhite} alt="RoadTribe" className="h-6" />
@@ -117,7 +119,7 @@ const EditTrip = () => {
       {/* Header */}
       <header className="sticky top-0 z-40 bg-background border-b border-border">
         <div className="flex items-center justify-between px-4 h-14">
-          <button onClick={goBack} className="text-foreground p-2 -ml-2">
+          <button onClick={handleBack} className="text-foreground p-2 -ml-2">
             <ArrowLeft className="h-6 w-6" />
           </button>
           <h1 className="font-semibold text-foreground">Edit Trip</h1>

@@ -1,5 +1,4 @@
 import { useNavigate } from 'react-router-dom';
-import { useSmartBack } from '@/hooks/useSmartBack';
 import { ArrowLeft, UserX } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -18,8 +17,11 @@ import {
 } from '@/components/ui/alert-dialog';
 
 const BlockedAccounts = () => {
-  const smartBack = useSmartBack();
   const navigate = useNavigate();
+  const handleBack = () => {
+    if (window.history.length > 1) navigate(-1);
+    else navigate('/settings', { replace: true });
+  };
   const { data: blockedUsers, isLoading } = useBlockedUsers();
   const unblockUser = useUnblockUser();
 
@@ -37,7 +39,7 @@ const BlockedAccounts = () => {
       {/* Header */}
       <div className="sticky top-0 z-10 bg-background border-b border-border">
         <div className="flex items-center gap-3 p-4">
-          <button onClick={smartBack} className="text-foreground min-h-11 min-w-11 flex items-center justify-center active:opacity-70">
+          <button onClick={handleBack} className="text-foreground min-h-11 min-w-11 flex items-center justify-center active:opacity-70">
             <ArrowLeft className="h-6 w-6" />
           </button>
           <h1 className="text-lg font-semibold">Blocked accounts</h1>
