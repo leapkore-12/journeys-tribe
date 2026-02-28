@@ -1,29 +1,30 @@
 
 
-## Fix Active Trip Navigation UI
+## Show Trip Stops on Route Map in Trip Detail
 
-### Issues identified from screenshot and code:
+### Approach
 
-1. **Header has no background** — logo, back arrow, share/call buttons float over the map with no backdrop, making them hard to see
-2. **Green direction banner** clashes with the turquoise map — needs to be white with dark text to match brand
-3. **Duplicate pause buttons** — there's a Pause in the bottom info card (line 666-701) AND a full-width "Pause trip" button below it (line 703-712), pushing content off-screen
-4. **Bottom layout issue** — the full-width Pause button at `bottom-0` pushes the info card too high and makes the Pause itself hard to reach
+Replace the static map image in the carousel with an interactive Mapbox map that displays the route line (from start to destination) plus markers for each stop along the route. The trip already has `start_lat/lng`, `end_lat/lng`, and `trip_stops` with `latitude/longitude`.
 
-### Changes — all in `src/pages/ActiveTrip.tsx`:
+### Changes
 
-**1. Add semi-transparent background to header overlay (lines 488-523)**
-- Add `bg-background/70 backdrop-blur-md` to the header container div so the logo and buttons are readable over the map
+**File: `src/pages/TripDetail.tsx`**
 
-**2. Change direction banner from green to white (lines 575-593)**
-- Change `bg-green-600` → `bg-white/90 backdrop-blur-md`
-- Change text colors from `text-white` → `text-foreground` and `text-white/70` → `text-muted-foreground`
-- Change icon background from `bg-white/20` → `bg-primary/10`
-- Change icon colors to use `text-primary`
+1. Import `RoutePreviewMap` component
+2. In the slides array (line 97), replace the static `map_image_url` slide with an interactive map slide using a new type `'interactive-map'`
+3. In the carousel rendering (line 330-338), add a conditional: if `slide.type === 'interactive-map'`, render a `RoutePreviewMap` instead of an `<img>` tag, passing `startCoordinates`, `destinationCoordinates`, and `routeCoordinates` from the trip data
 
-**3. Remove the duplicate full-width Pause button (lines 703-712)**
-- Delete the entire `{/* Pause Trip Button */}` section at the bottom
-- The Pause button in the bottom info card (line 693-698) already handles this
+**File: `src/components/trip/RoutePreviewMap.tsx`**
 
-**4. Move bottom info card down (line 666)**
-- Change `bottom-28` → `bottom-8` so it sits near the bottom of the screen with proper spacing, now that the duplicate button is removed
+1. Add a new `stops` prop: `Array<{ latitude: number; longitude: number; address: string }>`
+2. Add a `useEffect` that creates orange/amber circle markers for each stop (similar to start/dest markers but styled distinctly — e.g. amber with a number label)
+3. Include stop coordinates in the `fitBounds` calculation so the map viewport includes all stops
+4. Store stop markers in a ref array and clean them up on unmount
+
+### Visual Design
+
+- Start marker: green circle (existing)
+- Stop markers: amber/primary circle with stop number
+- Destination marker: red circle (existing)
+- Route line: blue (existing)
 
