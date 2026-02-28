@@ -327,6 +327,10 @@ export type Database = {
           marketing_consent: boolean | null
           monthly_trip_count: number | null
           monthly_trip_reset_at: string | null
+          notify_comments: boolean
+          notify_convoy_invites: boolean
+          notify_follows: boolean
+          notify_likes: boolean
           plan_type: string
           total_distance_km: number | null
           total_duration_minutes: number | null
@@ -350,6 +354,10 @@ export type Database = {
           marketing_consent?: boolean | null
           monthly_trip_count?: number | null
           monthly_trip_reset_at?: string | null
+          notify_comments?: boolean
+          notify_convoy_invites?: boolean
+          notify_follows?: boolean
+          notify_likes?: boolean
           plan_type?: string
           total_distance_km?: number | null
           total_duration_minutes?: number | null
@@ -373,6 +381,10 @@ export type Database = {
           marketing_consent?: boolean | null
           monthly_trip_count?: number | null
           monthly_trip_reset_at?: string | null
+          notify_comments?: boolean
+          notify_convoy_invites?: boolean
+          notify_follows?: boolean
+          notify_likes?: boolean
           plan_type?: string
           total_distance_km?: number | null
           total_duration_minutes?: number | null

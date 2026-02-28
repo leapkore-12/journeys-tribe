@@ -50,6 +50,7 @@ import TermsOfService from "./pages/TermsOfService";
 import Help from "./pages/Help";
 import Subscription from "./pages/Subscription";
 import BlockedAccounts from "./pages/BlockedAccounts";
+import NotificationSettings from "./pages/NotificationSettings";
 import { initCapacitor } from "@/lib/capacitor-init";
 
 const queryClient = new QueryClient();
@@ -113,7 +114,8 @@ const App = () => {
                   <Route path="/terms" element={<ProtectedRoute><TermsOfService /></ProtectedRoute>} />
                   <Route path="/help" element={<ProtectedRoute><Help /></ProtectedRoute>} />
                   <Route path="/subscription" element={<ProtectedRoute><Subscription /></ProtectedRoute>} />
-                  <Route path="/blocked-accounts" element={<ProtectedRoute><BlockedAccounts /></ProtectedRoute>} />
+                   <Route path="/blocked-accounts" element={<ProtectedRoute><BlockedAccounts /></ProtectedRoute>} />
+                   <Route path="/settings/notifications" element={<ProtectedRoute><NotificationSettings /></ProtectedRoute>} />
                   
                   {/* Admin Routes */}
                   <Route path="/admin" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
