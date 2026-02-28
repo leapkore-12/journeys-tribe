@@ -486,7 +486,7 @@ const ActiveTrip = () => {
       {/* Header Overlay */}
       {/* Header Overlay - Dynamic safe area for all iPhone sizes */}
       <div 
-        className="absolute left-0 right-0 z-20"
+        className="absolute left-0 right-0 z-20 bg-background/70 backdrop-blur-md"
         style={{ 
           top: 0,
           paddingTop: `max(env(safe-area-inset-top, ${safeAreaTop}px), ${safeAreaTop}px)`
@@ -575,19 +575,19 @@ const ActiveTrip = () => {
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="bg-green-600 rounded-xl p-4 flex items-center gap-4"
+          className="bg-white/90 backdrop-blur-md rounded-xl p-4 flex items-center gap-4 shadow-lg"
         >
-          <div className="w-12 h-12 bg-white/20 rounded-lg flex items-center justify-center">
-            <ArrowUp className="h-6 w-6 text-white" />
+          <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center">
+            <ArrowUp className="h-6 w-6 text-primary" />
           </div>
           <div className="flex-1">
-            <p className="text-white font-semibold text-lg line-clamp-1">{currentInstruction}</p>
-            <p className="text-white/70 text-sm flex items-center gap-1">
+            <p className="text-foreground font-semibold text-lg line-clamp-1">{currentInstruction}</p>
+            <p className="text-muted-foreground text-sm flex items-center gap-1">
               {route?.steps?.[1]?.instruction ? `Then ${route.steps[1].instruction.split(' ').slice(0, 3).join(' ')}` : 'Continue'}
             </p>
           </div>
-          <button className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
-            <Mic className="h-5 w-5 text-white" />
+          <button className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center">
+            <Mic className="h-5 w-5 text-primary" />
           </button>
         </motion.div>
       </div>
@@ -663,7 +663,7 @@ const ActiveTrip = () => {
       </div>
 
       {/* Bottom Info Card */}
-      <div className="absolute bottom-28 left-4 right-4 z-10">
+      <div className="absolute bottom-8 left-4 right-4 z-10">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -700,16 +700,6 @@ const ActiveTrip = () => {
         </motion.div>
       </div>
 
-      {/* Pause Trip Button */}
-      <div className="absolute bottom-0 left-0 right-0 p-4 bg-background z-10">
-        <Button
-          onClick={handlePauseTrip}
-          className="w-full h-14 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-lg gap-2"
-        >
-          <Pause className="h-5 w-5" />
-          Pause trip
-        </Button>
-      </div>
 
       {/* Convoy Panel Sheet */}
       <AnimatePresence>
