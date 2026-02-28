@@ -50,7 +50,7 @@ const CreateUser = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background pb-20">
+    <div className="min-h-screen bg-background pb-32">
       {/* Header */}
       <header className="sticky top-0 z-50 border-b border-border/50 bg-background/95 backdrop-blur">
         <div className="flex items-center gap-2 p-4">
@@ -177,7 +177,7 @@ const CreateUser = () => {
 
           <Button 
             type="submit" 
-            className="w-full" 
+            className="w-full mb-4" 
             disabled={createUser.isPending}
           >
             {createUser.isPending ? (
