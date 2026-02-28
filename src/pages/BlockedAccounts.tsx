@@ -37,9 +37,9 @@ const BlockedAccounts = () => {
       {/* Header */}
       <div className="sticky top-0 z-10 bg-background border-b border-border">
         <div className="flex items-center gap-3 p-4">
-          <Button variant="ghost" size="icon" onClick={smartBack}>
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
+          <button onClick={smartBack} className="text-foreground min-h-11 min-w-11 flex items-center justify-center active:opacity-70">
+            <ArrowLeft className="h-6 w-6" />
+          </button>
           <h1 className="text-lg font-semibold">Blocked accounts</h1>
         </div>
       </div>

@@ -88,13 +88,13 @@ const Profile = () => {
       {/* Header */}
       <header className="sticky top-0 z-40 bg-background">
         <div className="flex items-center justify-between px-4 h-14">
-          <button className="text-primary" onClick={() => navigate('/search')}>
+          <button className="text-primary min-h-11 min-w-11 flex items-center justify-center active:opacity-70" onClick={() => navigate('/search')}>
             <Search className="h-6 w-6" />
           </button>
           <span className="text-primary font-medium">@{profile?.username || 'user'}</span>
           <button
             onClick={() => navigate('/settings')}
-            className="text-primary"
+            className="text-primary min-h-11 min-w-11 flex items-center justify-center active:opacity-70"
           >
             <Settings className="h-6 w-6" />
           </button>

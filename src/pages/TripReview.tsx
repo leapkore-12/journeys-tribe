@@ -163,12 +163,12 @@ const TripReview = () => {
     <div className="flex flex-col h-full bg-background">
       {/* Custom header with search */}
       <header className="flex items-center justify-between px-4 h-14 bg-background">
-        <button onClick={() => navigate('/search')} className="w-10 h-10 flex items-center justify-center">
-          <Search className="h-5 w-5 text-foreground" />
+        <button onClick={() => navigate('/search')} className="min-h-11 min-w-11 flex items-center justify-center active:opacity-70">
+          <Search className="h-6 w-6 text-foreground" />
         </button>
         <img src={logoWhite} alt="RoadTribe" className="h-6" />
-        <button onClick={() => navigate('/notifications')} className="w-10 h-10 flex items-center justify-center">
-          <Bell className="h-5 w-5 text-foreground" />
+        <button onClick={() => navigate('/notifications')} className="min-h-11 min-w-11 flex items-center justify-center active:opacity-70">
+          <Bell className="h-6 w-6 text-foreground" />
         </button>
       </header>
 
