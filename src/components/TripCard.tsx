@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { MoreHorizontal, Flag, MessageCircle, Upload, ChevronDown, Send, Trash2 } from 'lucide-react';
+import { MoreHorizontal, Flag, MessageCircle, Upload, ChevronDown, Send, Trash2, Car } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { TripWithDetails, useDeleteTrip } from '@/hooks/useTrips';
 import { toast } from 'sonner';
@@ -243,8 +243,8 @@ const TripCard = ({ trip, index, onLike, onComment, onShare, onUserClick, contex
             <div className="flex items-center gap-2">
               <p className="font-semibold text-foreground text-sm">{trip.profile?.display_name || 'User'}</p>
               {trip.vehicle && (
-                <span className="text-muted-foreground text-xs">
-                  🚗 {trip.vehicle.name}
+                <span className="text-muted-foreground text-xs flex items-center gap-1">
+                  <Car className="h-3.5 w-3.5 text-primary" /> {trip.vehicle.name}
                 </span>
               )}
             </div>

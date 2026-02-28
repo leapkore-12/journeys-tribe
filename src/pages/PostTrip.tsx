@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Image, ChevronDown, Trash2, X, Lock, Crown, Loader2 } from 'lucide-react';
+import { Image, ChevronDown, Trash2, X, Lock, Crown, Loader2, Car } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -271,7 +271,7 @@ const PostTrip = () => {
   };
 
   return (
-    <div className="flex flex-col bg-background">
+    <div className="flex flex-col h-full bg-background">
       <TripHeader backTo="/trip/paused" />
       
       <div className="flex-1 px-4 py-4 pb-24 space-y-4 overflow-y-auto">
@@ -361,7 +361,7 @@ const PostTrip = () => {
           className="bg-secondary rounded-xl p-4 flex items-center justify-between"
         >
           <div className="flex items-center gap-3">
-            <span className="text-2xl">🚗</span>
+            <Car className="h-5 w-5 text-primary" />
             <span className="text-foreground font-medium">
               {tripState.vehicle?.name || 'No vehicle selected'}
             </span>

@@ -3,7 +3,7 @@ import { useDeviceSpacing } from '@/hooks/useDeviceInfo';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
-  Crosshair, Flag, Search, ChevronDown, Check, Plus, MapPin, Navigation, Loader2, Star, Crown, Lock
+  Crosshair, Flag, Search, ChevronDown, Check, Plus, MapPin, Navigation, Loader2, Star, Crown, Lock, Car
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -345,7 +345,7 @@ const TripPlanner = () => {
                     className="w-full h-12 px-4 bg-secondary rounded-lg flex items-center justify-between text-left"
                   >
                     <span className={selectedVehicle ? 'text-foreground' : 'text-muted-foreground'}>
-                      {selectedVehicle ? `🚗 ${selectedVehicle.name}` : vehiclesLoading ? 'Loading...' : 'Select vehicle'}
+                      {selectedVehicle ? <span className="flex items-center gap-1"><Car className="h-4 w-4 text-primary" /> {selectedVehicle.name}</span> : vehiclesLoading ? 'Loading...' : 'Select vehicle'}
                     </span>
                     <ChevronDown className={`h-5 w-5 text-primary transition-transform ${showVehicleDropdown ? 'rotate-180' : ''}`} />
                   </button>
@@ -379,7 +379,7 @@ const TripPlanner = () => {
                             className="w-full px-4 py-3 flex items-center justify-between hover:bg-muted/50 transition-colors"
                           >
                             <div className="flex items-center gap-2">
-                              <span className="text-foreground">🚗 {vehicle.name}</span>
+                              <span className="text-foreground flex items-center gap-1"><Car className="h-4 w-4 text-primary" /> {vehicle.name}</span>
                               {vehicle.make && vehicle.model && (
                                 <span className="text-muted-foreground text-sm">
                                   ({vehicle.make} {vehicle.model})
