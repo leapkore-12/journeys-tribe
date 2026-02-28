@@ -44,7 +44,9 @@ const EditVehicle = () => {
   const { toast } = useToast();
   
   // Get existing vehicle if editing
-  const { data: existingVehicle, isLoading: isLoadingVehicle, refetch: refetchVehicle } = useVehicle(id || '');
+  const [createdVehicleId, setCreatedVehicleId] = useState<string | null>(null);
+  const activeVehicleId = id || createdVehicleId || '';
+  const { data: existingVehicle, isLoading: isLoadingVehicle, refetch: refetchVehicle } = useVehicle(activeVehicleId);
   
   // Get user profile to check plan type
   const { data: profile } = useCurrentProfile();
@@ -66,7 +68,6 @@ const EditVehicle = () => {
   const [isUploading, setIsUploading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
-  const [createdVehicleId, setCreatedVehicleId] = useState<string | null>(null);
 
   // Use photos from existingVehicle data for real-time updates
   const photos: VehicleImage[] = existingVehicle?.vehicle_images || [];
@@ -146,10 +147,8 @@ const EditVehicle = () => {
         await uploadImage.mutateAsync({ vehicleId, file: files[i] });
       }
 
-      // Refetch to show new photos
-      if (id) {
-        await refetchVehicle();
-      }
+      // Refetch to show new photos immediately
+      await refetchVehicle();
 
       toast({
         title: `${allowedCount} photo(s) uploaded`,
