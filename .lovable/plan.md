@@ -1,22 +1,23 @@
 
 
-## Fix Comment Input Background
+## Add Delete Trip Option to Feed
 
-The `FixedBottomActions` component uses `bg-background` which resolves to pure black in dark mode. The issue is likely a transparency/blur effect bleeding through, or the area behind the input looking disconnected from the rest of the page.
+### Problem
+The "Delete trip" menu option is intentionally hidden when `context === 'feed'` (line 244 of TripCard.tsx). It only appears on profile/detail pages. The `handleDelete` function also just logs — it doesn't actually delete.
 
-### Changes — `src/pages/Comments.tsx`
+### Changes — `src/components/TripCard.tsx`
 
-Update the `FixedBottomActions` usage (~line 194) to pass a className that ensures a solid black background with no transparency, and a subtle top border for a cleaner, modern look:
+1. **Import** `useDeleteTrip` from `@/hooks/useTrips`, `AlertDialog` components from `@/components/ui/alert-dialog`, and `toast` from `sonner`.
 
-```tsx
-<FixedBottomActions showBorder className="bg-black">
-```
+2. **Add state and hook**: `const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)` and `const deleteTrip = useDeleteTrip()`.
 
-### Changes — `src/components/layout/FixedBottomActions.tsx`
+3. **Update `handleDelete`** (line 193-196): Instead of console.log, open the confirmation dialog: `setDeleteDialogOpen(true); setMenuOpen(false);`.
 
-Ensure the component uses a solid background with no backdrop blur or transparency artifacts. Add `z-50` to keep it above scrolling content:
+4. **Add `confirmDelete` function**: Calls `deleteTrip.mutateAsync(trip.id)`, shows success toast, navigates back if on detail page.
 
-- Line 27: Change class to `"fixed left-0 right-0 p-4 bg-background z-50 max-w-[430px] mx-auto"`
+5. **Remove the `context !== 'feed'` guard** (line 244): Show "Delete trip" for own posts in all contexts.
 
-Two files, ~2 lines changed.
+6. **Add AlertDialog JSX** at the end of the component (before closing `</motion.article>`): Confirmation dialog matching the pattern used in TripDetail.tsx.
+
+One file changed, ~30 lines added.
 
