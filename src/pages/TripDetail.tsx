@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useSmartBack } from '@/hooks/useSmartBack';
-import { ArrowLeft, MoreHorizontal, Flag, MessageCircle, Upload, Send, Trash2 } from 'lucide-react';
+import { ArrowLeft, MoreHorizontal, Flag, MessageCircle, Upload, Send, Trash2, MapPin } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Input } from '@/components/ui/input';
@@ -303,6 +303,24 @@ const TripDetail = () => {
               </div>
             </div>
           </div>
+
+          {/* Trip Stops */}
+          {trip.trip_stops && trip.trip_stops.length > 0 && (
+            <div className="px-4 pb-3 space-y-2">
+              <p className="text-xs text-muted-foreground">Stops</p>
+              {trip.trip_stops.map((stop, index) => (
+                <div key={stop.id} className="flex items-center gap-3 p-3 bg-secondary rounded-xl">
+                  <div className="w-7 h-7 rounded-full bg-primary/20 flex items-center justify-center">
+                    <MapPin className="h-3.5 w-3.5 text-primary" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-foreground">Stop {index + 1}</p>
+                    <p className="text-xs text-muted-foreground">{stop.address}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
 
           {/* Media Carousel */}
           {slides.length > 0 && (

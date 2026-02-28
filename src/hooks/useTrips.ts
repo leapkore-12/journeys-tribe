@@ -16,6 +16,16 @@ export interface ConvoyMemberProfile {
   } | null;
 }
 
+export interface TripStop {
+  id: string;
+  trip_id: string;
+  address: string;
+  latitude: number | null;
+  longitude: number | null;
+  stop_order: number;
+  created_at: string | null;
+}
+
 export interface TripWithDetails extends Trip {
   trip_photos: TripPhoto[];
   profile?: {
@@ -33,6 +43,7 @@ export interface TripWithDetails extends Trip {
   } | null;
   is_liked?: boolean;
   convoy_members?: ConvoyMemberProfile[];
+  trip_stops?: TripStop[];
 }
 
 const PAGE_SIZE = 10;
@@ -320,6 +331,13 @@ export const useTripById = (tripId: string | undefined) => {
         isLiked = !!like;
       }
 
+      // Fetch trip stops
+      const { data: tripStops } = await supabase
+        .from('trip_stops')
+        .select('*')
+        .eq('trip_id', tripId)
+        .order('stop_order', { ascending: true });
+
       // Fetch convoy members (include completed/left for completed trips)
       const { data: convoyMembers } = await supabase
         .from('convoy_members')
@@ -344,7 +362,7 @@ export const useTripById = (tripId: string | undefined) => {
           profile: profileMap.get(cm.user_id) || null,
         })) || [];
 
-      return { ...trip, profile, vehicle, is_liked: isLiked, convoy_members: convoyMembersWithProfiles } as TripWithDetails;
+      return { ...trip, profile, vehicle, is_liked: isLiked, convoy_members: convoyMembersWithProfiles, trip_stops: tripStops || [] } as TripWithDetails;
     },
     enabled: !!tripId,
   });

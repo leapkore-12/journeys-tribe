@@ -99,6 +99,22 @@ const TripReview = () => {
       
       // Store the trip ID in context for later use when finishing the trip
       setActiveTripId(tripId);
+
+      // Save stops to database
+      if (tripState.stops.length > 0) {
+        const { error: stopsError } = await supabase.from('trip_stops').insert(
+          tripState.stops.map((stop, index) => ({
+            trip_id: tripId,
+            address: stop.address,
+            latitude: stop.coordinates?.[1] ?? null,
+            longitude: stop.coordinates?.[0] ?? null,
+            stop_order: index,
+          }))
+        );
+        if (stopsError) {
+          console.error('Failed to save stops:', stopsError);
+        }
+      }
       
       // Add the current user as convoy leader
       const { error: leaderError } = await supabase
