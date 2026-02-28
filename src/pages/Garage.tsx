@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useSmartBack } from '@/hooks/useSmartBack';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowLeft, MoreHorizontal, Plus, Car, Star, ChevronUp, X } from 'lucide-react';
 import { useVehicles } from '@/hooks/useVehicles';
@@ -11,7 +10,10 @@ import { Dialog, DialogContent } from '@/components/ui/dialog';
 
 const Garage = () => {
   const navigate = useNavigate();
-  const goBack = useSmartBack('/profile');
+  const handleBack = () => {
+    if (window.history.length > 1) navigate(-1);
+    else navigate('/profile', { replace: true });
+  };
   const { data: vehicles, isLoading } = useVehicles();
   const { data: profile } = useCurrentProfile();
   const [expandedVehicleId, setExpandedVehicleId] = useState<string | null>(null);
@@ -27,7 +29,7 @@ const Garage = () => {
       <header className="sticky top-0 z-40 bg-background border-b border-border">
         <div className="flex items-center px-4 h-14">
           <button
-            onClick={goBack}
+            onClick={handleBack}
             className="text-primary min-h-11 min-w-11 flex items-center justify-center active:opacity-70"
           >
             <ArrowLeft className="h-6 w-6" />

@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { useSmartBack } from '@/hooks/useSmartBack';
 import { ArrowLeft, Plus, X, Loader2, Star, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -39,7 +38,10 @@ import { useToast } from '@/hooks/use-toast';
 
 const EditVehicle = () => {
   const navigate = useNavigate();
-  const goBack = useSmartBack('/garage');
+  const handleBack = () => {
+    if (window.history.length > 1) navigate(-1);
+    else navigate('/garage', { replace: true });
+  };
   const { id } = useParams();
   const { toast } = useToast();
   
@@ -316,7 +318,7 @@ const EditVehicle = () => {
       <header className="sticky top-0 z-40 bg-background border-b border-border">
         <div className="flex items-center px-4 h-14">
           <button
-            onClick={goBack}
+            onClick={handleBack}
             className="text-primary min-h-11 min-w-11 flex items-center justify-center active:opacity-70"
           >
             <ArrowLeft className="h-6 w-6" />

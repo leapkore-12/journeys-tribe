@@ -1,16 +1,20 @@
+import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, ExternalLink, Mail } from 'lucide-react';
-import { useSmartBack } from '@/hooks/useSmartBack';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
 const TermsOfService = () => {
-  const goBack = useSmartBack('/settings');
+  const navigate = useNavigate();
+  const handleBack = () => {
+    if (window.history.length > 1) navigate(-1);
+    else navigate('/settings', { replace: true });
+  };
 
   return (
     <div className="flex flex-col h-full bg-background">
       {/* Header */}
       <header className="sticky top-0 z-40 bg-background border-b border-border">
         <div className="flex items-center gap-3 px-4 h-14">
-          <button onClick={goBack} className="text-foreground min-h-11 min-w-11 flex items-center justify-center active:opacity-70">
+          <button onClick={handleBack} className="text-foreground min-h-11 min-w-11 flex items-center justify-center active:opacity-70">
             <ArrowLeft className="h-6 w-6" />
           </button>
           <h1 className="text-lg font-semibold text-foreground">Terms of Service</h1>

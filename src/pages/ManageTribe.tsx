@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useSmartBack } from '@/hooks/useSmartBack';
 import { ArrowLeft, Plus, Star, Search, X, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -12,7 +11,10 @@ import { useFollowing } from '@/hooks/useFollows';
 
 const ManageTribe = () => {
   const navigate = useNavigate();
-  const goBack = useSmartBack('/settings');
+  const handleBack = () => {
+    if (window.history.length > 1) navigate(-1);
+    else navigate('/settings', { replace: true });
+  };
   const { toast } = useToast();
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -74,7 +76,7 @@ const ManageTribe = () => {
           <Button
             variant="ghost"
             size="icon"
-            onClick={goBack}
+            onClick={handleBack}
             className="text-foreground"
           >
             <ArrowLeft className="h-5 w-5" />
