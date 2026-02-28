@@ -1,55 +1,16 @@
 
 
-## Simplify Search Page - Users Only, Exclude Admins
+## Fix Subscription Plan Card Visibility on Create User Page
 
-### Overview
-Remove the Trips tab from the search page and filter out admin users from search results. This will make the search simpler and ensure admin accounts are not discoverable by regular users.
+### Problem
+The Subscription Plan card and Create User button are hidden behind the bottom navigation bar. The `pb-20` padding on the container is not enough to account for the bottom nav plus safe area on iOS, causing the radio buttons and submit button to be cut off or show as a white box.
 
-### Changes Required
+### Solution
 
-**1. Update `src/hooks/useSearch.ts`**
-- Modify `useSearchUsers` to fetch admin user IDs from the `user_roles` table
-- Filter out admin users along with blocked users before returning results
-- Remove the `useSearchTrips` hook export (or keep it for potential future use but it won't be called)
+**File: `src/pages/admin/CreateUser.tsx`**
 
-**2. Update `src/pages/Search.tsx`**
-- Remove the `activeTab` state (no longer needed)
-- Remove the Trips tab button from the header
-- Remove the `useSearchTrips` import and hook call
-- Remove all the Trips-related UI code (lines 126-179)
-- Update the search placeholder text from "Search users, trips, locations..." to "Search users..."
+1. Increase bottom padding from `pb-20` to `pb-32` to ensure the Subscription Plan card and Create User button are fully visible above the bottom nav
+2. Add `mb-4` margin below the submit button for extra breathing room
 
-### Implementation Details
-
-**useSearch.ts changes:**
-```typescript
-// Add admin filtering to useSearchUsers
-const { data: adminRoles } = await supabase
-  .from('user_roles')
-  .select('user_id')
-  .eq('role', 'admin');
-const adminIds = new Set(adminRoles?.map(r => r.user_id) || []);
-
-// Then filter both blocked AND admin users
-return (data || []).filter(u => 
-  !blockedIds.includes(u.id) && !adminIds.has(u.id)
-);
-```
-
-**Search.tsx changes:**
-- Remove tabs UI completely (lines 60-82)
-- Remove trips loading state and results UI
-- Simplify to show only user search results
-
-### Files to Modify
-
-| File | Changes |
-|------|---------|
-| `src/hooks/useSearch.ts` | Add admin user filtering in `useSearchUsers` |
-| `src/pages/Search.tsx` | Remove tabs, trips import, and trips UI |
-
-### Result
-- Search page will only show user search with no tabs
-- Admin users will not appear in search results
-- Simpler, cleaner user experience
+This is a simple spacing fix - the content is there but gets clipped by the fixed bottom navigation bar on mobile devices.
 
