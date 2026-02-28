@@ -165,7 +165,7 @@ const ChangeCredentials = () => {
   };
 
   return (
-    <div className="flex flex-col bg-background">
+    <div className="flex flex-col h-full bg-background">
       {/* Header */}
       <header className="sticky top-0 z-40 bg-background border-b border-border">
         <div className="flex items-center gap-3 px-4 h-14">
@@ -176,7 +176,7 @@ const ChangeCredentials = () => {
         </div>
       </header>
 
-      <div className="flex-1 px-4 py-6 space-y-8">
+      <div className="flex-1 overflow-y-auto px-4 py-6 space-y-8">
         {/* Current Email Display */}
         <div className="space-y-2">
           <Label className="text-muted-foreground text-sm">Current email</Label>

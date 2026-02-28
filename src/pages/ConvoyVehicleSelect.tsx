@@ -59,7 +59,7 @@ const ConvoyVehicleSelect = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
+    <div className="flex flex-col h-full bg-background">
       {/* Header */}
       <div className="p-4 flex items-center gap-3 border-b border-border">
         <Button

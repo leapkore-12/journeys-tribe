@@ -22,7 +22,7 @@ const Garage = () => {
   };
 
   return (
-    <div className="flex flex-col bg-background pb-24">
+    <div className="flex flex-col h-full bg-background">
       {/* Header */}
       <header className="sticky top-0 z-40 bg-background border-b border-border">
         <div className="flex items-center px-4 h-14">
@@ -44,7 +44,7 @@ const Garage = () => {
         </div>
       </header>
 
-      <div className="flex-1">
+      <div className="flex-1 overflow-y-auto pb-24">
         {isLoading ? (
           <div className="p-4 space-y-6">
             {[...Array(2)].map((_, i) => (

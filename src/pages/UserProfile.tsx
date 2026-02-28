@@ -205,7 +205,7 @@ const UserProfile = () => {
 
   if (profileLoading || blockedByLoading) {
     return (
-      <div className="flex flex-col bg-background pb-24">
+      <div className="flex flex-col h-full bg-background">
         <header className="sticky top-0 z-40 bg-background">
           <div className="flex items-center justify-between px-4 h-14">
             <button onClick={handleBack} className="text-primary min-h-11 min-w-11 flex items-center justify-center active:opacity-70">
@@ -231,7 +231,7 @@ const UserProfile = () => {
   // If the profile owner has blocked the current user, show "not found" screen
   if (isBlockedByUser) {
     return (
-      <div className="flex flex-col bg-background min-h-screen">
+      <div className="flex flex-col h-full bg-background">
         <header className="sticky top-0 z-40 bg-background">
           <div className="flex items-center justify-between px-4 h-14">
             <button onClick={handleBack} className="text-primary min-h-11 min-w-11 flex items-center justify-center active:opacity-70">
@@ -261,7 +261,7 @@ const UserProfile = () => {
   }
 
   return (
-    <div className="flex flex-col bg-background pb-24">
+    <div className="flex flex-col h-full bg-background">
       {/* Header */}
       <header className="sticky top-0 z-40 bg-background">
         <div className="flex items-center justify-between px-4 h-14">
@@ -291,6 +291,7 @@ const UserProfile = () => {
         </div>
       </header>
 
+      <div className="flex-1 overflow-y-auto pb-24">
       {/* Profile Info */}
       <div className="px-4 py-6">
         {/* Avatar + Name + Stats in one row */}
@@ -523,6 +524,7 @@ const UserProfile = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      </div>
     </div>
   );
 };

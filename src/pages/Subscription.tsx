@@ -70,7 +70,7 @@ const Subscription = () => {
   }
 
   return (
-    <div className="flex flex-col bg-background min-h-screen pb-24">
+    <div className="flex flex-col h-full bg-background">
       {/* Header */}
       <header className="sticky top-0 z-40 bg-background">
         <div className="flex items-center gap-3 px-4 h-14">
@@ -81,7 +81,7 @@ const Subscription = () => {
         </div>
       </header>
 
-      <div className="flex-1 px-4 py-4 space-y-6">
+      <div className="flex-1 overflow-y-auto px-4 py-4 pb-24 space-y-6">
         {/* Current Plan Card */}
         <div className={`rounded-xl p-5 border ${isPaid ? 'border-primary bg-primary/10' : 'border-border bg-secondary'}`}>
           <div className="flex items-center gap-3 mb-3">

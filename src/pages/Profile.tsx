@@ -84,7 +84,7 @@ const Profile = () => {
   }
 
   return (
-    <div className="flex flex-col bg-background pb-24">
+    <div className="flex flex-col h-full bg-background">
       {/* Header */}
       <header className="sticky top-0 z-40 bg-background">
         <div className="flex items-center justify-between px-4 h-14">
@@ -101,6 +101,7 @@ const Profile = () => {
         </div>
       </header>
 
+      <div className="flex-1 overflow-y-auto pb-24">
       {/* Profile Info */}
       <div className="px-4 py-6">
         {/* Avatar + Name + Stats in one row */}
@@ -268,6 +269,7 @@ const Profile = () => {
             </div>
           </div>
         )}
+      </div>
       </div>
     </div>
   );
