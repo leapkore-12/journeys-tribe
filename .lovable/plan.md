@@ -1,34 +1,31 @@
 
 
-## Fix Active Trip Map Not Filling From Top
+## Fix Edge-to-Edge Display for ActiveTrip and Share Screens
 
 ### Problem
-`MobileContainer` adds `paddingTop: env(safe-area-inset-top)` to all pages. For the ActiveTrip map page, this creates a black gap at the top because the map should go edge-to-edge behind the status bar. The header overlay already handles its own safe area padding.
+`MobileContainer` adds `paddingTop: env(safe-area-inset-top)` on native, creating a visible gap at the top for immersive/full-screen pages (ActiveTrip map, Share screen). The current negative margin fix on ActiveTrip may not fully work because the container also loses height due to the padding.
 
-### Solution — `src/pages/ActiveTrip.tsx`
+### Solution
+For both immersive screens, use a combination of negative margin AND added padding compensation to truly fill edge-to-edge:
 
-Change the root container from `min-h-screen` to `h-screen` with negative margin to pull the content up behind MobileContainer's padding:
-
-Actually, the cleaner fix is in `MobileContainer.tsx` — but that affects all pages.
-
-The best approach: Override the MobileContainer padding on ActiveTrip by using a negative top margin or absolute positioning to break out of the padding.
-
-**Change line 477** in `ActiveTrip.tsx`:
+**`src/pages/ActiveTrip.tsx`** — Refine the fix:
 ```tsx
-// From:
-<div className="min-h-screen bg-background relative overflow-hidden">
-
-// To:
 <div 
   className="bg-background relative overflow-hidden"
   style={{ 
-    height: '100vh',
-    marginTop: `-env(safe-area-inset-top, ${safeAreaTop}px)`,
+    height: `calc(100vh + env(safe-area-inset-top, ${safeAreaTop}px))`,
+    marginTop: `calc(-1 * env(safe-area-inset-top, ${safeAreaTop}px))`,
   }}
 >
 ```
+Adding `env(safe-area-inset-top)` to the height ensures the container actually fills the reclaimed space.
 
-This pulls the map container up to cover the safe area gap that MobileContainer creates, while the header overlay's own `paddingTop` still keeps the buttons in the correct position.
+**`src/pages/Share.tsx`** — Apply the same pattern:
+- Import `useDeviceSpacing` 
+- Change root `<div className="flex flex-col h-full bg-black">` to use the same negative-margin + expanded-height style
+- Adjust the floating back button top position to account for safe area: `top: max(env(safe-area-inset-top), 16px) + 8px`
 
-One file, ~3 lines changed.
+### Files changed
+1. `src/pages/ActiveTrip.tsx` — fix height calculation (1 line)
+2. `src/pages/Share.tsx` — add negative margin + height fix, adjust back button positioning (~5 lines)
 
