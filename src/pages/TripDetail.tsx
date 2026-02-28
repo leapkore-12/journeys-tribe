@@ -180,7 +180,7 @@ const TripDetail = () => {
       <div className="flex flex-col bg-background">
         <header className="sticky top-0 z-40 bg-background border-b border-border">
           <div className="flex items-center justify-between px-4 h-14">
-            <button onClick={goBack} className="text-foreground p-2 -ml-2">
+            <button onClick={goBack} className="text-foreground min-h-11 min-w-11 flex items-center justify-center active:opacity-70">
               <ArrowLeft className="h-6 w-6" />
             </button>
             <img src={logoWhite} alt="RoadTribe" className="h-6" />
@@ -207,7 +207,7 @@ const TripDetail = () => {
       <div className="flex flex-col bg-background">
         <header className="sticky top-0 z-40 bg-background border-b border-border">
           <div className="flex items-center justify-between px-4 h-14">
-            <button onClick={goBack} className="text-foreground p-2 -ml-2">
+            <button onClick={goBack} className="text-foreground min-h-11 min-w-11 flex items-center justify-center active:opacity-70">
               <ArrowLeft className="h-6 w-6" />
             </button>
             <img src={logoWhite} alt="RoadTribe" className="h-6" />
@@ -226,7 +226,7 @@ const TripDetail = () => {
       {/* Header */}
       <header className="sticky top-0 z-40 bg-background border-b border-border">
         <div className="flex items-center justify-between px-4 h-14">
-          <button onClick={goBack} className="text-foreground p-2 -ml-2">
+          <button onClick={goBack} className="text-foreground min-h-11 min-w-11 flex items-center justify-center active:opacity-70">
             <ArrowLeft className="h-6 w-6" />
           </button>
           <img src={logoWhite} alt="RoadTribe" className="h-6" />

@@ -26,30 +26,26 @@ const Feed = () => {
       <header className="sticky top-0 z-40 bg-background border-b border-border">
         <div className="flex items-center justify-between px-4 h-14">
           {/* Search Icon - Left */}
-          <Button
-            variant="ghost"
-            size="icon"
+          <button
             onClick={() => navigate('/search')}
-            className="text-foreground"
+            className="min-h-11 min-w-11 flex items-center justify-center active:opacity-70 text-foreground"
           >
-            <Search className="h-5 w-5" />
-          </Button>
+            <Search className="h-6 w-6" />
+          </button>
 
           {/* Logo - Center */}
           <img src={logoWhite} alt="RoadTribe" className="h-6" />
 
           {/* Bell Icon - Right */}
-          <Button
-            variant="ghost"
-            size="icon"
+          <button
             onClick={() => navigate('/notifications')}
-            className="relative text-foreground"
+            className="relative min-h-11 min-w-11 flex items-center justify-center active:opacity-70 text-foreground"
           >
-            <Bell className="h-5 w-5" />
+            <Bell className="h-6 w-6" />
             {(unreadCount ?? 0) > 0 && (
-              <span className="absolute top-1 right-1 w-2 h-2 bg-primary rounded-full" />
+              <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-primary rounded-full" />
             )}
-          </Button>
+          </button>
         </div>
       </header>
 
