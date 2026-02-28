@@ -1,27 +1,47 @@
 
 
-## Dynamic Emergency Number Based on User Country
+## Restrict Road Hazard Visibility to Trip Owner and Convoy Members
 
-### Approach
+### Current State
+The `road_hazards` SELECT policy allows **any authenticated user** to view non-expired hazards:
+```sql
+USING (expires_at > now())
+```
 
-Use the user's current GPS coordinates (already available via the trip's geolocation tracking) to determine the country via reverse geocoding, then map it to the correct emergency number. This will be done with a lightweight utility and a country-to-emergency-number lookup.
+### Change — Single Migration
 
-### Changes
+Drop and recreate the SELECT policy to require the viewer to be either the trip owner or an active convoy member:
 
-**New file: `src/lib/emergency-numbers.ts`**
-- Export a map of country codes to emergency numbers (e.g., US/CA → 911, EU countries → 112, UK → 999, IN → 112, AU → 000, etc.)
-- Export a `getEmergencyNumber(countryCode: string): string` function with fallback to 112 (international standard)
+```sql
+DROP POLICY "Anyone can view active hazards" ON public.road_hazards;
 
-**New hook: `src/hooks/useEmergencyNumber.ts`**
-- Use the Mapbox reverse geocoding API (already used in `useMapboxGeocoding`) to get the country code from the user's current position (`lastPosition` from the background geolocation hook)
-- Cache the result so it doesn't re-fetch on every render
-- Return `{ emergencyNumber, countryName, isLoading }` with a default of 112
+CREATE POLICY "Trip owner and convoy members can view hazards"
+ON public.road_hazards
+FOR SELECT
+TO authenticated
+USING (
+  expires_at > now()
+  AND (
+    -- Reporter can always see their own hazards
+    auth.uid() = reporter_id
+    OR
+    -- Trip owner
+    EXISTS (
+      SELECT 1 FROM trips t
+      WHERE t.id = road_hazards.trip_id
+        AND t.user_id = auth.uid()
+    )
+    OR
+    -- Active convoy member
+    EXISTS (
+      SELECT 1 FROM convoy_members cm
+      WHERE cm.trip_id = road_hazards.trip_id
+        AND cm.user_id = auth.uid()
+        AND cm.status = 'active'
+    )
+  )
+);
+```
 
-**Modified file: `src/pages/ActiveTrip.tsx`**
-- Import and call `useEmergencyNumber`, passing the current position
-- Replace the hardcoded `href="tel:112"` and `Call Emergency (112)` text with the dynamic number from the hook
-- Lines ~789-795: Update the `<a>` tag to use `href={`tel:${emergencyNumber}`}` and display `Call Emergency (${emergencyNumber})`
-
-### Emergency Number Coverage
-Key mappings: US/CA → 911, most of EU → 112, UK → 999, India → 112, Australia → 000, Japan → 110, China → 110, Brazil → 190, South Africa → 10111, Mexico → 911. Fallback: 112 (works in most countries).
+No frontend code changes needed — the `useRoadHazards` hook already filters by `trip_id`.
 
