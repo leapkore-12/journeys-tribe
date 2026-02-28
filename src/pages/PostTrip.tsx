@@ -274,7 +274,7 @@ const PostTrip = () => {
     <div className="flex flex-col h-full bg-background">
       <TripHeader backTo="/trip/paused" />
       
-      <div className="flex-1 px-4 py-4 pb-24 space-y-4 overflow-y-auto">
+      <div className="flex-1 px-4 py-4 pb-52 space-y-4 overflow-y-auto">
         {/* Map Preview */}
         {mapPreviewUrl && (
           <motion.div
@@ -456,85 +456,84 @@ const PostTrip = () => {
           )}
         </motion.div>
 
-        {/* Visibility Dropdown */}
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.6 }}
-          className="relative"
-        >
-          {canUsePerTripVisibility ? (
-            <>
-              <button
-                onClick={() => setShowVisibilityDropdown(!showVisibilityDropdown)}
-                className="w-full h-12 px-4 bg-secondary rounded-lg flex items-center justify-between"
-              >
-                <span className="text-muted-foreground">Who can view this trip</span>
-                <div className="flex items-center gap-2">
-                  <span className="text-foreground">
-                    {paidVisibilityOptions.find(o => o.value === visibility)?.icon}{' '}
-                    {paidVisibilityOptions.find(o => o.value === visibility)?.label}
-                  </span>
-                  <ChevronDown className={`h-5 w-5 text-muted-foreground transition-transform ${showVisibilityDropdown ? 'rotate-180' : ''}`} />
-                </div>
-              </button>
-              
-              {showVisibilityDropdown && (
-                <motion.div
-                  initial={{ opacity: 0, y: -10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="absolute top-full left-0 right-0 mt-1 bg-secondary rounded-lg border border-border overflow-hidden z-50"
-                >
-                  {paidVisibilityOptions.map(option => (
-                    <button
-                      key={option.value}
-                      onClick={() => {
-                        setVisibility(option.value);
-                        setShowVisibilityDropdown(false);
-                      }}
-                      className={`w-full px-4 py-3 text-left hover:bg-muted/50 transition-colors text-foreground flex items-center gap-2 ${visibility === option.value ? 'bg-muted/30' : ''}`}
-                    >
-                      <span>{option.icon}</span>
-                      <span>{option.label}</span>
-                      {option.value === 'tribe' && (
-                        <span className="ml-auto text-xs text-primary">⭐</span>
-                      )}
-                    </button>
-                  ))}
-                </motion.div>
-              )}
-            </>
-          ) : (
-            <div className="w-full h-12 px-4 bg-secondary rounded-lg flex items-center justify-between">
-              <span className="text-muted-foreground">Who can view this trip</span>
-              <div className="flex items-center gap-2">
-                <Lock className="h-4 w-4 text-muted-foreground" />
-                <span className="text-foreground">{freeVisibilityLabel}</span>
-                <Crown className="h-4 w-4 text-yellow-500" />
-              </div>
-            </div>
-          )}
-        </motion.div>
       </div>
 
-      {/* Bottom Buttons */}
-      <FixedBottomActions>
-        <div className="flex gap-3">
-          <Button
-            variant="outline"
-            onClick={handleDelete}
-            className="flex-1 h-14 border-foreground bg-transparent text-primary font-semibold"
-          >
-            <Trash2 className="h-5 w-5 mr-2" />
-            Delete trip
-          </Button>
-          <Button
-            onClick={handlePost}
-            disabled={!!isPosting}
-            className="flex-1 h-14 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold"
-          >
-            {isPosting ? isPosting : 'Post trip'}
-          </Button>
+      {/* Bottom Buttons + Visibility */}
+      <FixedBottomActions aboveNav={false}>
+        <div className="space-y-3">
+          {/* Visibility Dropdown */}
+          <div className="relative">
+            {canUsePerTripVisibility ? (
+              <>
+                <button
+                  onClick={() => setShowVisibilityDropdown(!showVisibilityDropdown)}
+                  className="w-full h-12 px-4 bg-secondary rounded-lg flex items-center justify-between"
+                >
+                  <span className="text-muted-foreground">Who can view this trip</span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-foreground">
+                      {paidVisibilityOptions.find(o => o.value === visibility)?.icon}{' '}
+                      {paidVisibilityOptions.find(o => o.value === visibility)?.label}
+                    </span>
+                    <ChevronDown className={`h-5 w-5 text-muted-foreground transition-transform ${showVisibilityDropdown ? 'rotate-180' : ''}`} />
+                  </div>
+                </button>
+                
+                {showVisibilityDropdown && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="absolute bottom-full left-0 right-0 mb-1 bg-secondary rounded-lg border border-border overflow-hidden z-50"
+                  >
+                    {paidVisibilityOptions.map(option => (
+                      <button
+                        key={option.value}
+                        onClick={() => {
+                          setVisibility(option.value);
+                          setShowVisibilityDropdown(false);
+                        }}
+                        className={`w-full px-4 py-3 text-left hover:bg-muted/50 transition-colors text-foreground flex items-center gap-2 ${visibility === option.value ? 'bg-muted/30' : ''}`}
+                      >
+                        <span>{option.icon}</span>
+                        <span>{option.label}</span>
+                        {option.value === 'tribe' && (
+                          <span className="ml-auto text-xs text-primary">⭐</span>
+                        )}
+                      </button>
+                    ))}
+                  </motion.div>
+                )}
+              </>
+            ) : (
+              <div className="w-full h-12 px-4 bg-secondary rounded-lg flex items-center justify-between">
+                <span className="text-muted-foreground">Who can view this trip</span>
+                <div className="flex items-center gap-2">
+                  <Lock className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-foreground">{freeVisibilityLabel}</span>
+                  <Crown className="h-4 w-4 text-yellow-500" />
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Action Buttons */}
+          <div className="flex gap-3">
+            <Button
+              variant="outline"
+              onClick={handleDelete}
+              className="flex-1 h-14 border-foreground bg-transparent text-primary font-semibold"
+            >
+              <Trash2 className="h-5 w-5 mr-2" />
+              Delete trip
+            </Button>
+            <Button
+              onClick={handlePost}
+              disabled={!!isPosting}
+              className="flex-1 h-14 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold"
+            >
+              {isPosting ? isPosting : 'Post trip'}
+            </Button>
+          </div>
         </div>
       </FixedBottomActions>
     </div>
