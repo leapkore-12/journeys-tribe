@@ -477,7 +477,7 @@ const ActiveTrip = () => {
     <div 
       className="bg-background relative overflow-hidden"
       style={{ 
-        height: '100vh',
+        height: `calc(100vh + env(safe-area-inset-top, ${safeAreaTop}px))`,
         marginTop: `calc(-1 * env(safe-area-inset-top, ${safeAreaTop}px))`,
       }}
     >

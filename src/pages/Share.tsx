@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useTripById } from '@/hooks/useTrips';
+import { useDeviceSpacing } from '@/hooks/useDeviceInfo';
 import { useAuth } from '@/context/AuthContext';
 import { toast } from 'sonner';
 // logo-white removed — header eliminated for immersive view
@@ -77,6 +78,7 @@ const ShareOption = ({ icon, label, onClick, bgColor = 'bg-secondary' }: ShareOp
 
 const Share = () => {
   const navigate = useNavigate();
+  const { safeAreaTop } = useDeviceSpacing();
   const handleBack = () => {
     if (window.history.length > 1) navigate(-1);
     else navigate('/feed', { replace: true });
@@ -430,11 +432,18 @@ const Share = () => {
   }
 
   return (
-    <div className="flex flex-col h-full bg-black">
+    <div 
+      className="flex flex-col bg-black"
+      style={{
+        height: `calc(100vh + env(safe-area-inset-top, ${safeAreaTop}px))`,
+        marginTop: `calc(-1 * env(safe-area-inset-top, ${safeAreaTop}px))`,
+      }}
+    >
       {/* Floating Back Button */}
       <button
         onClick={handleBack}
-        className="absolute top-4 left-4 z-50 min-h-11 min-w-11 flex items-center justify-center rounded-full bg-black/40 text-white"
+        className="absolute left-4 z-50 min-h-11 min-w-11 flex items-center justify-center rounded-full bg-black/40 text-white"
+        style={{ top: `calc(max(env(safe-area-inset-top, ${safeAreaTop}px), 16px) + 8px)` }}
       >
         <ArrowLeft className="h-6 w-6" />
       </button>
