@@ -219,7 +219,7 @@ const Comments = () => {
       )}
 
       {/* Comment Input */}
-      <FixedBottomActions showBorder>
+      <FixedBottomActions showBorder className="bg-black">
         <form onSubmit={handleSubmitComment} className="flex items-center gap-3">
           <Input
             ref={inputRef}
