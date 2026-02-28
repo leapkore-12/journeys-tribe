@@ -1,16 +1,22 @@
 
 
-## Add Loading Spinner to Instagram Story Button
+## Fix Comment Input Background
 
-### Changes — `src/pages/Share.tsx`
+The `FixedBottomActions` component uses `bg-background` which resolves to pure black in dark mode. The issue is likely a transparency/blur effect bleeding through, or the area behind the input looking disconnected from the rest of the page.
 
-1. **Add state**: `const [isGeneratingStory, setIsGeneratingStory] = useState(false);`
+### Changes — `src/pages/Comments.tsx`
 
-2. **Wrap `handleInstagramShare`** with loading state:
-   - Set `setIsGeneratingStory(true)` at the start
-   - Set `setIsGeneratingStory(false)` in a `finally` block
+Update the `FixedBottomActions` usage (~line 194) to pass a className that ensures a solid black background with no transparency, and a subtle top border for a cleaner, modern look:
 
-3. **Update the Instagram Story button** (line ~555-560): Add `disabled={isGeneratingStory}` and show `<Loader2 className="mr-2 h-4 w-4 animate-spin" />` + "Generating…" text when loading, similar to the existing download button pattern.
+```tsx
+<FixedBottomActions showBorder className="bg-black">
+```
 
-One file, ~10 lines changed.
+### Changes — `src/components/layout/FixedBottomActions.tsx`
+
+Ensure the component uses a solid background with no backdrop blur or transparency artifacts. Add `z-50` to keep it above scrolling content:
+
+- Line 27: Change class to `"fixed left-0 right-0 p-4 bg-background z-50 max-w-[430px] mx-auto"`
+
+Two files, ~2 lines changed.
 
