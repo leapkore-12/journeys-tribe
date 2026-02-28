@@ -3,7 +3,18 @@ import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { MoreHorizontal, Flag, MessageCircle, Upload, ChevronDown, Send, Trash2 } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { TripWithDetails } from '@/hooks/useTrips';
+import { TripWithDetails, useDeleteTrip } from '@/hooks/useTrips';
+import { toast } from 'sonner';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { cn } from '@/lib/utils';
 import {
   DropdownMenu,
@@ -51,6 +62,8 @@ const TripCard = ({ trip, index, onLike, onComment, onShare, onUserClick, contex
   const navigate = useNavigate();
   const { user } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const deleteTrip = useDeleteTrip();
   const [carouselApi, setCarouselApi] = useState<CarouselApi>();
   const [currentSlide, setCurrentSlide] = useState(0);
   const [likesExpanded, setLikesExpanded] = useState(false);
@@ -191,8 +204,17 @@ const TripCard = ({ trip, index, onLike, onComment, onShare, onUserClick, contex
   };
 
   const handleDelete = () => {
-    console.log('Delete trip:', trip.id);
+    setDeleteDialogOpen(true);
     setMenuOpen(false);
+  };
+
+  const confirmDelete = async () => {
+    try {
+      await deleteTrip.mutateAsync(trip.id);
+      toast.success('Trip deleted');
+    } catch {
+      toast.error('Failed to delete trip');
+    }
   };
 
   const handleReport = () => {
@@ -241,9 +263,7 @@ const TripCard = ({ trip, index, onLike, onComment, onShare, onUserClick, contex
             {isOwnPost ? (
               <>
                 <DropdownMenuItem onClick={handleEdit} className="cursor-pointer">Edit trip</DropdownMenuItem>
-                {context !== 'feed' && (
-                  <DropdownMenuItem onClick={handleDelete} className="cursor-pointer text-destructive">Delete trip</DropdownMenuItem>
-                )}
+                <DropdownMenuItem onClick={handleDelete} className="cursor-pointer text-destructive">Delete trip</DropdownMenuItem>
               </>
             ) : (
               <DropdownMenuItem onClick={handleReport} className="cursor-pointer text-destructive">Report trip</DropdownMenuItem>
@@ -491,6 +511,23 @@ const TripCard = ({ trip, index, onLike, onComment, onShare, onUserClick, contex
       </div>
 
       <div className="h-2 bg-primary/20" />
+
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete trip?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete your trip and all associated data.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </motion.article>
   );
 };
