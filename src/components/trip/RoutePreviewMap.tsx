@@ -3,10 +3,17 @@ import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import { MAPBOX_TOKEN, MAP_STYLES } from '@/lib/mapbox';
 
+interface TripStop {
+  latitude: number;
+  longitude: number;
+  address: string;
+}
+
 interface RoutePreviewMapProps {
   startCoordinates?: [number, number] | null;
   destinationCoordinates?: [number, number] | null;
   routeCoordinates?: [number, number][];
+  stops?: TripStop[];
   className?: string;
 }
 
@@ -14,12 +21,14 @@ const RoutePreviewMap = ({
   startCoordinates,
   destinationCoordinates,
   routeCoordinates,
+  stops = [],
   className = '',
 }: RoutePreviewMapProps) => {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<mapboxgl.Map | null>(null);
   const startMarker = useRef<mapboxgl.Marker | null>(null);
   const destMarker = useRef<mapboxgl.Marker | null>(null);
+  const stopMarkers = useRef<mapboxgl.Marker[]>([]);
 
   // Initialize map
   useEffect(() => {
@@ -81,6 +90,7 @@ const RoutePreviewMap = ({
     return () => {
       startMarker.current?.remove();
       destMarker.current?.remove();
+      stopMarkers.current.forEach(m => m.remove());
       map.current?.remove();
       map.current = null;
     };
@@ -148,21 +158,51 @@ const RoutePreviewMap = ({
     }
   }, [routeCoordinates]);
 
+  // Update stop markers
+  useEffect(() => {
+    if (!map.current) return;
+
+    // Remove old stop markers
+    stopMarkers.current.forEach(m => m.remove());
+    stopMarkers.current = [];
+
+    stops.forEach((stop, index) => {
+      if (stop.latitude == null || stop.longitude == null) return;
+      const el = document.createElement('div');
+      el.className = 'stop-marker';
+      el.innerHTML = `
+        <div style="width: 28px; height: 28px; background: hsl(36, 100%, 50%); border: 3px solid white; border-radius: 50%; box-shadow: 0 2px 8px rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center; color: white; font-weight: 700; font-size: 12px;">${index + 1}</div>
+      `;
+
+      const marker = new mapboxgl.Marker({ element: el })
+        .setLngLat([stop.longitude, stop.latitude])
+        .addTo(map.current!);
+      stopMarkers.current.push(marker);
+    });
+  }, [stops]);
+
   // Fit to markers when they change
   useEffect(() => {
     if (!map.current) return;
 
-    if (startCoordinates && destinationCoordinates) {
-      const bounds = new mapboxgl.LngLatBounds();
-      bounds.extend(startCoordinates);
-      bounds.extend(destinationCoordinates);
+    const bounds = new mapboxgl.LngLatBounds();
+    let hasPoints = false;
+
+    if (startCoordinates) { bounds.extend(startCoordinates); hasPoints = true; }
+    if (destinationCoordinates) { bounds.extend(destinationCoordinates); hasPoints = true; }
+    stops.forEach(stop => {
+      if (stop.latitude != null && stop.longitude != null) {
+        bounds.extend([stop.longitude, stop.latitude]);
+        hasPoints = true;
+      }
+    });
+
+    if (hasPoints) {
       map.current.fitBounds(bounds, { padding: 40 });
     } else if (startCoordinates) {
       map.current.flyTo({ center: startCoordinates, zoom: 13 });
-    } else if (destinationCoordinates) {
-      map.current.flyTo({ center: destinationCoordinates, zoom: 13 });
     }
-  }, [startCoordinates, destinationCoordinates]);
+  }, [startCoordinates, destinationCoordinates, stops]);
 
   return (
     <div className={`relative rounded-xl overflow-hidden ${className}`}>

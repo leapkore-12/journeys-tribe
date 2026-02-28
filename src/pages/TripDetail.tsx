@@ -36,6 +36,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { formatDistanceToNow } from 'date-fns';
 import FixedBottomActions from '@/components/layout/FixedBottomActions';
+import RoutePreviewMap from '@/components/trip/RoutePreviewMap';
 
 const formatDistance = (km: number | null) => {
   if (!km) return '0 km';
@@ -93,9 +94,12 @@ const TripDetail = () => {
     );
   };
 
-  // Build slides array
+  // Build slides array — use interactive map if we have coordinates, else fall back to static image
+  const hasCoordinates = trip?.start_lat && trip?.start_lng && trip?.end_lat && trip?.end_lng;
   const slides = trip ? [
-    ...(trip.map_image_url ? [{ type: 'map' as const, src: trip.map_image_url, label: 'Route map' }] : []),
+    ...(hasCoordinates
+      ? [{ type: 'interactive-map' as const, src: '', label: 'Route map' }]
+      : trip.map_image_url ? [{ type: 'map' as const, src: trip.map_image_url, label: 'Route map' }] : []),
     ...(trip.vehicle?.images?.[0] ? [{ type: 'vehicle' as const, src: trip.vehicle.images[0], label: `${trip.vehicle.make} ${trip.vehicle.model}` }] : []),
     ...(trip.trip_photos?.map((photo, idx) => ({ type: 'photo' as const, src: photo.image_url, label: `Trip photo ${idx + 1}` })) || []),
   ] : [];
@@ -330,9 +334,22 @@ const TripDetail = () => {
                   {slides.map((slide, idx) => (
                     <CarouselItem key={idx} className="pl-0">
                       <div className="relative h-48 rounded-xl overflow-hidden bg-secondary">
-                        <img src={slide.src} alt={slide.label} className="w-full h-full object-cover" />
+                        {slide.type === 'interactive-map' && trip ? (
+                          <RoutePreviewMap
+                            startCoordinates={trip.start_lng && trip.start_lat ? [trip.start_lng, trip.start_lat] : null}
+                            destinationCoordinates={trip.end_lng && trip.end_lat ? [trip.end_lng, trip.end_lat] : null}
+                            stops={trip.trip_stops?.filter(s => s.latitude != null && s.longitude != null).map(s => ({
+                              latitude: s.latitude!,
+                              longitude: s.longitude!,
+                              address: s.address,
+                            })) || []}
+                            className="h-full w-full"
+                          />
+                        ) : (
+                          <img src={slide.src} alt={slide.label} className="w-full h-full object-cover" />
+                        )}
                         <div className="absolute top-2 left-2 bg-background/80 backdrop-blur-sm px-2 py-0.5 rounded text-xs text-foreground">
-                          {slide.type === 'map' ? '🗺️ Route' : slide.type === 'vehicle' ? '🚗 Vehicle' : '📷 Photo'}
+                          {slide.type === 'interactive-map' || slide.type === 'map' ? '🗺️ Route' : slide.type === 'vehicle' ? '🚗 Vehicle' : '📷 Photo'}
                         </div>
                       </div>
                     </CarouselItem>
