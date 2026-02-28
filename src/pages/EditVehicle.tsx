@@ -311,7 +311,7 @@ const EditVehicle = () => {
   }
 
   return (
-    <div className="flex flex-col bg-background">
+    <div className="flex flex-col h-full bg-background">
       {/* Header */}
       <header className="sticky top-0 z-40 bg-background border-b border-border">
         <div className="flex items-center px-4 h-14">
@@ -328,7 +328,7 @@ const EditVehicle = () => {
         </div>
       </header>
 
-      <div className="flex-1 p-4 space-y-6">
+      <div className="flex-1 overflow-y-auto p-4 space-y-6 pb-32">
         {/* Vehicle Type */}
         <div className="space-y-2">
           <Label className="text-base text-foreground">Car or motorbike:</Label>
@@ -378,7 +378,7 @@ const EditVehicle = () => {
           <button 
             onClick={handleAddPhoto}
             disabled={isUploading || (!isPaidUser && photos.length >= maxPhotos)}
-            className="w-full aspect-[2/1] border-2 border-dashed border-border rounded-xl flex flex-col items-center justify-center gap-2 text-muted-foreground transition-colors hover:border-primary hover:text-primary disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full py-6 border-2 border-dashed border-border rounded-xl flex flex-col items-center justify-center gap-2 text-muted-foreground transition-colors hover:border-primary hover:text-primary disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isUploading ? (
               <Loader2 className="h-8 w-8 animate-spin" />
@@ -427,7 +427,7 @@ const EditVehicle = () => {
                   {/* Delete button */}
                   <button
                     onClick={() => handleDeletePhoto(photo.id, photo.image_url)}
-                    className="absolute top-1 right-1 bg-black/60 rounded-full p-1.5 opacity-0 group-hover:opacity-100 transition-opacity"
+                    className="absolute top-1 right-1 bg-black/60 rounded-full p-1.5"
                   >
                     <X className="h-4 w-4 text-white" />
                   </button>
