@@ -24,18 +24,40 @@ const LocationSearchInput = ({
 }: LocationSearchInputProps) => {
   const [isFocused, setIsFocused] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
-  const { results, isLoading, search, clearResults } = useMapboxGeocoding();
+  const [coordResults, setCoordResults] = useState<GeocodingResult[]>([]);
+  const { results, isLoading, search, reverseGeocode, clearResults } = useMapboxGeocoding();
   const debouncedValue = useDebounce(value, 300);
+  const displayResults = coordResults.length > 0 ? coordResults : results;
   const containerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
+  const COORD_REGEX = /^(-?\d+\.?\d*)\s*,\s*(-?\d+\.?\d*)$/;
+
   // Search when debounced value changes
   useEffect(() => {
-    if (debouncedValue && isFocused) {
-      search(debouncedValue);
-      setShowDropdown(true);
+    if (!debouncedValue || !isFocused) return;
+
+    const coordMatch = debouncedValue.trim().match(COORD_REGEX);
+    if (coordMatch) {
+      const lat = parseFloat(coordMatch[1]);
+      const lng = parseFloat(coordMatch[2]);
+      if (lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
+        // Reverse geocode the coordinates
+        reverseGeocode([lng, lat]).then((result) => {
+          const syntheticResult: GeocodingResult = result
+            ? { ...result, id: `coord-${lat}-${lng}`, placeName: result.placeName, address: result.address }
+            : { id: `coord-${lat}-${lng}`, placeName: `${lat}, ${lng}`, address: `Coordinates: ${lat}, ${lng}`, coordinates: [lng, lat] };
+          setCoordResults([syntheticResult]);
+          setShowDropdown(true);
+        });
+        return;
+      }
     }
-  }, [debouncedValue, search, isFocused]);
+
+    setCoordResults([]);
+    search(debouncedValue);
+    setShowDropdown(true);
+  }, [debouncedValue, search, isFocused, reverseGeocode]);
 
   // Handle clicks outside
   useEffect(() => {
@@ -53,6 +75,7 @@ const LocationSearchInput = ({
     onChange(result.address);
     onSelect(result);
     setShowDropdown(false);
+    setCoordResults([]);
     clearResults();
   };
 
@@ -79,7 +102,7 @@ const LocationSearchInput = ({
             if (inputRef.current) {
               inputRef.current.select();
             }
-            if (results.length > 0) setShowDropdown(true);
+            if (displayResults.length > 0) setShowDropdown(true);
           }}
           onBlur={() => setIsFocused(false)}
           placeholder={placeholder}
@@ -104,14 +127,14 @@ const LocationSearchInput = ({
       </div>
 
       <AnimatePresence>
-        {showDropdown && results.length > 0 && (
+        {showDropdown && displayResults.length > 0 && (
           <motion.div
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
             className="absolute top-full left-0 right-0 mt-1 bg-secondary rounded-lg border border-border overflow-hidden z-50 shadow-lg"
           >
-            {results.map((result) => (
+            {displayResults.map((result) => (
               <button
                 key={result.id}
                 type="button"
