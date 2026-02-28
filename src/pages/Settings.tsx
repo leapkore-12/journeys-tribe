@@ -311,7 +311,7 @@ const Settings = () => {
     },
     {
       label: 'Manage notifications',
-      onClick: () => navigate('/notifications'),
+      onClick: () => navigate('/settings/notifications'),
     },
     {
       label: 'Block accounts',
