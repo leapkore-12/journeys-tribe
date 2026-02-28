@@ -26,6 +26,7 @@ import NearbySearchSheet from '@/components/trip/NearbySearchSheet';
 import ReportHazardSheet from '@/components/trip/ReportHazardSheet';
 import { useRoadHazards, RoadHazard } from '@/hooks/useRoadHazards';
 import logoWhite from '@/assets/logo-white.svg';
+import { useEmergencyNumber } from '@/hooks/useEmergencyNumber';
 import { calculateDistance } from '@/lib/distance-utils';
 import { useDeviceSpacing } from '@/hooks/useDeviceInfo';
 
@@ -167,6 +168,7 @@ const ActiveTrip = () => {
   const [userPosition, setUserPosition] = useState<[number, number] | null>(null);
   const [heading, setHeading] = useState<number | null>(null);
   const [speed, setSpeed] = useState<number | null>(null);
+  const { emergencyNumber } = useEmergencyNumber(userPosition);
   const [geoError, setGeoError] = useState<string | null>(null);
 
   // Background GPS tracking - continues when app is minimized
@@ -787,11 +789,11 @@ const ActiveTrip = () => {
               
               <div className="space-y-3">
                 <a
-                  href="tel:112"
+                  href={`tel:${emergencyNumber}`}
                   className="flex items-center justify-center gap-2 w-full h-12 bg-destructive text-destructive-foreground rounded-lg font-semibold"
                 >
                   <Phone className="h-5 w-5" />
-                  Call Emergency (112)
+                  Call Emergency ({emergencyNumber})
                 </a>
                 <Button
                   variant="outline"
