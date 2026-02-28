@@ -32,7 +32,7 @@ const UserManagement = () => {
   });
 
   return (
-    <div className="min-h-screen bg-background pb-20">
+    <div className="flex flex-col h-full bg-background">
       {/* Header */}
       <header className="sticky top-0 z-50 border-b border-border/50 bg-background/95 backdrop-blur">
         <div className="flex items-center justify-between p-4">
@@ -52,7 +52,8 @@ const UserManagement = () => {
         </div>
       </header>
 
-      <main className="p-4 space-y-4">
+      <div className="flex-1 overflow-y-auto">
+      <main className="p-4 pb-32 space-y-4">
         {/* Search */}
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -139,6 +140,7 @@ const UserManagement = () => {
           </div>
         )}
       </main>
+      </div>
 
       <AdminBottomNav />
     </div>
