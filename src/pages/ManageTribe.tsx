@@ -67,7 +67,7 @@ const ManageTribe = () => {
   };
 
   return (
-    <div className="flex flex-col bg-background safe-bottom">
+    <div className="flex flex-col h-full bg-background">
       {/* Header */}
       <div className="flex items-center justify-between p-4 border-b border-border">
         <div className="flex items-center gap-3">

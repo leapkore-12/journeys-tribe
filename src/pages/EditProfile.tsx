@@ -139,7 +139,7 @@ const EditProfile = () => {
 
   if (isLoading) {
     return (
-      <div className="flex flex-col bg-background">
+      <div className="flex flex-col h-full bg-background">
         <header className="sticky top-0 z-40 bg-background border-b border-border">
           <div className="flex items-center justify-between px-4 h-14">
             <button onClick={() => navigate('/profile')} className="text-primary">
@@ -149,7 +149,7 @@ const EditProfile = () => {
             <div className="w-12" />
           </div>
         </header>
-        <div className="flex-1 px-4 py-6 space-y-6">
+        <div className="flex-1 overflow-y-auto px-4 py-6 space-y-6">
           <div className="flex flex-col items-center gap-3">
             <Skeleton className="h-24 w-24 rounded-full" />
             <Skeleton className="h-4 w-24" />
@@ -165,7 +165,7 @@ const EditProfile = () => {
   }
 
   return (
-    <div className="flex flex-col bg-background">
+    <div className="flex flex-col h-full bg-background">
       {/* Header */}
       <header className="sticky top-0 z-40 bg-background border-b border-border">
         <div className="flex items-center justify-between px-4 h-14">

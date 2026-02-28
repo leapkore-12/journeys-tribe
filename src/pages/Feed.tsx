@@ -21,7 +21,7 @@ const Feed = () => {
   };
 
   return (
-    <div className="flex flex-col bg-background">
+    <div className="flex flex-col h-full bg-background">
       {/* Header - Search Left, Logo Center, Bell Right */}
       <header className="sticky top-0 z-40 bg-background border-b border-border">
         <div className="flex items-center justify-between px-4 h-14">
@@ -54,7 +54,7 @@ const Feed = () => {
       </header>
 
       {/* Feed */}
-      <div>
+      <div className="flex-1 overflow-y-auto">
         {isLoading ? (
           <div className="space-y-4 p-4">
             {[...Array(3)].map((_, i) => (

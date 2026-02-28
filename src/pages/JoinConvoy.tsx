@@ -45,9 +45,9 @@ const JoinConvoy = () => {
   const isAlreadyUsed = invite?.status === 'accepted';
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
+    <div className="flex flex-col h-full bg-background">
       {/* Header */}
-      <div className="safe-top px-4 py-4 flex items-center justify-between">
+      <div className="px-4 py-4 flex items-center justify-between">
         <button onClick={() => navigate('/feed')} className="p-2">
           <X className="h-6 w-6 text-foreground" />
         </button>

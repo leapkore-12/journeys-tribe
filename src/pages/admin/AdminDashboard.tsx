@@ -56,7 +56,7 @@ const AdminDashboard = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-background pb-20">
+    <div className="flex flex-col h-full bg-background">
       {/* Header */}
       <header className="sticky top-0 z-50 border-b border-border/50 bg-background/95 backdrop-blur">
         <div className="flex items-center justify-between p-4">
@@ -70,6 +70,7 @@ const AdminDashboard = () => {
         </div>
       </header>
 
+      <div className="flex-1 overflow-y-auto pb-32">
       <main className="p-4 space-y-6">
         {/* Welcome */}
         <div>
@@ -128,6 +129,7 @@ const AdminDashboard = () => {
           </CardContent>
         </Card>
       </main>
+      </div>
 
       <AdminBottomNav />
     </div>

@@ -461,7 +461,7 @@ const Notifications = () => {
   };
 
   return (
-    <div className="flex flex-col bg-background">
+    <div className="flex flex-col h-full bg-background">
       {/* Header - Back Arrow + Centered Logo */}
       <header className="sticky top-0 z-40 bg-background border-b border-border">
         <div className="flex items-center justify-between px-4 h-14">
@@ -476,6 +476,7 @@ const Notifications = () => {
         </div>
       </header>
 
+      <div className="flex-1 overflow-y-auto">
       {/* Notifications List */}
       {isLoading ? (
         <div className="divide-y divide-border">
@@ -537,6 +538,7 @@ const Notifications = () => {
           </p>
         </div>
       )}
+      </div>
     </div>
   );
 };

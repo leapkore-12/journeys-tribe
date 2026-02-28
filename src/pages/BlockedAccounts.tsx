@@ -33,7 +33,7 @@ const BlockedAccounts = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="flex flex-col h-full bg-background">
       {/* Header */}
       <div className="sticky top-0 z-10 bg-background border-b border-border">
         <div className="flex items-center gap-3 p-4">
@@ -45,7 +45,7 @@ const BlockedAccounts = () => {
       </div>
 
       {/* Content */}
-      <div className="p-4">
+      <div className="flex-1 overflow-y-auto p-4">
         {isLoading ? (
           <div className="space-y-4">
             {[1, 2, 3].map((i) => (

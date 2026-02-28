@@ -102,7 +102,7 @@ const ManageConnections = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="flex flex-col h-full bg-background">
       {/* Header */}
       <header className="sticky top-0 z-50 bg-background/95 backdrop-blur-sm border-b border-border">
         <div className="flex items-center justify-between px-4 h-14">
@@ -119,6 +119,7 @@ const ManageConnections = () => {
         </div>
       </header>
 
+      <div className="flex-1 overflow-y-auto">
       {/* Tabs */}
       <Tabs defaultValue="following" className="w-full">
         <TabsList className="w-full bg-transparent border-b border-border rounded-none h-auto p-0">
@@ -352,6 +353,7 @@ const ManageConnections = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      </div>
     </div>
   );
 };
