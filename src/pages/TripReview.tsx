@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Crosshair, Flag, Plus, Loader2 } from 'lucide-react';
+import { Crosshair, Flag, Plus, Loader2, MapPin } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import TripHeader from '@/components/trip/TripHeader';
@@ -157,7 +157,7 @@ const TripReview = () => {
       </header>
 
       {/* Title */}
-      <div className="px-4 pt-2 pb-4">
+      <div className="px-4 pt-6 pb-4">
         <h1 className="text-xl font-semibold text-primary text-center">Trip Planner</h1>
       </div>
 
@@ -208,6 +208,27 @@ const TripReview = () => {
               </div>
             </div>
           </motion.div>
+
+          {/* Stops */}
+          {tripState.stops.length > 0 && tripState.stops.map((stop, index) => (
+            <motion.div
+              key={stop.id}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.05 + index * 0.05 }}
+              className="bg-secondary rounded-xl p-4"
+            >
+              <div className="flex items-start gap-3">
+                <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center mt-0.5">
+                  <MapPin className="h-4 w-4 text-primary" />
+                </div>
+                <div className="flex-1">
+                  <p className="text-foreground font-medium">Stop {index + 1}</p>
+                  <p className="text-sm text-muted-foreground mt-1">{stop.address}</p>
+                </div>
+              </div>
+            </motion.div>
+          ))}
         </div>
 
         {/* Add Stops Button */}
