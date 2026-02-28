@@ -13,7 +13,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useTripById } from '@/hooks/useTrips';
 import { useAuth } from '@/context/AuthContext';
 import { toast } from 'sonner';
-import logoWhite from '@/assets/logo-white.svg';
+// logo-white removed — header eliminated for immersive view
 import iconWhite from '@/assets/icon-white.svg';
 import rWhitePng from '@/assets/r-white.png';
 import {
@@ -401,23 +401,8 @@ const Share = () => {
 
   if (isLoading) {
     return (
-      <div className="flex flex-col bg-background">
-        <header className="sticky top-0 z-40 bg-background border-b border-border">
-          <div className="flex items-center justify-between px-4 h-14">
-            <button onClick={handleBack} className="text-foreground p-2 -ml-2">
-              <ArrowLeft className="h-6 w-6" />
-            </button>
-            <img src={logoWhite} alt="RoadTribe" className="h-6" />
-            <div className="w-10" />
-          </div>
-        </header>
-        <div className="flex-1 flex flex-col px-4 py-6">
-          <Skeleton className="w-full aspect-[9/16] max-h-[500px] rounded-2xl" />
-          <div className="space-y-3 mt-6">
-            <Skeleton className="w-full h-12 rounded-lg" />
-            <Skeleton className="w-full h-12 rounded-lg" />
-          </div>
-        </div>
+      <div className="flex flex-col h-full bg-black items-center justify-center">
+        <Skeleton className="w-full h-full" />
       </div>
     );
   }
@@ -445,174 +430,160 @@ const Share = () => {
   }
 
   return (
-    <div className="flex flex-col h-full bg-background">
-      {/* Header */}
-      <header className="sticky top-0 z-40 bg-background border-b border-border">
-        <div className="flex items-center justify-between px-4 h-14">
-          <button
-            onClick={handleBack}
-            className="text-foreground p-2 -ml-2"
-          >
-            <ArrowLeft className="h-6 w-6" />
-          </button>
-          <img src={logoWhite} alt="RoadTribe" className="h-6" />
-          <div className="w-10" />
-        </div>
-      </header>
+    <div className="flex flex-col h-full bg-black">
+      {/* Floating Back Button */}
+      <button
+        onClick={handleBack}
+        className="absolute top-4 left-4 z-50 min-h-11 min-w-11 flex items-center justify-center rounded-full bg-black/40 text-white"
+      >
+        <ArrowLeft className="h-6 w-6" />
+      </button>
 
-      {/* Swipeable Media Carousel */}
-      <div className="flex-1 flex flex-col px-4 py-6">
-        <div className="relative flex-1">
-          <Carousel
-            setApi={setCarouselApi}
-            opts={{ loop: false }}
-            className="w-full"
-          >
-            <CarouselContent className="-ml-0">
-              {slides.map((slide, idx) => (
-                <CarouselItem key={idx} className="pl-0">
-                  {/* Image with Overlay */}
-                  <div className="relative w-full aspect-[9/16] max-h-[500px] rounded-2xl overflow-hidden bg-secondary">
-                    <img
-                      src={slide.src}
-                      alt={slide.type === 'map' ? 'Route map' : 'Vehicle'}
-                      className="w-full h-full object-cover"
-                    />
-                    
-                    {/* Gradient Overlay */}
-                    <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-transparent to-black/60" />
-                    
-                    {/* Top Overlay - Stats */}
-                    <div className="absolute top-0 left-0 right-0 p-4 flex justify-between">
-                      <div>
-                        <span className="text-white/70 text-xs block">Distance</span>
-                        <span className="text-white font-bold text-lg">{formatDistance(trip.distance_km)}</span>
-                        {slide.type === 'map' && trip.start_location && (
-                          <span className="text-white/80 text-xs block mt-1">{trip.start_location}</span>
-                        )}
-                      </div>
-                      <div className="text-right">
-                        <span className="text-white/70 text-xs block">Time on road</span>
-                        <span className="text-white font-bold text-lg">{formatDuration(trip.duration_minutes)}</span>
-                        {slide.type === 'map' && trip.end_location && (
-                          <span className="text-white/80 text-xs block mt-1">{trip.end_location}</span>
-                        )}
-                      </div>
-                    </div>
-                    
-                    {/* Bottom Overlay Content */}
-                    <div className="absolute bottom-0 left-0 right-0 p-4 flex justify-between items-end">
-                      {/* Convoy Members */}
-                      {trip.convoy_members && trip.convoy_members.length > 0 ? (
-                        <div>
-                          <span className="text-white/70 text-xs block mb-1">Convoy with</span>
-                          <div className="flex -space-x-2">
-                            {trip.convoy_members.slice(0, 4).map((member) => (
-                              <button
-                                key={member.user_id}
-                                onClick={() => handleConvoyMemberClick(member.user_id)}
-                                className="hover:z-10 transition-transform hover:scale-110"
-                              >
-                                <Avatar className="h-8 w-8 border-2 border-white/30">
-                                  <AvatarImage src={member.profile?.avatar_url || ''} alt={member.profile?.display_name || 'User'} />
-                                  <AvatarFallback className="text-xs bg-secondary">
-                                    {(member.profile?.display_name || 'U')[0]}
-                                  </AvatarFallback>
-                                </Avatar>
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-                      ) : (
-                        <div />
+      {/* Full-screen Image Carousel */}
+      <div className="flex-1 relative">
+        <Carousel
+          setApi={setCarouselApi}
+          opts={{ loop: false }}
+          className="h-full"
+        >
+          <CarouselContent className="-ml-0 h-full">
+            {slides.map((slide, idx) => (
+              <CarouselItem key={idx} className="pl-0 h-full">
+                <div className="relative w-full h-full overflow-hidden">
+                  <img
+                    src={slide.src}
+                    alt={slide.type === 'map' ? 'Route map' : 'Vehicle'}
+                    className="w-full h-full object-cover"
+                  />
+                  
+                  {/* Gradient Overlay */}
+                  <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-transparent to-black/60" />
+                  
+                  {/* Top Overlay - Stats */}
+                  <div className="absolute top-0 left-0 right-0 p-4 pt-16 flex justify-between">
+                    <div>
+                      <span className="text-white/70 text-xs block">Distance</span>
+                      <span className="text-white font-bold text-lg">{formatDistance(trip.distance_km)}</span>
+                      {slide.type === 'map' && trip.start_location && (
+                        <span className="text-white/80 text-xs block mt-1">{trip.start_location}</span>
                       )}
-                      
-                      {/* RoadTribe Watermark */}
-                      <div className="flex items-center gap-2">
-                        <img src={iconWhite} alt="RoadTribe" className="h-6 w-6" />
-                        <span className="text-white/90 text-sm font-semibold">RoadTribe</span>
-                      </div>
+                    </div>
+                    <div className="text-right">
+                      <span className="text-white/70 text-xs block">Time on road</span>
+                      <span className="text-white font-bold text-lg">{formatDuration(trip.duration_minutes)}</span>
+                      {slide.type === 'map' && trip.end_location && (
+                        <span className="text-white/80 text-xs block mt-1">{trip.end_location}</span>
+                      )}
                     </div>
                   </div>
-                </CarouselItem>
-              ))}
-            </CarouselContent>
-          </Carousel>
+                  
+                  {/* Bottom Overlay Content */}
+                  <div className="absolute bottom-0 left-0 right-0 p-4 flex justify-between items-end">
+                    {trip.convoy_members && trip.convoy_members.length > 0 ? (
+                      <div>
+                        <span className="text-white/70 text-xs block mb-1">Convoy with</span>
+                        <div className="flex -space-x-2">
+                          {trip.convoy_members.slice(0, 4).map((member) => (
+                            <button
+                              key={member.user_id}
+                              onClick={() => handleConvoyMemberClick(member.user_id)}
+                              className="hover:z-10 transition-transform hover:scale-110"
+                            >
+                              <Avatar className="h-8 w-8 border-2 border-white/30">
+                                <AvatarImage src={member.profile?.avatar_url || ''} alt={member.profile?.display_name || 'User'} />
+                                <AvatarFallback className="text-xs bg-secondary">
+                                  {(member.profile?.display_name || 'U')[0]}
+                                </AvatarFallback>
+                              </Avatar>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    ) : (
+                      <div />
+                    )}
+                    
+                    {/* RoadTribe Watermark */}
+                    <div className="flex items-center gap-2">
+                      <img src={iconWhite} alt="RoadTribe" className="h-6 w-6" />
+                      <span className="text-white/90 text-sm font-semibold">RoadTribe</span>
+                    </div>
+                  </div>
+                </div>
+              </CarouselItem>
+            ))}
+          </CarouselContent>
+        </Carousel>
 
-          {/* Pagination Dots */}
-          {slides.length > 1 && (
-            <div className="flex justify-center gap-2 mt-4">
-              {slides.map((_, index) => (
-                <button
-                  key={index}
-                  onClick={() => carouselApi?.scrollTo(index)}
-                  className={`w-2 h-2 rounded-full transition-colors ${
-                    index === currentSlide ? 'bg-primary' : 'bg-muted'
-                  }`}
-                />
-              ))}
-            </div>
-          )}
-        </div>
+        {/* Pagination Dots - overlaid on image */}
+        {slides.length > 1 && (
+          <div className="absolute bottom-20 left-0 right-0 flex justify-center gap-2 z-10">
+            {slides.map((_, index) => (
+              <button
+                key={index}
+                onClick={() => carouselApi?.scrollTo(index)}
+                className={`w-2 h-2 rounded-full transition-colors ${
+                  index === currentSlide ? 'bg-white' : 'bg-white/40'
+                }`}
+              />
+            ))}
+          </div>
+        )}
+      </div>
 
-        {/* Share Buttons - Contextual based on ownership */}
-        <div className="space-y-3 mt-6">
-          {canShareAsOwn ? (
-            <>
-              {/* Owner/Convoy member - can share as their own */}
-              <Button
-                onClick={handleInstagramShare}
-                disabled={isGeneratingStory}
-                className="w-full h-12 bg-secondary hover:bg-secondary/80 text-foreground font-semibold"
-              >
-                {isGeneratingStory ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Generating…
-                  </>
-                ) : (
-                  'Instagram Story'
-                )}
-              </Button>
-              
-              <Button
-                onClick={handleDownload}
-                disabled={isDownloading}
-                variant="outline"
-                className="w-full h-12 border-border text-foreground font-semibold"
-              >
-                {isDownloading ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Downloading...
-                  </>
-                ) : (
-                  'Download Image'
-                )}
-              </Button>
-            </>
-          ) : (
-            <>
-              {/* 3rd party - can only share the post externally */}
-              <Button
-                onClick={() => setIsShareSheetOpen(true)}
-                className="w-full h-12 bg-secondary hover:bg-secondary/80 text-foreground font-semibold"
-              >
-                <Upload className="mr-2 h-4 w-4" />
-                Share
-              </Button>
-              
-              <Button
-                onClick={handleCopyLink}
-                variant="outline"
-                className="w-full h-12 border-border text-foreground font-semibold"
-              >
-                <LinkIcon className="mr-2 h-4 w-4" />
-                Copy Link
-              </Button>
-            </>
-          )}
-        </div>
+      {/* Bottom Action Buttons */}
+      <div className="p-4 pb-6 space-y-3 bg-black/80 backdrop-blur-sm">
+        {canShareAsOwn ? (
+          <>
+            <Button
+              onClick={handleInstagramShare}
+              disabled={isGeneratingStory}
+              className="w-full h-12 bg-white/10 hover:bg-white/20 text-white font-semibold border border-white/20"
+            >
+              {isGeneratingStory ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Generating…
+                </>
+              ) : (
+                'Instagram Story'
+              )}
+            </Button>
+            
+            <Button
+              onClick={handleDownload}
+              disabled={isDownloading}
+              className="w-full h-12 bg-white/10 hover:bg-white/20 text-white font-semibold border border-white/20"
+            >
+              {isDownloading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Downloading...
+                </>
+              ) : (
+                'Download Image'
+              )}
+            </Button>
+          </>
+        ) : (
+          <>
+            <Button
+              onClick={() => setIsShareSheetOpen(true)}
+              className="w-full h-12 bg-white/10 hover:bg-white/20 text-white font-semibold border border-white/20"
+            >
+              <Upload className="mr-2 h-4 w-4" />
+              Share
+            </Button>
+            
+            <Button
+              onClick={handleCopyLink}
+              className="w-full h-12 bg-white/10 hover:bg-white/20 text-white font-semibold border border-white/20"
+            >
+              <LinkIcon className="mr-2 h-4 w-4" />
+              Copy Link
+            </Button>
+          </>
+        )}
       </div>
       
       {/* Hidden canvas for download */}
