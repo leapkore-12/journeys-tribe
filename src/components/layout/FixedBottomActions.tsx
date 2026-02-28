@@ -24,7 +24,7 @@ const FixedBottomActions = ({
   return (
     <div 
       className={cn(
-        "fixed left-0 right-0 p-4 bg-background max-w-[430px] mx-auto",
+        "fixed left-0 right-0 p-4 bg-background z-50 max-w-[430px] mx-auto",
         showBorder && "border-t border-border",
         className
       )}
