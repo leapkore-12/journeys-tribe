@@ -1,26 +1,45 @@
 
 
-## Fix "Leave Convoy" → "Leave Trip" for Solo Trips
+## Standardize Header Icons Across All Pages
 
 ### Problem
-The dismiss confirmation dialog always says "Leave Convoy?" regardless of whether the user is on a solo trip or a group convoy trip.
+Header icons are inconsistent in size and touch target across pages:
+- **Feed.tsx**: Search/Bell at `h-5 w-5` inside `<Button size="icon">` (~40px container)
+- **TripHeader.tsx**: ChevronLeft/Bell at `h-6 w-6` with `min-h-11 min-w-11` (44px)
+- **TripReview.tsx**: Search/Bell at `h-5 w-5` in `w-10 h-10` containers
+- **Profile.tsx**: Search/Settings at `h-6 w-6` with no touch target sizing
+- **TripDetail.tsx**: ArrowLeft at `h-6 w-6` with `p-2 -ml-2` (inconsistent)
+- Many other pages: bare buttons with no `min-h-11 min-w-11`
 
-### Changes — `src/components/trip/ActiveTripBar.tsx`
+### Standard to Apply (matching TripHeader pattern)
+- All header icons: **`h-6 w-6`**
+- All header icon buttons: **`min-h-11 min-w-11 flex items-center justify-center active:opacity-70`**
+- This ensures 44px touch targets and consistent visual weight
 
-1. **Check if solo trip**: Compare `activeConvoy.trip.user_id === user.id` and add a query to count active convoy members for the trip. If only 1 member (the user), it's a solo trip.
+### Files to Update
 
-2. **Simpler approach**: Since the `useActiveConvoy` hook already tells us `is_leader` and `trip.user_id`, we can fetch the member count inline. But the simplest: if the user owns the trip (`trip.user_id === user.id`), check member count. Or even simpler — just count members in the dismiss handler when we already hit the DB.
+| File | What changes |
+|------|-------------|
+| `src/pages/Feed.tsx` | Search & Bell icons → `h-6 w-6`, replace `<Button size="icon">` with standard button pattern |
+| `src/pages/TripReview.tsx` | Search & Bell → `h-6 w-6`, containers → `min-h-11 min-w-11` |
+| `src/pages/Profile.tsx` | Search & Settings → add `min-h-11 min-w-11` touch targets |
+| `src/pages/TripDetail.tsx` | ArrowLeft buttons → replace `p-2 -ml-2` with `min-h-11 min-w-11` pattern |
+| `src/pages/Comments.tsx` | Verify ArrowLeft button has consistent pattern |
+| `src/pages/Notifications.tsx` | ArrowLeft button → consistent pattern |
+| `src/pages/Settings.tsx` | ArrowLeft button → consistent pattern |
+| `src/pages/Help.tsx` | ArrowLeft → add touch target |
+| `src/pages/Subscription.tsx` | ArrowLeft → add touch target |
+| `src/pages/TermsOfService.tsx` | ArrowLeft → add touch target |
+| `src/pages/PrivacyPolicy.tsx` | ArrowLeft → add touch target |
+| `src/pages/ManageConnections.tsx` | ArrowLeft → consistent sizing |
+| `src/pages/BlockedAccounts.tsx` | Uses `<Button size="icon">` → standardize |
+| `src/pages/EditProfile.tsx` | ArrowLeft → add touch target |
+| `src/pages/Garage.tsx` | ArrowLeft → add touch target |
+| `src/pages/EditVehicle.tsx` | ArrowLeft → add touch target |
+| `src/pages/NotificationSettings.tsx` | Already correct — verify only |
+| `src/pages/UserProfile.tsx` | Check and fix header icons |
+| `src/pages/PostTrip.tsx` | Check and fix header icons |
+| `src/pages/Search.tsx` | Already has `min-h-11 min-w-11` — verify icon size |
 
-3. **Determine `isConvoy`**: In `handleDismiss`, after fetching the trip status, also fetch `convoy_members` count for the trip. If count > 1, it's a convoy. Store in state.
-
-4. **Update dialog text dynamically**:
-   - Solo: Title = "Leave Trip?", Description = "...leave the trip?", Button = "Leave Trip", toast = "Left trip"
-   - Convoy: Title = "Leave Convoy?", Description = "...leave the convoy?", Button = "Leave Convoy", toast = "Left convoy"
-
-### Implementation
-- Add `const [isConvoy, setIsConvoy] = useState(false)` state
-- In `handleDismiss`, after confirming trip is active, query `convoy_members` count where `trip_id` matches and `status = 'active'`. Set `isConvoy = count > 1`
-- Replace hardcoded "Convoy" strings in dialog with conditional: `isConvoy ? 'Convoy' : 'Trip'`
-
-One file changed, ~10 lines added.
+~20 files, ~1-3 lines each. All icons become `h-6 w-6`, all containers become `min-h-11 min-w-11 flex items-center justify-center active:opacity-70`.
 
