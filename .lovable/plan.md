@@ -1,41 +1,33 @@
 
 
-## Fix Invite Button Not Working
+## Allow Convoy Leaders to Create Invites
 
-### Root Causes
-
-1. **`activeTripId` can be `null`** — `handleShareInvite` passes `activeTripId` (which is `string | null`) directly to `createInvite.mutateAsync({ tripId: activeTripId })`. When null, the insert fails silently.
-
-2. **Silent failure** — The catch block only does `console.error`, so the user sees no feedback when the invite fails.
-
-3. **No null guard on button** — The invite button is always clickable even when `activeTripId` is null.
-
-### Changes — `src/pages/ActiveTrip.tsx`
-
-**1. Guard `handleShareInvite` against null tripId (line 432-448)**
-- Add early return if `!activeTripId`
-- Add user-facing toast on error instead of silent `console.error`
-
-```ts
-const handleShareInvite = useCallback(async () => {
-  if (!activeTripId) {
-    toast({ title: 'No active trip', description: 'Cannot create invite without an active trip.', variant: 'destructive' });
-    return;
-  }
-  try {
-    const result = await createInvite.mutateAsync({ tripId: activeTripId });
-    if (navigator.share) {
-      await navigator.share({ ... });
-    } else {
-      await copyInviteLink(result.invite_code);
-    }
-  } catch (error) {
-    console.error('Share failed:', error);
-    toast({ title: 'Invite failed', description: 'Could not create invite. Please try again.', variant: 'destructive' });
-  }
-}, [createInvite, copyInviteLink, getShareLink, activeTripId, toast]);
+### Current State
+The `convoy_invites` INSERT policy only allows trip owners:
+```sql
+(auth.uid() = inviter_id) AND (EXISTS (SELECT 1 FROM trips t WHERE t.id = convoy_invites.trip_id AND t.user_id = auth.uid()))
 ```
 
-**2. Disable invite buttons when no tripId (lines 508-509, 733-734)**
-- Add `!activeTripId` to the `disabled` prop on both the header share button and the convoy panel invite button
+### Change — Single Migration
+
+Drop and recreate the INSERT policy on `convoy_invites` to also check if the user is a convoy leader for that trip:
+
+```sql
+DROP POLICY "Trip owner can create invites" ON public.convoy_invites;
+
+CREATE POLICY "Trip owner or convoy leader can create invites"
+ON public.convoy_invites
+FOR INSERT
+TO authenticated
+WITH CHECK (
+  auth.uid() = inviter_id
+  AND (
+    EXISTS (SELECT 1 FROM trips t WHERE t.id = trip_id AND t.user_id = auth.uid())
+    OR
+    EXISTS (SELECT 1 FROM convoy_members cm WHERE cm.trip_id = convoy_invites.trip_id AND cm.user_id = auth.uid() AND cm.is_leader = true AND cm.status = 'active')
+  )
+);
+```
+
+No code changes needed — the frontend already passes `auth.uid()` as `inviter_id` and the trip ID correctly.
 
