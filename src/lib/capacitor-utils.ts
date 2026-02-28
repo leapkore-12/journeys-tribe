@@ -85,22 +85,23 @@ export async function pickPhotoAsFile(): Promise<File | null> {
 // Pick multiple photos - returns array of File objects
 export async function pickMultiplePhotosAsFiles(): Promise<File[]> {
   if (Capacitor.isNativePlatform()) {
-    // Native: Camera plugin doesn't support true multi-select, pick one at a time
     try {
-      const { Camera, CameraResultType, CameraSource } = await import('@capacitor/camera');
-      const image = await Camera.getPhoto({
+      const { Camera } = await import('@capacitor/camera');
+      const result = await Camera.pickImages({
         quality: 80,
-        allowEditing: false,
-        resultType: CameraResultType.Base64,
-        source: CameraSource.Photos, // Gallery only
+        limit: 20,
       });
       
-      if (image.base64String) {
-        const format = image.format || 'jpeg';
-        const blob = base64ToBlob(image.base64String, `image/${format}`);
-        return [new File([blob], `photo_${Date.now()}.${format}`, { type: `image/${format}` })];
+      const files: File[] = [];
+      for (const photo of result.photos) {
+        if (photo.webPath) {
+          const response = await fetch(photo.webPath);
+          const blob = await response.blob();
+          const format = photo.format || 'jpeg';
+          files.push(new File([blob], `photo_${Date.now()}_${files.length}.${format}`, { type: `image/${format}` }));
+        }
       }
-      return [];
+      return files;
     } catch (error) {
       console.error('Camera error:', error);
       return [];
