@@ -314,7 +314,7 @@ const PostTrip = () => {
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             placeholder="Description"
-            className="min-h-24 bg-transparent border-primary text-foreground placeholder:text-muted-foreground resize-none"
+            className="min-h-24 bg-transparent border-primary text-foreground placeholder:text-muted-foreground resize-none text-base"
           />
         </motion.div>
 
