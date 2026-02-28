@@ -1,30 +1,37 @@
 
 
-## Make Toast Swipe-Up to Dismiss (iOS-style) + Auto-close at 4.5s
+## Create a Manage Notifications Settings Page
 
-### Changes
+Currently "Manage notifications" just navigates to the notifications inbox. It needs its own dedicated page with toggles to control which notifications the user receives.
 
-**1. `src/components/ui/toast.tsx`** — Change swipe direction and animations:
-- On the `ToastProvider`, set `swipeDirection="up"` 
-- Update `toastVariants` CSS classes: replace all `translate-x` / `swipe-end-x` / `swipe-move-x` references with `translate-y` / `swipe-end-y` / `swipe-move-y` equivalents, and change `slide-out-to-right-full` to `slide-out-to-top-full`
+### 1. Database Migration — Add notification preference columns to `profiles`
 
-**2. `src/hooks/use-toast.ts`** — Update auto-dismiss delay:
-- Change `TOAST_REMOVE_DELAY` from `3000` to `4500`
+Add these boolean columns (all defaulting to `true`):
+- `notify_likes` — receive notifications when someone likes your trip
+- `notify_comments` — receive notifications on comments
+- `notify_follows` — receive notifications for follow requests/accepts
+- `notify_convoy_invites` — receive notifications for convoy invites
 
-### Swipe class mapping (line 30)
-```
-Current (horizontal):
-  data-[swipe=cancel]:translate-x-0
-  data-[swipe=end]:translate-x-[var(--radix-toast-swipe-end-x)]
-  data-[swipe=move]:translate-x-[var(--radix-toast-swipe-move-x)]
-  data-[state=closed]:slide-out-to-right-full
+### 2. New Page — `src/pages/NotificationSettings.tsx`
 
-New (vertical/up):
-  data-[swipe=cancel]:translate-y-0
-  data-[swipe=end]:translate-y-[var(--radix-toast-swipe-end-y)]
-  data-[swipe=move]:translate-y-[var(--radix-toast-swipe-move-y)]
-  data-[state=closed]:slide-out-to-top-full
-```
+A settings-style page with:
+- Back arrow header titled "Manage Notifications"
+- Toggle switches for each notification type:
+  - **Likes** — "Get notified when someone likes your trip"
+  - **Comments** — "Get notified when someone comments on your trip"
+  - **Follows** — "Get notified about follow requests"
+  - **Convoy Invites** — "Get notified about convoy invitations"
+- Each toggle reads from and writes to the user's profile
 
-Two files, minimal changes.
+### 3. Update `src/pages/Settings.tsx`
+
+Change the "Manage notifications" item to navigate to `/settings/notifications` instead of `/notifications`.
+
+### 4. Update `src/App.tsx`
+
+Add route: `/settings/notifications` → `NotificationSettings`
+
+### 5. Update notification triggers (optional enhancement)
+
+The database triggers that create notifications (`notify_on_trip_like`, `notify_on_comment`, `notify_on_follow_request_accepted`) should check the recipient's preference before inserting. This ensures toggling off actually stops notifications.
 
