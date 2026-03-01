@@ -1,33 +1,24 @@
 
 
-## Fix Offline Maps for Capacitor/Native iOS
+## Already Implemented
 
-### Problem
-The offline maps feature relies entirely on Service Workers, which are **not supported in Capacitor's WKWebView** on iOS. The check `'serviceWorker' in navigator` returns `false`, so the component shows "Offline maps not available in this browser."
+The Settings page **already contains** a cache management section for offline maps. Looking at the existing code (lines ~460-510 of `Settings.tsx`):
 
-### Solution
-Implement a **direct Cache API fallback** that works without service workers. The `caches` (Cache Storage API) is available in WKWebView even without service worker support. When service workers aren't available (native app), the hook will cache and retrieve tiles directly from the main thread using the Cache API.
+- **"Offline Maps" section** with a header
+- **Cached Map Data display** showing tile count or size in KB/MB
+- **"Clear offline maps" button** with loading state and destructive styling
+- **Conditional rendering** — only shown when `offlineMapsSupported` is true
 
-### Changes
+The section uses the `useOfflineMaps` hook which provides `cacheSize`, `getCacheSize`, and `clearCache`.
 
-**1. `src/hooks/useOfflineMaps.ts`** — Add direct Cache API fallback
-- Change `isSupported` to check for either `serviceWorker` OR `caches` API availability
-- When service workers aren't available but `caches` is, implement tile caching directly:
-  - `downloadRouteArea`: Fetch tiles in batches and store them via `caches.open()` / `cache.put()` directly
-  - `checkCacheStatus`: Check cached tiles directly via `cache.match()`
-  - `clearCache`: Delete the cache directly via `caches.delete()`
-  - `getCacheSize`: Count cached keys directly
-- Keep the existing service worker path for web browsers
+### What Could Be Improved
 
-**2. `src/components/trip/OfflineMapDownload.tsx`** — No changes needed
-- The component already works off the hook's `isSupported` / `isReady` flags; once the hook reports support, it will work automatically.
+Since the feature exists but could be enhanced, here are optional improvements:
 
-**3. `src/lib/offline-tiles.ts`** — Add a helper to strip access tokens from URLs (same logic the SW uses for cache keys), so the direct cache path uses consistent keys.
+1. **Show last download date** — Track and display when tiles were last cached
+2. **Show region names** — Display which route areas are cached (requires storing metadata alongside tiles)
+3. **Per-region cache management** — Allow deleting specific route caches instead of all-or-nothing
+4. **Always show the section** — Currently hidden when `offlineMapsSupported` is false; could instead show an informational message explaining offline maps require the native app
 
-### Technical Detail
-The key insight is that `window.caches` (CacheStorage API) works independently of service workers in modern WebKit/WKWebView. The service worker was only used as a middleman to batch-fetch and cache tiles. We can do the same directly from the main thread. The fetch-intercept (cache-first on navigation) won't work without a SW, but pre-downloading tiles into the cache is still valuable — Mapbox GL JS can be configured to check the cache first via a custom `transformRequest`.
-
-### Files changed
-1. `src/hooks/useOfflineMaps.ts` — Add direct Cache API fallback path
-2. `src/lib/offline-tiles.ts` — Export `getCacheKey` helper
+No changes are needed unless you'd like one of these enhancements. The core cache management section is already live in Settings.
 
