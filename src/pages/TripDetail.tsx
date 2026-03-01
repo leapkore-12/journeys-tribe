@@ -234,7 +234,7 @@ const TripDetail = () => {
       </header>
 
       {/* Scrollable Content */}
-      <div className="flex-1 overflow-y-auto pb-20">
+      <div className="flex-1 overflow-y-auto pb-28">
         {/* Trip Card */}
         <motion.article
           initial={{ opacity: 0, y: 20 }}
@@ -473,7 +473,7 @@ const TripDetail = () => {
       </div>
 
       {/* Comment Input */}
-      <FixedBottomActions showBorder>
+      <FixedBottomActions showBorder aboveNav={false}>
         <form onSubmit={handleSubmitComment} className="flex items-center gap-3">
           <Input
             value={newComment}
