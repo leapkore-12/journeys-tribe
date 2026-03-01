@@ -78,6 +78,15 @@ const Login = () => {
     }
   };
 
+  // Show spinner while checking auth state
+  if (authLoading || adminLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-background flex flex-col safe-top safe-bottom">
       <div className="flex-1 flex flex-col justify-center px-6 py-8">
