@@ -173,7 +173,7 @@ const TripReview = () => {
       </header>
 
       {/* Title */}
-      <div className="px-4 pt-6 pb-4">
+      <div className="px-4 pt-8 pb-4">
         <h1 className="text-xl font-semibold text-primary text-center">Trip Planner</h1>
       </div>
 
