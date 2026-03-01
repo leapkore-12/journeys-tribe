@@ -1,16 +1,17 @@
 
 
-## Fix Empty Space on Create User Page
+## Fix Spacing on Remaining Admin Pages
 
 ### Problem
-The Create User page has a large empty gap between the "Create User" button and the bottom navigation bar. The `pb-32` padding on `<main>` combined with `flex-1 overflow-y-auto` on the scroll wrapper creates excessive whitespace below the button.
+Dashboard, User Management, and Edit User all use `pb-32` bottom padding, creating the same excessive white space gap above the bottom nav that was just fixed on Create User (`pb-20`).
 
-### Solution — `src/pages/admin/CreateUser.tsx`
+### Changes
 
-1. **Reduce bottom padding** — Change `pb-32` to `pb-20` on the `<main>` element. The `pb-32` was overly generous; `pb-20` provides just enough clearance above the fixed bottom nav (h-16 = 4rem = ~64px, pb-20 = 5rem = 80px).
+1. **`src/pages/admin/AdminDashboard.tsx`** (line 73) — Change `pb-32` to `pb-20` on the scroll wrapper div.
 
-2. **Remove `mb-4` from the submit button** — The extra margin below the button adds unnecessary space at the bottom of the form.
+2. **`src/pages/admin/UserManagement.tsx`** (line 56) — Change `pb-32` to `pb-20` on `<main>`.
 
-### Files changed
-1. `src/pages/admin/CreateUser.tsx` — Change `pb-32` to `pb-20` on main, remove `mb-4` from Button
+3. **`src/pages/admin/EditUser.tsx`** (line 169) — Change `pb-32` to `pb-20` on `<main>`.
+
+All three changes match what was already applied to CreateUser.
 
