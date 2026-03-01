@@ -42,7 +42,7 @@ const TripPlanner = () => {
   const [selectedVehicle, setSelectedVehicle] = useState<VehicleWithImages | null>(null);
   const [showVehicleDropdown, setShowVehicleDropdown] = useState(false);
   const [searchFriends, setSearchFriends] = useState('');
-  const [localStops, setLocalStops] = useState(tripState.stops);
+  
   const [selectedFriends, setSelectedFriends] = useState<string[]>(tripState.convoy.map(u => u.id));
   const [isGettingLocation, setIsGettingLocation] = useState(false);
 
@@ -105,13 +105,13 @@ const TripPlanner = () => {
   // Calculate route when we have start and destination
   useEffect(() => {
     if (startCoords && destCoords) {
-      const waypoints = localStops
+      const waypoints = tripState.stops
         .filter(s => s.coordinates)
         .map(s => s.coordinates as [number, number]);
       
       getRoute(startCoords, destCoords, waypoints.length > 0 ? waypoints : undefined);
     }
-  }, [startCoords, destCoords, localStops, getRoute]);
+  }, [startCoords, destCoords, tripState.stops, getRoute]);
 
   // Update trip context when route is calculated
   useEffect(() => {
@@ -196,7 +196,6 @@ const TripPlanner = () => {
   const handleAddStop = () => {
     if (stopInput.trim()) {
       addStop(stopInput, stopCoords || undefined);
-      setLocalStops([...localStops, { id: Date.now().toString(), address: stopInput, coordinates: stopCoords }]);
       setStopInput('');
       setStopCoords(null);
     }
@@ -286,7 +285,7 @@ const TripPlanner = () => {
       <TripHeader onBack={handleBack} />
       
       {/* Title */}
-      <div className="px-4 pt-6 pb-4">
+    <div className="px-4 pt-8 pb-4">
         <h1 className="text-xl font-semibold text-primary text-center">Trip Planner</h1>
       </div>
 
@@ -497,9 +496,9 @@ const TripPlanner = () => {
               </div>
 
               {/* List of added stops */}
-              {localStops.length > 0 && (
+              {tripState.stops.length > 0 && (
                 <div className="space-y-2">
-                  {localStops.map((stop, idx) => (
+                  {tripState.stops.map((stop, idx) => (
                     <div key={stop.id} className="flex items-center gap-3 p-3 bg-secondary rounded-lg">
                       <span className="text-muted-foreground text-sm">{idx + 1}.</span>
                       <div className="flex-1">
@@ -513,7 +512,6 @@ const TripPlanner = () => {
                       <button 
                         onClick={() => {
                           removeStop(stop.id);
-                          setLocalStops(localStops.filter(s => s.id !== stop.id));
                         }}
                         className="text-muted-foreground hover:text-destructive"
                       >
