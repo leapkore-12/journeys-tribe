@@ -188,3 +188,14 @@ export function isWithinBounds(
     lat <= bounds.maxLat
   );
 }
+
+// Strip access token from URL to create a consistent cache key
+export function getCacheKey(url: string): string {
+  try {
+    const u = new URL(url);
+    u.searchParams.delete('access_token');
+    return u.toString();
+  } catch {
+    return url;
+  }
+}
