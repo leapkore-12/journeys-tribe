@@ -1,25 +1,33 @@
 
 
-## Fix Fullscreen Image Viewer Close Button in Garage
+## Fix Offline Maps for Capacitor/Native iOS
 
 ### Problem
-The fullscreen image viewer Dialog uses the default DialogContent close button (X icon at 16x16px). On mobile, this is nearly invisible on the black background and too small to tap reliably. The overlay click may also not register properly due to the full-screen content div intercepting touches.
+The offline maps feature relies entirely on Service Workers, which are **not supported in Capacitor's WKWebView** on iOS. The check `'serviceWorker' in navigator` returns `false`, so the component shows "Offline maps not available in this browser."
 
-### Solution — `src/pages/Garage.tsx`
+### Solution
+Implement a **direct Cache API fallback** that works without service workers. The `caches` (Cache Storage API) is available in WKWebView even without service worker support. When service workers aren't available (native app), the hook will cache and retrieve tiles directly from the main thread using the Cache API.
 
-1. **Add a visible, large close button** — Replace reliance on the tiny default X with an explicit large close button (e.g., 44x44px tap target with a visible X icon) positioned at top-right with safe area consideration.
+### Changes
 
-2. **Make the background tappable to close** — Add an `onClick` handler on the background area so tapping outside the image also closes the viewer.
+**1. `src/hooks/useOfflineMaps.ts`** — Add direct Cache API fallback
+- Change `isSupported` to check for either `serviceWorker` OR `caches` API availability
+- When service workers aren't available but `caches` is, implement tile caching directly:
+  - `downloadRouteArea`: Fetch tiles in batches and store them via `caches.open()` / `cache.put()` directly
+  - `checkCacheStatus`: Check cached tiles directly via `cache.match()`
+  - `clearCache`: Delete the cache directly via `caches.delete()`
+  - `getCacheSize`: Count cached keys directly
+- Keep the existing service worker path for web browsers
 
-3. **Hide the default DialogContent close button** — Use `[&>button]:hidden` to remove the tiny default one.
+**2. `src/components/trip/OfflineMapDownload.tsx`** — No changes needed
+- The component already works off the hook's `isSupported` / `isReady` flags; once the hook reports support, it will work automatically.
 
-### Changes — `src/pages/Garage.tsx` (lines 186-199)
+**3. `src/lib/offline-tiles.ts`** — Add a helper to strip access tokens from URLs (same logic the SW uses for cache keys), so the direct cache path uses consistent keys.
 
-Replace the Dialog block with:
-- A custom close button using the `X` icon (already imported) with `min-h-11 min-w-11` tap target
-- The image container gets a click handler that closes on background tap (not on the image itself)
-- Default close button hidden via `[&>button]:hidden`
+### Technical Detail
+The key insight is that `window.caches` (CacheStorage API) works independently of service workers in modern WebKit/WKWebView. The service worker was only used as a middleman to batch-fetch and cache tiles. We can do the same directly from the main thread. The fetch-intercept (cache-first on navigation) won't work without a SW, but pre-downloading tiles into the cache is still valuable — Mapbox GL JS can be configured to check the cache first via a custom `transformRequest`.
 
 ### Files changed
-1. `src/pages/Garage.tsx` — Replace fullscreen image viewer close mechanism
+1. `src/hooks/useOfflineMaps.ts` — Add direct Cache API fallback path
+2. `src/lib/offline-tiles.ts` — Export `getCacheKey` helper
 
