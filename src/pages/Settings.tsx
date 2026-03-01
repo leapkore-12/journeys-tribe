@@ -217,11 +217,7 @@ const Settings = () => {
         throw new Error('No active session');
       }
 
-      const response = await supabase.functions.invoke('export-user-data', {
-        headers: {
-          Authorization: `Bearer ${session.access_token}`,
-        },
-      });
+      const response = await supabase.functions.invoke('export-user-data');
 
       if (response.error) {
         throw response.error;
