@@ -1,7 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import { ChevronLeft, Bell, Phone } from 'lucide-react';
 import logoWhite from '@/assets/logo-white.svg';
-import { useDeviceSpacing } from '@/hooks/useDeviceInfo';
 
 interface TripHeaderProps {
   showBack?: boolean;
@@ -21,15 +20,9 @@ const TripHeader = ({
   onBack,
 }: TripHeaderProps) => {
   const navigate = useNavigate();
-  const { safeAreaTop } = useDeviceSpacing();
 
   return (
-    <header 
-      className="flex items-center justify-between px-4 h-14 bg-background"
-      style={{ 
-        paddingTop: `max(env(safe-area-inset-top, ${safeAreaTop}px), ${safeAreaTop}px)` 
-      }}
-    >
+    <header className="flex items-center justify-between px-4 h-14 bg-background">
       <div className="w-11">
         {showBack && (
           <button 
