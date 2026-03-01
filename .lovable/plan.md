@@ -1,22 +1,44 @@
 
 
-## Fix: Trip Planner Header Has Extra Top Spacing
+## Fix: Replace `navigate(-1)` with Direct Parent Routes
 
-### Problem
-The Trip Planner screen uses `TripHeader`, which applies its own safe-area top padding via `paddingTop: max(env(safe-area-inset-top), safeAreaTop)`. But `MobileContainer` already adds top safe-area padding globally. This causes double padding on the Trip Planner, making the header sit lower than Feed and Profile.
+Every sub-page currently uses `navigate(-1)` (browser history back), which causes unpredictable navigation when users visit multiple sub-pages in sequence. The fix is simple: replace every `handleBack` with a direct `navigate('/parent')` call.
 
-Feed and Profile headers use a plain `<header>` with `h-14` and no extra top padding — they rely on `MobileContainer` for safe area handling.
+### Changes (21 files, one-liner each)
 
-### Fix
+**Settings sub-pages → `navigate('/settings')`:**
+- `src/pages/ManageTribe.tsx`
+- `src/pages/TermsOfService.tsx`
+- `src/pages/PrivacyPolicy.tsx`
+- `src/pages/Help.tsx`
+- `src/pages/BlockedAccounts.tsx`
+- `src/pages/NotificationSettings.tsx`
+- `src/pages/Subscription.tsx`
 
-**`src/components/trip/TripHeader.tsx`** — Remove the inline `paddingTop` style that duplicates the safe area. Keep the header as a simple `h-14` flex container, matching Feed and Profile headers.
+**Profile sub-pages → `navigate('/profile')`:**
+- `src/pages/Settings.tsx`
+- `src/pages/Garage.tsx`
+- `src/pages/ManageConnections.tsx`
 
-Remove:
-```tsx
-style={{ 
-  paddingTop: `max(env(safe-area-inset-top, ${safeAreaTop}px), ${safeAreaTop}px)` 
-}}
-```
+**Feed sub-pages → `navigate('/feed')`:**
+- `src/pages/Search.tsx`
+- `src/pages/Notifications.tsx`
+- `src/pages/Comments.tsx`
+- `src/pages/Share.tsx`
+- `src/pages/TripDetail.tsx`
+- `src/pages/UserProfile.tsx`
+- `src/pages/EditTrip.tsx`
 
-Also remove the `useDeviceSpacing` import since it's no longer needed.
+**Garage sub-pages → `navigate('/garage')`:**
+- `src/pages/EditVehicle.tsx`
+
+**Admin sub-pages → `navigate('/admin/dashboard')`:**
+- `src/pages/admin/UserManagement.tsx`
+- `src/pages/admin/EditUser.tsx`
+- `src/pages/admin/CreateUser.tsx`
+
+### What changes in each file
+Replace the `handleBack` function (or inline `navigate(-1)`) with a single `navigate('/parent-route')` call. Remove the `window.history.length` check entirely.
+
+**Already correct** (no changes needed): `EditProfile.tsx`, `ChangeCredentials.tsx`.
 
