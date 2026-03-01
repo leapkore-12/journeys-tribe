@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Eye, EyeOff } from 'lucide-react';
@@ -6,76 +6,51 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/AuthContext';
-import { useIsAdmin } from '@/hooks/useAdmin';
 import logoWhiteTagline from '@/assets/logo-white-tagline.svg';
 
-const Login = () => {
+const Signup = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { signIn, user, isLoading: authLoading } = useAuth();
-  const { data: isAdmin, isLoading: adminLoading, refetch: refetchAdmin } = useIsAdmin();
+  const { signUp } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState('');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
-  // Redirect if already logged in based on role
-  useEffect(() => {
-    if (user && !authLoading && !adminLoading) {
-      if (isAdmin) {
-        navigate('/admin/dashboard', { replace: true });
-      } else {
-        navigate('/feed', { replace: true });
-      }
-    }
-  }, [user, authLoading, adminLoading, isAdmin, navigate]);
-
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (!email || !password) {
-      toast({
-        title: "Error",
-        description: "Please enter both email and password",
-        variant: "destructive",
-      });
+
+    if (!email || !username || !password || !confirmPassword) {
+      toast({ title: "Error", description: "Please fill in all fields", variant: "destructive" });
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      toast({ title: "Error", description: "Passwords do not match", variant: "destructive" });
+      return;
+    }
+
+    if (password.length < 6) {
+      toast({ title: "Error", description: "Password must be at least 6 characters", variant: "destructive" });
       return;
     }
 
     setIsLoading(true);
-    
-    const { error } = await signIn(email, password);
-    
+    const { error } = await signUp(email, password, username);
+    setIsLoading(false);
+
     if (error) {
-      let errorMessage = "An error occurred during login";
-      
-      if (error.message.includes("Invalid login credentials")) {
-        errorMessage = "Invalid email or password";
-      } else if (error.message.includes("Email not confirmed")) {
-        errorMessage = "Please confirm your email before logging in";
-      } else {
-        errorMessage = error.message;
-      }
-      
-      toast({
-        title: "Login failed",
-        description: errorMessage,
-        variant: "destructive",
-      });
-      setIsLoading(false);
+      toast({ title: "Sign up failed", description: error.message, variant: "destructive" });
       return;
     }
-    
-    // Refetch admin status and redirect based on role
-    const { data: adminStatus } = await refetchAdmin();
-    
-    setIsLoading(false);
-    
-    if (adminStatus) {
-      navigate('/admin/dashboard');
-    } else {
-      navigate('/feed');
-    }
+
+    toast({
+      title: "Account created",
+      description: "Please check your email to confirm your account before logging in.",
+    });
+    navigate('/login');
   };
 
   return (
@@ -87,13 +62,20 @@ const Login = () => {
           transition={{ duration: 0.5 }}
           className="w-full max-w-sm mx-auto"
         >
-          {/* Logo with Tagline */}
           <div className="flex justify-center mb-12">
             <img src={logoWhiteTagline} alt="RoadTribe" className="w-56 h-auto" />
           </div>
 
-          {/* Login Form */}
-          <form onSubmit={handleLogin} className="space-y-4">
+          <form onSubmit={handleSignup} className="space-y-4">
+            <Input
+              type="text"
+              placeholder="Username"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              className="h-12 bg-secondary border-border text-foreground placeholder:text-muted-foreground"
+              autoComplete="username"
+            />
+
             <Input
               type="email"
               placeholder="Email"
@@ -110,7 +92,7 @@ const Login = () => {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 className="h-12 pr-10 bg-secondary border-border text-foreground placeholder:text-muted-foreground"
-                autoComplete="current-password"
+                autoComplete="new-password"
               />
               <button
                 type="button"
@@ -121,30 +103,28 @@ const Login = () => {
               </button>
             </div>
 
-            <div className="flex justify-end">
-              <button
-                type="button"
-                onClick={() => navigate('/forgot-password')}
-                className="text-sm text-primary hover:underline"
-              >
-                Forgot password?
-              </button>
-            </div>
+            <Input
+              type={showPassword ? 'text' : 'password'}
+              placeholder="Confirm Password"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              className="h-12 bg-secondary border-border text-foreground placeholder:text-muted-foreground"
+              autoComplete="new-password"
+            />
 
             <Button
               type="submit"
               className="w-full h-12 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold mt-2"
               disabled={isLoading}
             >
-              {isLoading ? 'Logging in...' : 'Login'}
+              {isLoading ? 'Creating account...' : 'Sign Up'}
             </Button>
           </form>
 
-          {/* Account Info */}
           <p className="mt-8 text-center text-sm text-muted-foreground">
-            Don't have an account?{' '}
-            <button onClick={() => navigate('/signup')} className="text-primary hover:underline">
-              Sign up
+            Already have an account?{' '}
+            <button onClick={() => navigate('/login')} className="text-primary hover:underline">
+              Login
             </button>
           </p>
         </motion.div>
@@ -153,4 +133,4 @@ const Login = () => {
   );
 };
 
-export default Login;
+export default Signup;

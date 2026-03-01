@@ -12,6 +12,7 @@ import ProtectedRoute from "./components/auth/ProtectedRoute";
 import AdminRoute from "./components/auth/AdminRoute";
 import Splash from "./pages/Splash";
 import Login from "./pages/Login";
+import Signup from "./pages/Signup";
 import Feed from "./pages/Feed";
 import Search from "./pages/Search";
 import Notifications from "./pages/Notifications";
@@ -75,6 +76,7 @@ const App = () => {
                   {/* Public Routes */}
                   <Route path="/" element={<Splash />} />
                   <Route path="/login" element={<Login />} />
+                  <Route path="/signup" element={<Signup />} />
                   <Route path="/forgot-password" element={<ForgotPassword />} />
                   <Route path="/reset-password" element={<ResetPassword />} />
                   
