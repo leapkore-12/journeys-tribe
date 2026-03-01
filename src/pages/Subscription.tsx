@@ -95,9 +95,10 @@ const Subscription = () => {
           </div>
           
           {isPaid ? (
-            <p className="text-muted-foreground">
-              Unlimited trips & features. Thank you for your support!
-            </p>
+            <div className="text-muted-foreground space-y-1">
+              <p>You are using the Premium Plan.</p>
+              <p>Built for riders and drivers.</p>
+            </div>
           ) : (
             <div className="space-y-3">
               <div className="flex justify-between text-sm">
