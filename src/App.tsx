@@ -85,6 +85,7 @@ const App = () => {
                     <Route path="/feed" element={<Feed />} />
                     <Route path="/trip" element={<TripPlanner />} />
                     <Route path="/profile" element={<Profile />} />
+                    <Route path="/share/:postId" element={<Share />} />
                   </Route>
                   
                   {/* Protected Routes - Trip Flow */}
@@ -103,7 +104,7 @@ const App = () => {
                   <Route path="/trip/:tripId" element={<ProtectedRoute><TripDetail /></ProtectedRoute>} />
                   <Route path="/trip/:tripId/edit" element={<ProtectedRoute><EditTrip /></ProtectedRoute>} />
                   <Route path="/comments/:postId" element={<ProtectedRoute><Comments /></ProtectedRoute>} />
-                  <Route path="/share/:postId" element={<ProtectedRoute><Share /></ProtectedRoute>} />
+                  {/* Share route moved to MainLayout group */}
                   <Route path="/user/:userId" element={<ProtectedRoute><UserProfile /></ProtectedRoute>} />
                   <Route path="/garage" element={<ProtectedRoute><Garage /></ProtectedRoute>} />
                   <Route path="/user/:userId/garage" element={<ProtectedRoute><Garage /></ProtectedRoute>} />
