@@ -106,6 +106,7 @@ const App = () => {
                   <Route path="/share/:postId" element={<ProtectedRoute><Share /></ProtectedRoute>} />
                   <Route path="/user/:userId" element={<ProtectedRoute><UserProfile /></ProtectedRoute>} />
                   <Route path="/garage" element={<ProtectedRoute><Garage /></ProtectedRoute>} />
+                  <Route path="/user/:userId/garage" element={<ProtectedRoute><Garage /></ProtectedRoute>} />
                   <Route path="/garage/edit/:id?" element={<ProtectedRoute><EditVehicle /></ProtectedRoute>} />
                   <Route path="/manage-followers" element={<ProtectedRoute><ManageConnections /></ProtectedRoute>} />
                   <Route path="/manage-tribe" element={<ProtectedRoute><ManageTribe /></ProtectedRoute>} />
