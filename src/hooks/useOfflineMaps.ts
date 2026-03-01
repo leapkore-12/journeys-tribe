@@ -3,21 +3,17 @@ import {
   registerOfflineMapsSW,
   postMessageToSW,
   addSWMessageListener,
-  getServiceWorker,
 } from '@/lib/service-worker-init';
 import {
   getRouteTiles,
   generateTileUrls,
   estimateDownloadSize,
   calculateRouteDistanceKm,
+  getCacheKey,
 } from '@/lib/offline-tiles';
 
-interface CacheProgress {
-  completed: number;
-  total: number;
-  failed: number;
-  progress: number;
-}
+const CACHE_NAME = 'offline-mapbox-tiles';
+const BATCH_SIZE = 20;
 
 interface CacheStatus {
   total: number;
@@ -33,7 +29,6 @@ interface CacheSize {
 }
 
 interface UseOfflineMapsReturn {
-  // State
   isSupported: boolean;
   isReady: boolean;
   isDownloading: boolean;
@@ -42,8 +37,6 @@ interface UseOfflineMapsReturn {
   estimatedSize: string;
   cacheStatus: CacheStatus | null;
   cacheSize: CacheSize | null;
-  
-  // Actions
   downloadRouteArea: (routeCoords: [number, number][], paddingKm?: number) => Promise<void>;
   checkCacheStatus: (routeCoords: [number, number][]) => Promise<CacheStatus | null>;
   clearCache: () => Promise<void>;
@@ -55,6 +48,10 @@ interface UseOfflineMapsReturn {
   };
 }
 
+// Detect environment capabilities
+const hasSW = typeof navigator !== 'undefined' && 'serviceWorker' in navigator;
+const hasCaches = typeof window !== 'undefined' && 'caches' in window;
+
 export const useOfflineMaps = (): UseOfflineMapsReturn => {
   const [isSupported, setIsSupported] = useState(false);
   const [isReady, setIsReady] = useState(false);
@@ -64,30 +61,37 @@ export const useOfflineMaps = (): UseOfflineMapsReturn => {
   const [estimatedSize, setEstimatedSize] = useState('');
   const [cacheStatus, setCacheStatus] = useState<CacheStatus | null>(null);
   const [cacheSize, setCacheSize] = useState<CacheSize | null>(null);
-  
+
   const resolveDownloadRef = useRef<(() => void) | null>(null);
   const rejectDownloadRef = useRef<((error: Error) => void) | null>(null);
 
-  // Initialize service worker
+  // Determine which backend to use: SW or direct Cache API
+  const useSW = hasSW;
+  const useDirect = !hasSW && hasCaches;
+
+  // Initialize
   useEffect(() => {
-    const supported = 'serviceWorker' in navigator;
+    const supported = hasSW || hasCaches;
     setIsSupported(supported);
 
     if (!supported) {
-      console.warn('[OfflineMaps] Service workers not supported');
+      console.warn('[OfflineMaps] Neither Service Workers nor Cache API available');
       return;
     }
 
-    registerOfflineMapsSW().then((registration) => {
-      if (registration) {
-        setIsReady(true);
-      }
-    });
+    if (useSW) {
+      registerOfflineMapsSW().then((registration) => {
+        if (registration) setIsReady(true);
+      });
+    } else if (useDirect) {
+      // Direct Cache API is available immediately
+      setIsReady(true);
+    }
   }, []);
 
-  // Listen for SW messages
+  // Listen for SW messages (only when using SW path)
   useEffect(() => {
-    if (!isSupported) return;
+    if (!useSW) return;
 
     const cleanup = addSWMessageListener((event) => {
       const { type, payload } = event.data || {};
@@ -97,7 +101,6 @@ export const useOfflineMaps = (): UseOfflineMapsReturn => {
           setDownloadProgress(payload.progress);
           setDownloadFailed(payload.failed);
           break;
-
         case 'CACHE_COMPLETE':
           setIsDownloading(false);
           setDownloadProgress(100);
@@ -105,16 +108,13 @@ export const useOfflineMaps = (): UseOfflineMapsReturn => {
           resolveDownloadRef.current?.();
           resolveDownloadRef.current = null;
           break;
-
         case 'CACHE_CLEARED':
           setCacheStatus(null);
           setCacheSize(null);
           break;
-
         case 'CACHE_SIZE':
           setCacheSize(payload);
           break;
-
         case 'CACHED_STATUS':
           setCacheStatus(payload);
           break;
@@ -122,7 +122,7 @@ export const useOfflineMaps = (): UseOfflineMapsReturn => {
     });
 
     return cleanup;
-  }, [isSupported]);
+  }, [useSW]);
 
   // Estimate tiles for a route
   const estimateTiles = useCallback((
@@ -132,11 +132,9 @@ export const useOfflineMaps = (): UseOfflineMapsReturn => {
     if (routeCoords.length === 0) {
       return { tileCount: 0, estimatedSize: '0 KB', routeDistanceKm: 0 };
     }
-
     const tiles = getRouteTiles(routeCoords, paddingKm);
     const { formatted } = estimateDownloadSize(tiles.length);
     const routeDistanceKm = calculateRouteDistanceKm(routeCoords);
-
     return {
       tileCount: tiles.length,
       estimatedSize: formatted,
@@ -144,20 +142,58 @@ export const useOfflineMaps = (): UseOfflineMapsReturn => {
     };
   }, []);
 
-  // Download route area for offline use
+  // ── Direct Cache API helpers ──────────────────────────────────
+
+  const directDownload = useCallback(async (urls: string[]) => {
+    const cache = await caches.open(CACHE_NAME);
+    let completed = 0;
+    let failed = 0;
+    const total = urls.length;
+
+    for (let i = 0; i < total; i += BATCH_SIZE) {
+      const batch = urls.slice(i, i + BATCH_SIZE);
+      const results = await Promise.allSettled(
+        batch.map(async (url) => {
+          const key = getCacheKey(url);
+          const existing = await cache.match(key);
+          if (existing) return; // already cached
+          const resp = await fetch(url);
+          if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+          await cache.put(key, resp);
+        })
+      );
+      results.forEach((r) => {
+        if (r.status === 'fulfilled') completed++;
+        else failed++;
+      });
+      const progress = Math.round(((completed + failed) / total) * 100);
+      setDownloadProgress(progress);
+      setDownloadFailed(failed);
+    }
+
+    return { completed, failed };
+  }, []);
+
+  const directCheckCached = useCallback(async (urls: string[]): Promise<CacheStatus> => {
+    const cache = await caches.open(CACHE_NAME);
+    let cached = 0;
+    for (const url of urls) {
+      const match = await cache.match(getCacheKey(url));
+      if (match) cached++;
+    }
+    const total = urls.length;
+    return { total, cached, percentage: total > 0 ? Math.round((cached / total) * 100) : 0 };
+  }, []);
+
+  // ── Public actions ────────────────────────────────────────────
+
   const downloadRouteArea = useCallback(async (
     routeCoords: [number, number][],
     paddingKm: number = 5
   ): Promise<void> => {
-    if (!isReady) {
-      throw new Error('Service worker not ready');
-    }
+    if (!isReady) throw new Error('Not ready');
+    if (routeCoords.length === 0) throw new Error('No route coordinates provided');
 
-    if (routeCoords.length === 0) {
-      throw new Error('No route coordinates provided');
-    }
-
-    // Calculate tiles
     const tiles = getRouteTiles(routeCoords, paddingKm);
     const urls = generateTileUrls(tiles);
     const { formatted } = estimateDownloadSize(tiles.length);
@@ -167,38 +203,51 @@ export const useOfflineMaps = (): UseOfflineMapsReturn => {
     setDownloadProgress(0);
     setDownloadFailed(0);
 
+    if (useDirect) {
+      try {
+        await directDownload(urls);
+        setIsDownloading(false);
+        setDownloadProgress(100);
+      } catch (err) {
+        setIsDownloading(false);
+        throw err;
+      }
+      return;
+    }
+
+    // SW path
     return new Promise((resolve, reject) => {
       resolveDownloadRef.current = resolve;
       rejectDownloadRef.current = reject;
 
-      // Send tiles to service worker for caching
-      postMessageToSW({
-        type: 'CACHE_TILES',
-        payload: { urls },
-      });
+      postMessageToSW({ type: 'CACHE_TILES', payload: { urls } });
 
-      // Timeout after 5 minutes
       setTimeout(() => {
-        if (isDownloading) {
+        if (resolveDownloadRef.current) {
           setIsDownloading(false);
           rejectDownloadRef.current?.(new Error('Download timeout'));
           rejectDownloadRef.current = null;
+          resolveDownloadRef.current = null;
         }
       }, 5 * 60 * 1000);
     });
-  }, [isReady, isDownloading]);
+  }, [isReady, useDirect, directDownload]);
 
-  // Check cache status for a route
   const checkCacheStatus = useCallback(async (
     routeCoords: [number, number][]
   ): Promise<CacheStatus | null> => {
-    if (!isReady || routeCoords.length === 0) {
-      return null;
-    }
+    if (!isReady || routeCoords.length === 0) return null;
 
     const tiles = getRouteTiles(routeCoords, 5);
     const urls = generateTileUrls(tiles);
 
+    if (useDirect) {
+      const status = await directCheckCached(urls);
+      setCacheStatus(status);
+      return status;
+    }
+
+    // SW path
     return new Promise((resolve) => {
       const cleanup = addSWMessageListener((event) => {
         if (event.data?.type === 'CACHED_STATUS') {
@@ -207,23 +256,20 @@ export const useOfflineMaps = (): UseOfflineMapsReturn => {
           resolve(event.data.payload);
         }
       });
-
-      postMessageToSW({
-        type: 'CHECK_CACHED',
-        payload: { urls },
-      });
-
-      // Timeout after 10 seconds
-      setTimeout(() => {
-        cleanup();
-        resolve(null);
-      }, 10000);
+      postMessageToSW({ type: 'CHECK_CACHED', payload: { urls } });
+      setTimeout(() => { cleanup(); resolve(null); }, 10000);
     });
-  }, [isReady]);
+  }, [isReady, useDirect, directCheckCached]);
 
-  // Clear all cached tiles
   const clearCache = useCallback(async (): Promise<void> => {
     if (!isReady) return;
+
+    if (useDirect) {
+      await caches.delete(CACHE_NAME);
+      setCacheStatus(null);
+      setCacheSize(null);
+      return;
+    }
 
     return new Promise((resolve) => {
       const cleanup = addSWMessageListener((event) => {
@@ -232,20 +278,25 @@ export const useOfflineMaps = (): UseOfflineMapsReturn => {
           resolve();
         }
       });
-
       postMessageToSW({ type: 'CLEAR_CACHE' });
-
-      // Timeout after 5 seconds
-      setTimeout(() => {
-        cleanup();
-        resolve();
-      }, 5000);
+      setTimeout(() => { cleanup(); resolve(); }, 5000);
     });
-  }, [isReady]);
+  }, [isReady, useDirect]);
 
-  // Get current cache size
   const getCacheSizeAction = useCallback(async (): Promise<CacheSize | null> => {
     if (!isReady) return null;
+
+    if (useDirect) {
+      try {
+        const cache = await caches.open(CACHE_NAME);
+        const keys = await cache.keys();
+        const size: CacheSize = { tileCount: keys.length };
+        setCacheSize(size);
+        return size;
+      } catch {
+        return null;
+      }
+    }
 
     return new Promise((resolve) => {
       const cleanup = addSWMessageListener((event) => {
@@ -255,16 +306,10 @@ export const useOfflineMaps = (): UseOfflineMapsReturn => {
           resolve(event.data.payload);
         }
       });
-
       postMessageToSW({ type: 'GET_CACHE_SIZE' });
-
-      // Timeout after 5 seconds
-      setTimeout(() => {
-        cleanup();
-        resolve(null);
-      }, 5000);
+      setTimeout(() => { cleanup(); resolve(null); }, 5000);
     });
-  }, [isReady]);
+  }, [isReady, useDirect]);
 
   return {
     isSupported,
