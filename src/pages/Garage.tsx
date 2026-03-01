@@ -1,18 +1,22 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowLeft, MoreHorizontal, Plus, Car, Star, ChevronUp, X } from 'lucide-react';
 import { useVehicles } from '@/hooks/useVehicles';
-import { useCurrentProfile } from '@/hooks/useProfile';
+import { useCurrentProfile, useProfile } from '@/hooks/useProfile';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { useAuth } from '@/context/AuthContext';
 
 const Garage = () => {
   const navigate = useNavigate();
-  const handleBack = () => navigate('/profile');
-  const { data: vehicles, isLoading } = useVehicles();
-  const { data: profile } = useCurrentProfile();
+  const { userId } = useParams<{ userId?: string }>();
+  const { user } = useAuth();
+  const isOwnGarage = !userId || userId === user?.id;
+  const handleBack = () => navigate(isOwnGarage ? '/profile' : `/user/${userId}`);
+  const { data: vehicles, isLoading } = useVehicles(userId);
+  const { data: profile } = useProfile(isOwnGarage ? user?.id : userId);
   const [expandedVehicleId, setExpandedVehicleId] = useState<string | null>(null);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
 
@@ -34,12 +38,15 @@ const Garage = () => {
           <h1 className="flex-1 text-center text-lg font-semibold text-foreground">
             {profile?.username ? `@${profile.username}'s` : 'My'} Garage
           </h1>
-          <button 
-            onClick={() => navigate('/garage/edit')}
-            className="w-8 h-8 bg-primary rounded-md flex items-center justify-center"
-          >
-            <Plus className="h-5 w-5 text-primary-foreground" />
-          </button>
+          {isOwnGarage && (
+            <button 
+              onClick={() => navigate('/garage/edit')}
+              className="w-8 h-8 bg-primary rounded-md flex items-center justify-center"
+            >
+              <Plus className="h-5 w-5 text-primary-foreground" />
+            </button>
+          )}
+          {!isOwnGarage && <div className="w-8" />}
         </div>
       </header>
 
@@ -82,12 +89,14 @@ const Garage = () => {
                       <Star className="h-5 w-5 fill-yellow-500 text-yellow-500" />
                     )}
                   </div>
-                  <button 
-                    onClick={() => navigate(`/garage/edit/${vehicle.id}`)}
-                    className="text-primary font-medium text-base"
-                  >
-                    Edit
-                  </button>
+                  {isOwnGarage && (
+                    <button 
+                      onClick={() => navigate(`/garage/edit/${vehicle.id}`)}
+                      className="text-primary font-medium text-base"
+                    >
+                      Edit
+                    </button>
+                  )}
                 </div>
 
                 {/* Specs Line */}
@@ -168,14 +177,18 @@ const Garage = () => {
             </div>
             <h3 className="font-semibold text-foreground">No vehicles yet</h3>
             <p className="text-sm text-muted-foreground text-center mt-1">
-              Add your first vehicle to start tracking your trips
+              {isOwnGarage
+                ? 'Add your first vehicle to start tracking your trips'
+                : 'This user hasn\'t added any vehicles yet'}
             </p>
-            <Button
-              onClick={() => navigate('/garage/edit')}
-              className="mt-4 bg-primary"
-            >
-              Add Vehicle
-            </Button>
+            {isOwnGarage && (
+              <Button
+                onClick={() => navigate('/garage/edit')}
+                className="mt-4 bg-primary"
+              >
+                Add Vehicle
+              </Button>
+            )}
           </div>
         )}
       </div>
