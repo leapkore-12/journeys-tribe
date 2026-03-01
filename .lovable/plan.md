@@ -1,18 +1,17 @@
 
 
-## Fix PostTrip Bottom Buttons Positioning
+## Fix Flag/Like Button Tap Target Size
 
 ### Problem
-The "Delete trip" and "Post trip" buttons use `FixedBottomActions` with `aboveNav={true}` (default), which adds `bottomNavHeight` offset — but PostTrip has no bottom nav, so the buttons float too high with a visible gap from the bottom. The visibility dropdown also sits below the buttons in the scroll area, making it look disconnected.
+The flag (like) button in the action row at the bottom of each trip card is hard to tap on touchscreens. While it has `min-h-11 min-w-11`, the icon inside is only `h-6 w-6` (24px), and the button uses `flex-1` which makes width flexible but the actual tappable area around the icon may still feel small due to the icon being the only visual anchor.
 
-### Changes — `src/pages/PostTrip.tsx`
+### Solution — `src/components/TripCard.tsx`
 
-1. **Move visibility dropdown below the buttons** — Move it into the `FixedBottomActions` area so it sits at the very bottom with the action buttons above it, keeping everything anchored together.
+1. **Increase action row height** — Change `py-2` to `py-3` on the action row container (line 488) to give more vertical breathing room.
 
-2. **Set `aboveNav={false}`** on `FixedBottomActions` — This positions the buttons at the screen bottom with only safe-area padding, not the bottom-nav offset.
+2. **Add padding to each action button** — Add explicit `py-3 px-6` padding to each of the three action buttons (like, comment, share) so the entire touchable area is generous and forgiving, not just the icon center.
 
-3. **Adjust scroll area padding** — Update `pb-24` to account for the new bottom layout (buttons + visibility together).
+3. **Bump icon size slightly** — Increase flag icon from `h-6 w-6` to `h-7 w-7` (28px) for a larger visual tap target.
 
-### Result
-Buttons and visibility will be flush at the bottom of the screen with only safe-area clearance, matching proper iPhone layout.
+These changes ensure the tap area is well above 44×44px in practice and the icon itself is larger, making it much easier to hit on a touchscreen.
 
