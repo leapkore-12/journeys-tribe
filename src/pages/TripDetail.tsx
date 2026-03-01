@@ -482,7 +482,7 @@ const TripDetail = () => {
             value={newComment}
             onChange={(e) => setNewComment(e.target.value)}
             placeholder="Add a comment..."
-            className="flex-1 h-10 bg-secondary border-border"
+            className="flex-1 h-10 bg-secondary border-border text-foreground"
           />
           <button
             type="submit"
