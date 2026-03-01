@@ -1,26 +1,17 @@
 
 
-## Restore Share Page to Match Figma Design
+## Fix: Make Both Action Buttons Visible on Share Page
 
 ### Problem
-The Share page was changed to an immersive full-screen edge-to-edge layout, but the Figma design shows a card-based layout with:
-1. RoadTribe logo centered at the top
-2. Trip image displayed as a contained card (not full-screen)
-3. Pagination dots below the card
-4. Instagram Story / Download Image buttons below dots
-5. Bottom navigation bar (Feed, Trip, Profile) visible
+The image card with `aspect-[9/16]` takes up too much vertical space, pushing the "Instagram Story" button off-screen. Only "Download Image" is visible above the bottom nav bar.
 
-### Changes
+### Solution
+Reduce the card's aspect ratio slightly and ensure the action buttons area doesn't get clipped. Two changes:
 
-**1. `src/App.tsx`** — Move the `/share/:postId` route inside the `MainLayout` route group so the bottom navigation bar is visible.
+**`src/pages/Share.tsx`**:
+1. Change the card aspect ratio from `aspect-[9/16]` to `aspect-[3/4]` — this gives more room for both buttons while still showing the image prominently.
+2. Alternatively, make the entire content area scrollable (`overflow-y-auto`) so users can scroll to see both buttons if the screen is small.
+3. Reduce vertical padding/spacing between dots and buttons (`pt-3 space-y-3` → `pt-2 space-y-2`) to reclaim space.
 
-**2. `src/pages/Share.tsx`** — Restructure the layout from immersive full-screen to card-based:
-- Remove the full-screen black background with negative margins and safe-area hacks
-- Add the RoadTribe logo (logo-white.svg) centered at the top
-- Change the carousel from full-height edge-to-edge to a contained card with rounded corners and proper aspect ratio
-- Keep the branded overlays (distance, time, convoy, watermark) on the card
-- Move pagination dots below the card (not overlaid)
-- Place action buttons (Instagram Story, Download Image) below the dots
-- Remove the floating back button (bottom nav handles navigation)
-- Keep the 3rd-party share sheet as-is
+The recommended approach is to combine a slightly shorter aspect ratio with tighter spacing, keeping the layout non-scrollable and clean — matching the reference design where the image fills most of the screen but both buttons remain visible.
 
