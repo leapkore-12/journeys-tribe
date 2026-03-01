@@ -1,24 +1,25 @@
 
 
-## Fix Comment Input Text Visibility
+## Fix Fullscreen Image Viewer Close Button in Garage
 
 ### Problem
-The comment input on the Trip Detail page uses `bg-secondary` (dark background) but doesn't include `text-foreground`, so typed text defaults to a dark color that's invisible against the dark background.
+The fullscreen image viewer Dialog uses the default DialogContent close button (X icon at 16x16px). On mobile, this is nearly invisible on the black background and too small to tap reliably. The overlay click may also not register properly due to the full-screen content div intercepting touches.
 
-### Solution — `src/pages/TripDetail.tsx`
+### Solution — `src/pages/Garage.tsx`
 
-Add `text-foreground` to the comment `<Input>` className (around line 506):
+1. **Add a visible, large close button** — Replace reliance on the tiny default X with an explicit large close button (e.g., 44x44px tap target with a visible X icon) positioned at top-right with safe area consideration.
 
-```tsx
-// Before
-className="flex-1 h-10 bg-secondary border-border"
+2. **Make the background tappable to close** — Add an `onClick` handler on the background area so tapping outside the image also closes the viewer.
 
-// After  
-className="flex-1 h-10 bg-secondary border-border text-foreground"
-```
+3. **Hide the default DialogContent close button** — Use `[&>button]:hidden` to remove the tiny default one.
 
-This follows the project's existing standard (per memory note) that all interactive text inputs on dark backgrounds must explicitly include `text-foreground`.
+### Changes — `src/pages/Garage.tsx` (lines 186-199)
+
+Replace the Dialog block with:
+- A custom close button using the `X` icon (already imported) with `min-h-11 min-w-11` tap target
+- The image container gets a click handler that closes on background tap (not on the image itself)
+- Default close button hidden via `[&>button]:hidden`
 
 ### Files changed
-1. `src/pages/TripDetail.tsx` — Add `text-foreground` to comment input
+1. `src/pages/Garage.tsx` — Replace fullscreen image viewer close mechanism
 
