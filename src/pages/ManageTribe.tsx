@@ -11,10 +11,7 @@ import { useFollowing } from '@/hooks/useFollows';
 
 const ManageTribe = () => {
   const navigate = useNavigate();
-  const handleBack = () => {
-    if (window.history.length > 1) navigate(-1);
-    else navigate('/settings', { replace: true });
-  };
+  const handleBack = () => navigate('/settings');
   const { toast } = useToast();
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');

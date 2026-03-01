@@ -18,10 +18,7 @@ import {
 
 const BlockedAccounts = () => {
   const navigate = useNavigate();
-  const handleBack = () => {
-    if (window.history.length > 1) navigate(-1);
-    else navigate('/settings', { replace: true });
-  };
+  const handleBack = () => navigate('/settings');
   const { data: blockedUsers, isLoading } = useBlockedUsers();
   const unblockUser = useUnblockUser();
 

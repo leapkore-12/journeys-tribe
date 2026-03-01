@@ -10,10 +10,7 @@ import { Dialog, DialogContent } from '@/components/ui/dialog';
 
 const Garage = () => {
   const navigate = useNavigate();
-  const handleBack = () => {
-    if (window.history.length > 1) navigate(-1);
-    else navigate('/profile', { replace: true });
-  };
+  const handleBack = () => navigate('/profile');
   const { data: vehicles, isLoading } = useVehicles();
   const { data: profile } = useCurrentProfile();
   const [expandedVehicleId, setExpandedVehicleId] = useState<string | null>(null);

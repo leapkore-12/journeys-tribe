@@ -5,10 +5,7 @@ import { Button } from '@/components/ui/button';
 
 const Help = () => {
   const navigate = useNavigate();
-  const handleBack = () => {
-    if (window.history.length > 1) navigate(-1);
-    else navigate('/settings', { replace: true });
-  };
+  const handleBack = () => navigate('/settings');
 
   return (
     <div className="flex flex-col h-full bg-background">

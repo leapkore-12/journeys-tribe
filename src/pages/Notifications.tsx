@@ -20,13 +20,7 @@ import { formatDistanceToNow } from 'date-fns';
 
 const Notifications = () => {
   const navigate = useNavigate();
-  const handleBack = () => {
-    if (window.history.length > 1) {
-      navigate(-1);
-    } else {
-      navigate('/feed', { replace: true });
-    }
-  };
+  const handleBack = () => navigate('/feed');
   const { user } = useAuth();
   const { toast } = useToast();
 

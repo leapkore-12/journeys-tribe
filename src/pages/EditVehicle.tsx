@@ -38,10 +38,7 @@ import { useToast } from '@/hooks/use-toast';
 
 const EditVehicle = () => {
   const navigate = useNavigate();
-  const handleBack = () => {
-    if (window.history.length > 1) navigate(-1);
-    else navigate('/garage', { replace: true });
-  };
+  const handleBack = () => navigate('/garage');
   const { id } = useParams();
   const { toast } = useToast();
   

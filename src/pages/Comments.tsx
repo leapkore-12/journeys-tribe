@@ -23,13 +23,7 @@ import FixedBottomActions from '@/components/layout/FixedBottomActions';
 
 const Comments = () => {
   const navigate = useNavigate();
-  const handleBack = () => {
-    if (window.history.length > 1) {
-      navigate(-1);
-    } else {
-      navigate('/feed', { replace: true });
-    }
-  };
+  const handleBack = () => navigate('/feed');
   const { postId } = useParams();
   const { user } = useAuth();
   const [newComment, setNewComment] = useState('');
