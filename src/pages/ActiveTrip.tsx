@@ -50,7 +50,7 @@ const ActiveTrip = () => {
   const { tripState, pauseTrip, updateProgress, resetTrip } = useTrip();
   const { user } = useAuth();
   const { toast } = useToast();
-  const { safeAreaTop } = useDeviceSpacing();
+  const { safeAreaTop, safeAreaBottom } = useDeviceSpacing();
   const [showSOS, setShowSOS] = useState(false);
   const [showConvoyPanel, setShowConvoyPanel] = useState(false);
   const [elapsedTime, setElapsedTime] = useState(tripState.timeElapsed);
@@ -655,7 +655,7 @@ const ActiveTrip = () => {
       </div>
 
       {/* Re-centre Button and Convoy Status */}
-      <div className="absolute left-4 bottom-56 z-10 space-y-2">
+      <div className="absolute left-4 z-10 space-y-2" style={{ bottom: safeAreaBottom + 200 }}>
         {(isConvoyConnected && totalMembersCount > 0) || !isOnline ? (
           <ConvoyStatusBar
             connectedCount={connectedMembersCount}
@@ -676,7 +676,7 @@ const ActiveTrip = () => {
       </div>
 
       {/* Bottom Info Card */}
-      <div className="absolute bottom-8 left-4 right-4 z-10">
+      <div className="absolute left-4 right-4 z-10" style={{ bottom: safeAreaBottom + 16 }}>
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
