@@ -485,27 +485,27 @@ const TripCard = ({ trip, index, onLike, onComment, onShare, onUserClick, contex
       <div className="h-px bg-border mx-4" />
 
       {/* Action Row */}
-      <div className="flex items-center justify-around py-2">
+      <div className="flex items-center justify-around py-3">
         <button 
           onClick={onLike} 
           className={cn(
-            "flex-1 flex items-center justify-center min-h-11 min-w-11 transition-colors active:opacity-70",
+            "flex-1 flex items-center justify-center py-3 px-6 min-h-11 min-w-11 transition-colors active:opacity-70",
             trip.is_liked ? "text-primary" : "text-muted-foreground"
           )}
         >
-          <Flag className={cn("h-6 w-6", trip.is_liked && "fill-primary")} />
+          <Flag className={cn("h-7 w-7", trip.is_liked && "fill-primary")} />
         </button>
         <button 
           onClick={onComment} 
-          className="flex-1 flex items-center justify-center min-h-11 min-w-11 text-muted-foreground transition-colors active:opacity-70"
+          className="flex-1 flex items-center justify-center py-3 px-6 min-h-11 min-w-11 text-muted-foreground transition-colors active:opacity-70"
         >
-          <MessageCircle className="h-6 w-6" />
+          <MessageCircle className="h-7 w-7" />
         </button>
         <button 
           onClick={onShare} 
-          className="flex-1 flex items-center justify-center min-h-11 min-w-11 text-muted-foreground transition-colors active:opacity-70"
+          className="flex-1 flex items-center justify-center py-3 px-6 min-h-11 min-w-11 text-muted-foreground transition-colors active:opacity-70"
         >
-          <Upload className="h-6 w-6" />
+          <Upload className="h-7 w-7" />
         </button>
       </div>
 
