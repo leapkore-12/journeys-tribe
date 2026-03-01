@@ -1,29 +1,26 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import logoWhite from '@/assets/logo-white.svg';
+import { Button } from '@/components/ui/button';
+import logoWhiteTagline from '@/assets/logo-white-tagline.svg';
 
 const Splash = () => {
   const navigate = useNavigate();
   const [showLogo, setShowLogo] = useState(false);
+  const [showButtons, setShowButtons] = useState(false);
 
   useEffect(() => {
-    // Show logo after initial delay
     const logoTimer = setTimeout(() => setShowLogo(true), 300);
-    
-    // Navigate to login after animation
-    const navTimer = setTimeout(() => {
-      navigate('/login');
-    }, 2500);
+    const buttonTimer = setTimeout(() => setShowButtons(true), 1500);
 
     return () => {
       clearTimeout(logoTimer);
-      clearTimeout(navTimer);
+      clearTimeout(buttonTimer);
     };
-  }, [navigate]);
+  }, []);
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center safe-bottom">
+    <div className="min-h-screen bg-background flex flex-col items-center justify-center safe-bottom px-6">
       <motion.div
         initial={{ opacity: 0, scale: 0.8 }}
         animate={showLogo ? { opacity: 1, scale: 1 } : {}}
@@ -31,38 +28,27 @@ const Splash = () => {
         className="flex flex-col items-center"
       >
         <motion.img
-          src={logoWhite}
+          src={logoWhiteTagline}
           alt="RoadTribe"
           className="w-64 h-auto"
           initial={{ y: 20 }}
           animate={showLogo ? { y: 0 } : {}}
           transition={{ duration: 0.8, delay: 0.2, ease: [0.16, 1, 0.3, 1] }}
         />
-        
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={showLogo ? { opacity: 1 } : {}}
-          transition={{ duration: 0.5, delay: 1 }}
-          className="mt-12"
-        >
-          <div className="flex gap-1">
-            {[0, 1, 2].map((i) => (
-              <motion.div
-                key={i}
-                className="w-2 h-2 rounded-full bg-primary"
-                animate={{
-                  scale: [1, 1.2, 1],
-                  opacity: [0.5, 1, 0.5],
-                }}
-                transition={{
-                  duration: 1,
-                  repeat: Infinity,
-                  delay: i * 0.2,
-                }}
-              />
-            ))}
-          </div>
-        </motion.div>
+      </motion.div>
+
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={showButtons ? { opacity: 1, y: 0 } : {}}
+        transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+        className="w-full max-w-sm flex flex-col gap-3 mt-12"
+      >
+        <Button size="lg" className="w-full" onClick={() => navigate('/login')}>
+          Login
+        </Button>
+        <Button size="lg" variant="outline" className="w-full" onClick={() => navigate('/signup')}>
+          Sign Up
+        </Button>
       </motion.div>
     </div>
   );
