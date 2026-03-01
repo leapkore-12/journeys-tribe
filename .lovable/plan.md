@@ -1,17 +1,16 @@
 
 
-## Fix Flag/Like Button Tap Target Size
+## Fix Empty Space on Create User Page
 
 ### Problem
-The flag (like) button in the action row at the bottom of each trip card is hard to tap on touchscreens. While it has `min-h-11 min-w-11`, the icon inside is only `h-6 w-6` (24px), and the button uses `flex-1` which makes width flexible but the actual tappable area around the icon may still feel small due to the icon being the only visual anchor.
+The Create User page has a large empty gap between the "Create User" button and the bottom navigation bar. The `pb-32` padding on `<main>` combined with `flex-1 overflow-y-auto` on the scroll wrapper creates excessive whitespace below the button.
 
-### Solution — `src/components/TripCard.tsx`
+### Solution — `src/pages/admin/CreateUser.tsx`
 
-1. **Increase action row height** — Change `py-2` to `py-3` on the action row container (line 488) to give more vertical breathing room.
+1. **Reduce bottom padding** — Change `pb-32` to `pb-20` on the `<main>` element. The `pb-32` was overly generous; `pb-20` provides just enough clearance above the fixed bottom nav (h-16 = 4rem = ~64px, pb-20 = 5rem = 80px).
 
-2. **Add padding to each action button** — Add explicit `py-3 px-6` padding to each of the three action buttons (like, comment, share) so the entire touchable area is generous and forgiving, not just the icon center.
+2. **Remove `mb-4` from the submit button** — The extra margin below the button adds unnecessary space at the bottom of the form.
 
-3. **Bump icon size slightly** — Increase flag icon from `h-6 w-6` to `h-7 w-7` (28px) for a larger visual tap target.
-
-These changes ensure the tap area is well above 44×44px in practice and the icon itself is larger, making it much easier to hit on a touchscreen.
+### Files changed
+1. `src/pages/admin/CreateUser.tsx` — Change `pb-32` to `pb-20` on main, remove `mb-4` from Button
 
