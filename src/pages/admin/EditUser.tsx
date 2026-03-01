@@ -166,7 +166,7 @@ const EditUser = () => {
       </header>
 
       <div className="flex-1 overflow-y-auto">
-      <main className="p-4 pb-32 space-y-6">
+      <main className="p-4 pb-20 space-y-6">
         {/* User Header */}
         <div className="flex items-center gap-4">
           <Avatar className="h-16 w-16">
