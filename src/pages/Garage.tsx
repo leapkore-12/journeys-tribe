@@ -185,13 +185,23 @@ const Garage = () => {
 
       {/* Fullscreen Image Viewer */}
       <Dialog open={!!selectedImage} onOpenChange={() => setSelectedImage(null)}>
-        <DialogContent className="max-w-none w-screen h-screen p-0 border-none bg-black/95 rounded-none [&>button]:z-50 [&>button]:text-white [&>button]:top-4 [&>button]:right-4">
+        <DialogContent className="max-w-none w-screen h-screen p-0 border-none bg-black/95 rounded-none [&>button]:hidden">
           {selectedImage && (
-            <div className="w-full h-full flex items-center justify-center p-4">
+            <div 
+              className="w-full h-full flex items-center justify-center p-4"
+              onClick={() => setSelectedImage(null)}
+            >
+              <button
+                onClick={(e) => { e.stopPropagation(); setSelectedImage(null); }}
+                className="absolute top-4 right-4 z-50 min-h-11 min-w-11 flex items-center justify-center rounded-full bg-white/20 active:opacity-70"
+              >
+                <X className="h-6 w-6 text-white" />
+              </button>
               <img
                 src={selectedImage}
                 alt="Vehicle photo"
                 className="max-w-full max-h-full object-contain"
+                onClick={(e) => e.stopPropagation()}
               />
             </div>
           )}
