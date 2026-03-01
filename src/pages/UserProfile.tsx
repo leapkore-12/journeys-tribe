@@ -52,13 +52,7 @@ const formatStatsTime = (minutes: number) => {
 
 const UserProfile = () => {
   const navigate = useNavigate();
-  const handleBack = () => {
-    if (window.history.length > 1) {
-      navigate(-1);
-    } else {
-      navigate('/feed', { replace: true });
-    }
-  };
+  const handleBack = () => navigate('/feed');
   const { userId } = useParams();
   const { user } = useAuth();
   const { toast } = useToast();

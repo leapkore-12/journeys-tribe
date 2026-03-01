@@ -53,10 +53,7 @@ const formatDuration = (minutes: number | null) => {
 
 const TripDetail = () => {
   const navigate = useNavigate();
-  const handleBack = () => {
-    if (window.history.length > 1) navigate(-1);
-    else navigate('/feed', { replace: true });
-  };
+  const handleBack = () => navigate('/feed');
   const { tripId } = useParams();
   const { user } = useAuth();
   const { toast } = useToast();

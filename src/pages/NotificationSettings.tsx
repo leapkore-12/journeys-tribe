@@ -56,10 +56,7 @@ const NotificationSettings = () => {
     }
   };
 
-  const handleBack = () => {
-    if (window.history.length > 1) navigate(-1);
-    else navigate('/settings', { replace: true });
-  };
+  const handleBack = () => navigate('/settings');
 
   const items = [
     {

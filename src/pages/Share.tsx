@@ -79,10 +79,7 @@ const ShareOption = ({ icon, label, onClick, bgColor = 'bg-secondary' }: ShareOp
 const Share = () => {
   const navigate = useNavigate();
   const { safeAreaTop } = useDeviceSpacing();
-  const handleBack = () => {
-    if (window.history.length > 1) navigate(-1);
-    else navigate('/feed', { replace: true });
-  };
+  const handleBack = () => navigate('/feed');
   const { postId } = useParams();
   const { user } = useAuth();
   const [carouselApi, setCarouselApi] = useState<CarouselApi>();

@@ -11,13 +11,7 @@ const Search = () => {
   const navigate = useNavigate();
   const [query, setQuery] = useState('');
   
-  const handleBack = () => {
-    if (window.history.length > 1) {
-      navigate(-1);
-    } else {
-      navigate('/feed', { replace: true });
-    }
-  };
+  const handleBack = () => navigate('/feed');
   
   const debouncedQuery = useDebounce(query, 300);
   

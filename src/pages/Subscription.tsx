@@ -8,10 +8,7 @@ import { differenceInDays, parseISO, addMonths } from 'date-fns';
 
 const Subscription = () => {
   const navigate = useNavigate();
-  const handleBack = () => {
-    if (window.history.length > 1) navigate(-1);
-    else navigate('/settings', { replace: true });
-  };
+  const handleBack = () => navigate('/settings');
   const { isPaid, planType } = useIsPaidUser();
   const { isLoading } = useFeatureAccess();
   const { tripsUsed, tripsRemaining } = useMonthlyTripLimit();
