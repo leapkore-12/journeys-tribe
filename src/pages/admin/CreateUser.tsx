@@ -65,7 +65,7 @@ const CreateUser = () => {
       </header>
 
       <div className="flex-1 overflow-y-auto">
-      <main className="p-4 pb-32">
+      <main className="p-4 pb-20">
         <form onSubmit={handleSubmit} className="space-y-6">
           <Card className="border-border/50">
             <CardHeader>
@@ -178,7 +178,7 @@ const CreateUser = () => {
 
           <Button 
             type="submit" 
-            className="w-full mb-4" 
+            className="w-full" 
             disabled={createUser.isPending}
           >
             {createUser.isPending ? (
