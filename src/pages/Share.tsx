@@ -393,7 +393,7 @@ const Share = () => {
             <CarouselContent className="-ml-0">
               {slides.map((slide, idx) => (
                 <CarouselItem key={idx} className="pl-0">
-                  <div className="relative w-full aspect-[9/16] rounded-2xl overflow-hidden">
+                  <div className="relative w-full aspect-[3/4] rounded-2xl overflow-hidden">
                     <img
                       src={slide.src}
                       alt={slide.type === 'map' ? 'Route map' : 'Vehicle'}
@@ -477,7 +477,7 @@ const Share = () => {
       </div>
 
       {/* Action Buttons - below dots */}
-      <div className="px-4 pb-4 pt-3 space-y-3">
+      <div className="px-4 pb-4 pt-2 space-y-2">
         {canShareAsOwn ? (
           <>
             <Button
