@@ -1,29 +1,24 @@
 
 
-## Fix Stops Not Showing in Trip Review + Logo-Title Spacing
+## Fix Comment Input Text Visibility
 
-### Problem 1: Stops missing from review page
-TripPlanner maintains a **separate `localStops` array** (line 45) alongside the context `tripState.stops`. When the user adds a stop, `addStop()` is called on the context AND a new item is pushed to `localStops` — but each creates its own `Date.now()` ID. This means:
-- The local and context stop IDs are **always different**
-- When removing a stop, `removeStop(stop.id)` uses the local ID, which **doesn't match** the context ID — so context stops are never removed
-- The route calculation useEffect depends on `localStops` (line 108), not context stops
-- Any re-sync issues between the two states could cause stops to be lost in the context
+### Problem
+The comment input on the Trip Detail page uses `bg-secondary` (dark background) but doesn't include `text-foreground`, so typed text defaults to a dark color that's invisible against the dark background.
 
-**Fix:** Eliminate `localStops` entirely. Use `tripState.stops` directly everywhere in TripPlanner. This ensures a single source of truth — stops added/removed are always reflected in context and therefore in the review page.
+### Solution — `src/pages/TripDetail.tsx`
 
-### Problem 2: Logo-to-title spacing too tight
-Both TripPlanner and TripReview have `pt-6` on the title wrapper. Increasing to `pt-8` adds breathing room between the header logo and "Trip Planner" heading.
+Add `text-foreground` to the comment `<Input>` className (around line 506):
 
-### Changes
+```tsx
+// Before
+className="flex-1 h-10 bg-secondary border-border"
 
-**`src/pages/TripPlanner.tsx`**
-1. Remove `localStops` state variable (line 45)
-2. Replace all `localStops` references with `tripState.stops`
-3. In `handleAddStop`, remove the `setLocalStops(...)` line — context `addStop` is sufficient
-4. In the remove-stop handler, remove the `setLocalStops(...)` line — context `removeStop` is sufficient
-5. In the route calculation useEffect, use `tripState.stops` instead of `localStops`
-6. Change title wrapper padding from `pt-6` to `pt-8`
+// After  
+className="flex-1 h-10 bg-secondary border-border text-foreground"
+```
 
-**`src/pages/TripReview.tsx`**
-1. Change title wrapper padding from `pt-6` to `pt-8`
+This follows the project's existing standard (per memory note) that all interactive text inputs on dark backgrounds must explicitly include `text-foreground`.
+
+### Files changed
+1. `src/pages/TripDetail.tsx` — Add `text-foreground` to comment input
 
