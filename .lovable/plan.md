@@ -1,19 +1,26 @@
 
 
-## Fix: Bottom Bar Cut Off on Active Trip Page
+## Restore Share Page to Match Figma Design
 
 ### Problem
-The bottom info card (showing elapsed time, distance, Pause button) uses a fixed `bottom-8` (32px) positioning, which doesn't account for the iPhone home indicator safe area. This causes the bar to be partially obscured or clipped at the bottom of the screen.
+The Share page was changed to an immersive full-screen edge-to-edge layout, but the Figma design shows a card-based layout with:
+1. RoadTribe logo centered at the top
+2. Trip image displayed as a contained card (not full-screen)
+3. Pagination dots below the card
+4. Instagram Story / Download Image buttons below dots
+5. Bottom navigation bar (Feed, Trip, Profile) visible
 
 ### Changes
 
-**`src/pages/ActiveTrip.tsx`** (line 679):
-- Change the bottom info card's positioning from `bottom-8` to use a dynamic `bottom` style that includes the safe area bottom inset.
-- Use `calc(env(safe-area-inset-bottom, 8px) + 8px)` or the `safeAreaBottom` value from `useDeviceSpacing` to ensure the card sits above the home indicator.
-- The `useDeviceSpacing` hook is already imported — just need to destructure `safeAreaBottom` and apply it to the bottom card's style.
+**1. `src/App.tsx`** — Move the `/share/:postId` route inside the `MainLayout` route group so the bottom navigation bar is visible.
 
-Specifically:
-1. Destructure `safeAreaBottom` from `useDeviceSpacing()` (already imported at line 31, used at line 53).
-2. On the bottom card container (line 679), replace the Tailwind `bottom-8` class with an inline `style={{ bottom: safeAreaBottom + 8 }}` to dynamically position it above the safe area.
-3. Also update the "Re-centre" / convoy status container (line 658) from `bottom-56` to a dynamic value that sits above the bottom card, e.g. `style={{ bottom: safeAreaBottom + 100 }}`.
+**2. `src/pages/Share.tsx`** — Restructure the layout from immersive full-screen to card-based:
+- Remove the full-screen black background with negative margins and safe-area hacks
+- Add the RoadTribe logo (logo-white.svg) centered at the top
+- Change the carousel from full-height edge-to-edge to a contained card with rounded corners and proper aspect ratio
+- Keep the branded overlays (distance, time, convoy, watermark) on the card
+- Move pagination dots below the card (not overlaid)
+- Place action buttons (Instagram Story, Download Image) below the dots
+- Remove the floating back button (bottom nav handles navigation)
+- Keep the 3rd-party share sheet as-is
 
