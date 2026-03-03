@@ -309,7 +309,7 @@ const TripPlanner = () => {
                       value={startInput}
                       onChange={setStartInput}
                       onSelect={handleStartSelect}
-                      placeholder="Enter start location"
+                      placeholder="Search or enter lat, lng"
                       icon={<Crosshair className="h-5 w-5" />}
                     />
                   </div>
@@ -413,7 +413,7 @@ const TripPlanner = () => {
                   value={destInput}
                   onChange={setDestInput}
                   onSelect={handleDestSelect}
-                  placeholder="Search for destination"
+                  placeholder="Search or enter lat, lng"
                   icon={<Flag className="h-5 w-5" />}
                 />
                 {destCoords && (
@@ -481,7 +481,7 @@ const TripPlanner = () => {
                     value={stopInput}
                     onChange={setStopInput}
                     onSelect={handleStopSelect}
-                    placeholder="Search for a stop"
+                    placeholder="Search or enter lat, lng"
                     icon={<Flag className="h-5 w-5" />}
                     className="pr-12"
                   />
