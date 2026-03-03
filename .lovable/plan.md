@@ -1,17 +1,22 @@
 
 
-## Fix: Make Both Action Buttons Visible on Share Page
+## Fix: Garage Fullscreen Image Viewer Getting Stuck
 
 ### Problem
-The image card with `aspect-[9/16]` takes up too much vertical space, pushing the "Instagram Story" button off-screen. Only "Download Image" is visible above the bottom nav bar.
+Clicking a vehicle photo opens a Radix `Dialog`-based fullscreen viewer that freezes the app. The Radix Dialog traps focus, applies scroll locks, and uses transforms for centering -- all of which conflict with a simple fullscreen image overlay. The close button becomes unresponsive, leaving the user stuck.
 
 ### Solution
-Reduce the card's aspect ratio slightly and ensure the action buttons area doesn't get clipped. Two changes:
+Replace the Radix `Dialog` with a simple fixed-position overlay using `AnimatePresence` + `motion.div`. This is lightweight, doesn't trap focus or lock scroll, and dismisses reliably via the X button or tapping the background.
 
-**`src/pages/Share.tsx`**:
-1. Change the card aspect ratio from `aspect-[9/16]` to `aspect-[3/4]` — this gives more room for both buttons while still showing the image prominently.
-2. Alternatively, make the entire content area scrollable (`overflow-y-auto`) so users can scroll to see both buttons if the screen is small.
-3. Reduce vertical padding/spacing between dots and buttons (`pt-3 space-y-3` → `pt-2 space-y-2`) to reclaim space.
+### Changes
 
-The recommended approach is to combine a slightly shorter aspect ratio with tighter spacing, keeping the layout non-scrollable and clean — matching the reference design where the image fills most of the screen but both buttons remain visible.
+**`src/pages/Garage.tsx`**:
+- Remove the `Dialog` and `DialogContent` imports
+- Replace the Dialog-based viewer (lines 196-219) with a simple `AnimatePresence` overlay:
+  - Fixed fullscreen div with `z-50 bg-black/95`
+  - Fade in/out animation via framer-motion
+  - X close button (top-right, 44x44 tap target, `bg-white/20`)
+  - Click background to dismiss
+  - Image centered with `object-contain`
+- No changes to the rest of the page
 
