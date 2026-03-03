@@ -1,44 +1,56 @@
 
 
-## Plan: Add Robust Error Handling to handleStartTrip
+## Plan: Fix Invite Button & Add Direct Invite to Tribe/Followers
 
 ### Problem
-When the auth session expires or network fails during trip start, the `handleStartTrip` function in `TripReview.tsx` hangs — the loading spinner shows indefinitely because Supabase calls fail silently (no response), and the `finally` block may not always fire cleanly.
+
+Two issues:
+
+1. **Invite button fails (RLS error)**: The current `handleShareInvite` creates a `convoy_invites` row, but the RLS policy only allows **trip owners** or **convoy leaders** to insert. If the user is a convoy member (non-leader), it fails silently with "Invite failed."
+
+2. **No way to directly invite tribe/followers**: The current invite flow only generates a shareable link (via `navigator.share` or clipboard). Users want to **pick people from their tribe or followers** and send them direct invites that appear as notifications with Accept/Decline buttons.
 
 ### Changes
 
-**`src/pages/TripReview.tsx`**:
+#### 1. New Component: `InviteMembersSheet.tsx`
+A bottom sheet that opens when the user taps "Invite" on the ActiveTrip page. It shows:
+- **Two tabs**: "Tribe" and "Followers"
+- Each tab lists users with avatar, name, and an "Invite" button
+- Already-invited or already-in-convoy users show a disabled "Invited"/"Joined" badge
+- A "Share Link" button at the bottom for the existing link-sharing flow
+- Uses `useTribe` and `useFollows` hooks to fetch lists
 
-1. **Add a timeout wrapper** — wrap the entire `handleStartTrip` logic in a `Promise.race` with a 15-second timeout so the UI never hangs indefinitely.
+#### 2. Update `useConvoyInvites.ts` — `createBulkInvites`
+The existing `createBulkInvites` mutation already supports sending invites with `invitee_id` set (which triggers the `notify_on_convoy_invite` database trigger to create notifications). This is the right mechanism — just needs to be wired up to the new UI.
 
-2. **Check auth session before starting** — call `supabase.auth.getSession()` first. If no valid session, show a toast telling the user to log in again, and navigate to `/login`.
+#### 3. Update `ActiveTrip.tsx`
+- Replace `handleShareInvite` with opening the new `InviteMembersSheet`
+- The sheet handles both direct invites (via `createBulkInvites`) and link sharing (via existing `createInvite` + share)
 
-3. **Improve the catch block** — detect specific error types:
-   - `TypeError: Failed to fetch` → show "Network error. Check your connection and try again."
-   - Auth errors → show "Session expired. Please log in again." and navigate to `/login`.
-   - Other errors → show the existing generic message.
+#### 4. Fix RLS Policy (if needed)
+The current RLS INSERT policy on `convoy_invites` requires the user to be the trip owner OR a convoy leader (`is_leader = true`). This is correct — only leaders should invite. But we need to verify the user's `is_leader` status is set properly when they start a trip (trip owner should automatically be a convoy member with `is_leader = true`).
 
-4. **Ensure `setIsStarting(false)` always runs** — the `finally` block already does this, but the timeout case also needs to reset it.
+Let me check: the error happens because when the **trip owner** starts a trip, they may not have a corresponding `convoy_members` row with `is_leader = true`, and the RLS check for `trips.user_id = auth.uid()` should cover them. The more likely issue is that `activeTripId` resolves to a trip the user doesn't own (e.g., via `activeConvoy.trip_id`), or the trip's `user_id` doesn't match.
 
-### Implementation Detail
+We should add better error logging in the catch block to surface the actual Supabase error, and ensure the trip owner path works.
 
-```typescript
-// At the start of handleStartTrip:
-const { data: { session } } = await supabase.auth.getSession();
-if (!session) {
-  toast({ title: 'Session expired', description: 'Please log in again.', variant: 'destructive' });
-  navigate('/login');
-  return;
-}
+### Technical Details
 
-// Wrap main logic with timeout:
-const timeout = new Promise((_, reject) => 
-  setTimeout(() => reject(new Error('TIMEOUT')), 15000)
-);
-await Promise.race([mainLogic(), timeout]);
+**`src/components/convoy/InviteMembersSheet.tsx`** (new file):
+- Props: `isOpen`, `onClose`, `tripId`, `existingMemberIds`
+- Tabs for Tribe / Followers using existing hooks
+- Each row: avatar, display name, invite button
+- On invite: call `createBulkInvites` with selected `invitee_id`s
+- Footer: "Share Link" button for link-based invite
 
-// In catch: check error.message for 'Failed to fetch', 'TIMEOUT', etc.
-```
+**`src/pages/ActiveTrip.tsx`**:
+- Add state `showInviteSheet`
+- Replace `handleShareInvite` → open the sheet
+- Pass `activeTripId` and current member IDs to the sheet
+- Improve error handling: log the actual error from `createInvite`
 
-This is a single-file change to `src/pages/TripReview.tsx`, focused on the `handleStartTrip` function.
+**`src/hooks/useConvoyInvites.ts`**:
+- Minor: improve error messages in `createInvite` and `createBulkInvites` to surface the actual DB error
+
+**Database**: No schema changes needed. The `convoy_invites` table already supports `invitee_id`, and the `notify_on_convoy_invite` trigger already fires on insert to create notifications. The Notifications page already has Accept/Decline buttons for `convoy_invite` type notifications.
 
