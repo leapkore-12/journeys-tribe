@@ -6,7 +6,6 @@ import { useVehicles } from '@/hooks/useVehicles';
 import { useCurrentProfile, useProfile } from '@/hooks/useProfile';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { useAuth } from '@/context/AuthContext';
 
 const Garage = () => {
@@ -194,29 +193,30 @@ const Garage = () => {
       </div>
 
       {/* Fullscreen Image Viewer */}
-      <Dialog open={!!selectedImage} onOpenChange={() => setSelectedImage(null)}>
-        <DialogContent className="max-w-none w-screen h-screen p-0 border-none bg-black/95 rounded-none [&>button]:hidden">
-          {selectedImage && (
-            <div 
-              className="w-full h-full flex items-center justify-center p-4"
-              onClick={() => setSelectedImage(null)}
+      <AnimatePresence>
+        {selectedImage && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 bg-black/95 flex items-center justify-center"
+            onClick={() => setSelectedImage(null)}
+          >
+            <button
+              onClick={(e) => { e.stopPropagation(); setSelectedImage(null); }}
+              className="absolute top-12 right-6 z-50 min-h-11 min-w-11 flex items-center justify-center rounded-full bg-white/20 active:opacity-70"
             >
-              <button
-                onClick={(e) => { e.stopPropagation(); setSelectedImage(null); }}
-                className="absolute top-4 right-4 z-50 min-h-11 min-w-11 flex items-center justify-center rounded-full bg-white/20 active:opacity-70"
-              >
-                <X className="h-6 w-6 text-white" />
-              </button>
-              <img
-                src={selectedImage}
-                alt="Vehicle photo"
-                className="max-w-full max-h-full object-contain"
-                onClick={(e) => e.stopPropagation()}
-              />
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
+              <X className="h-6 w-6 text-white" />
+            </button>
+            <img
+              src={selectedImage}
+              alt="Vehicle photo"
+              className="max-w-full max-h-[80vh] object-contain px-4"
+              onClick={(e) => e.stopPropagation()}
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };
