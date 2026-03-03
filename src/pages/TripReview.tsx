@@ -27,129 +27,164 @@ const TripReview = () => {
     
     setIsStarting(true);
     try {
-      // Check for existing active trips and complete them first
-      const { data: existingTrip } = await supabase
-        .from('trips')
-        .select('id, title')
-        .eq('user_id', user.id)
-        .eq('status', 'active')
-        .maybeSingle();
-
-      if (existingTrip) {
-        console.log('Found existing active trip, completing it:', existingTrip.id);
-        
-        // Complete the old trip
-        await supabase
-          .from('trips')
-          .update({ 
-            status: 'completed', 
-            completed_at: new Date().toISOString() 
-          })
-          .eq('id', existingTrip.id);
-        
-        // Deactivate convoy members of old trip
-        await supabase
-          .from('convoy_members')
-          .update({ status: 'left' })
-          .eq('trip_id', existingTrip.id)
-          .eq('status', 'active');
-        
-        // Delete any active_trips entries for the old trip
-        await supabase
-          .from('active_trips')
-          .delete()
-          .eq('trip_id', existingTrip.id);
-      }
-
-      // Now create the new trip
-      const { data: trip, error: tripError } = await supabase
-        .from('trips')
-        .insert({
-          user_id: user.id,
-          title: `Trip to ${tripState.destination || 'Destination'}`,
-          start_location: tripState.startLocation,
-          start_lat: tripState.startCoordinates?.[1],
-          start_lng: tripState.startCoordinates?.[0],
-          end_location: tripState.destination,
-          end_lat: tripState.destinationCoordinates?.[1],
-          end_lng: tripState.destinationCoordinates?.[0],
-          distance_km: tripState.routeDistance,
-          duration_minutes: tripState.routeDuration ? Math.round(tripState.routeDuration) : null,
-          vehicle_id: tripState.vehicle?.id,
-          status: 'active',
-          started_at: new Date().toISOString(),
-        })
-        .select()
-        .single();
-      
-      if (tripError || !trip) {
-        console.error('Failed to create trip:', tripError);
-        if (tripError?.code === '23505') {
-          toast({
-            title: 'Trip already in progress',
-            description: 'Please complete or cancel your current trip first.',
-            variant: 'destructive',
-          });
-          return;
-        }
-        throw new Error('Failed to create trip');
-      }
-      
-      const tripId = trip.id;
-      
-      // Store the trip ID in context for later use when finishing the trip
-      setActiveTripId(tripId);
-
-      // Save stops to database
-      if (tripState.stops.length > 0) {
-        const { error: stopsError } = await supabase.from('trip_stops').insert(
-          tripState.stops.map((stop, index) => ({
-            trip_id: tripId,
-            address: stop.address,
-            latitude: stop.coordinates?.[1] ?? null,
-            longitude: stop.coordinates?.[0] ?? null,
-            stop_order: index,
-          }))
-        );
-        if (stopsError) {
-          console.error('Failed to save stops:', stopsError);
-        }
-      }
-      
-      // Add the current user as convoy leader
-      const { error: leaderError } = await supabase
-        .from('convoy_members')
-        .insert({
-          trip_id: tripId,
-          user_id: user.id,
-          is_leader: true,
-          status: 'active',
-        });
-      
-      if (leaderError) {
-        console.error('Failed to add leader:', leaderError);
-      }
-      
-      // Create invites for selected convoy members
-      if (tripState.convoy.length > 0) {
-        const inviteeIds = tripState.convoy.map(member => member.id);
-        await createBulkInvites.mutateAsync({ tripId, inviteeIds });
-        
+      // Check auth session before proceeding
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
         toast({
-          title: 'Convoy invites sent!',
-          description: `Invited ${tripState.convoy.length} friends to join your convoy.`,
+          title: 'Session expired',
+          description: 'Please log in again.',
+          variant: 'destructive',
+        });
+        navigate('/login');
+        return;
+      }
+
+      const startTripLogic = async () => {
+        // Check for existing active trips and complete them first
+        const { data: existingTrip } = await supabase
+          .from('trips')
+          .select('id, title')
+          .eq('user_id', user.id)
+          .eq('status', 'active')
+          .maybeSingle();
+
+        if (existingTrip) {
+          console.log('Found existing active trip, completing it:', existingTrip.id);
+          
+          await supabase
+            .from('trips')
+            .update({ 
+              status: 'completed', 
+              completed_at: new Date().toISOString() 
+            })
+            .eq('id', existingTrip.id);
+          
+          await supabase
+            .from('convoy_members')
+            .update({ status: 'left' })
+            .eq('trip_id', existingTrip.id)
+            .eq('status', 'active');
+          
+          await supabase
+            .from('active_trips')
+            .delete()
+            .eq('trip_id', existingTrip.id);
+        }
+
+        const { data: trip, error: tripError } = await supabase
+          .from('trips')
+          .insert({
+            user_id: user.id,
+            title: `Trip to ${tripState.destination || 'Destination'}`,
+            start_location: tripState.startLocation,
+            start_lat: tripState.startCoordinates?.[1],
+            start_lng: tripState.startCoordinates?.[0],
+            end_location: tripState.destination,
+            end_lat: tripState.destinationCoordinates?.[1],
+            end_lng: tripState.destinationCoordinates?.[0],
+            distance_km: tripState.routeDistance,
+            duration_minutes: tripState.routeDuration ? Math.round(tripState.routeDuration) : null,
+            vehicle_id: tripState.vehicle?.id,
+            status: 'active',
+            started_at: new Date().toISOString(),
+          })
+          .select()
+          .single();
+        
+        if (tripError || !trip) {
+          console.error('Failed to create trip:', tripError);
+          if (tripError?.code === '23505') {
+            toast({
+              title: 'Trip already in progress',
+              description: 'Please complete or cancel your current trip first.',
+              variant: 'destructive',
+            });
+            return;
+          }
+          throw new Error('Failed to create trip');
+        }
+        
+        const tripId = trip.id;
+        setActiveTripId(tripId);
+
+        if (tripState.stops.length > 0) {
+          const { error: stopsError } = await supabase.from('trip_stops').insert(
+            tripState.stops.map((stop, index) => ({
+              trip_id: tripId,
+              address: stop.address,
+              latitude: stop.coordinates?.[1] ?? null,
+              longitude: stop.coordinates?.[0] ?? null,
+              stop_order: index,
+            }))
+          );
+          if (stopsError) {
+            console.error('Failed to save stops:', stopsError);
+          }
+        }
+        
+        const { error: leaderError } = await supabase
+          .from('convoy_members')
+          .insert({
+            trip_id: tripId,
+            user_id: user.id,
+            is_leader: true,
+            status: 'active',
+          });
+        
+        if (leaderError) {
+          console.error('Failed to add leader:', leaderError);
+        }
+        
+        if (tripState.convoy.length > 0) {
+          const inviteeIds = tripState.convoy.map(member => member.id);
+          await createBulkInvites.mutateAsync({ tripId, inviteeIds });
+          
+          toast({
+            title: 'Convoy invites sent!',
+            description: `Invited ${tripState.convoy.length} friends to join your convoy.`,
+          });
+        }
+        
+        startTrip();
+        navigate('/trip/active');
+      };
+
+      // Race the main logic against a 15-second timeout
+      const timeout = new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('TIMEOUT')), 15000)
+      );
+      await Promise.race([startTripLogic(), timeout]);
+
+    } catch (error: any) {
+      console.error('Failed to start trip:', error);
+      const msg = error?.message || '';
+      
+      if (msg === 'TIMEOUT') {
+        toast({
+          title: 'Request timed out',
+          description: 'The server took too long to respond. Please check your connection and try again.',
+          variant: 'destructive',
+        });
+      } else if (msg.includes('Failed to fetch') || msg.includes('NetworkError')) {
+        toast({
+          title: 'Network error',
+          description: 'Check your internet connection and try again.',
+          variant: 'destructive',
+        });
+      } else if (msg.includes('JWT') || msg.includes('token') || msg.includes('auth')) {
+        toast({
+          title: 'Session expired',
+          description: 'Please log in again.',
+          variant: 'destructive',
+        });
+        navigate('/login');
+      } else {
+        toast({
+          title: 'Failed to start trip',
+          description: 'Please try again.',
+          variant: 'destructive',
         });
       }
-      
-      startTrip();
-      navigate('/trip/active');
-    } catch (error) {
-      console.error('Failed to start trip:', error);
-      toast({
-        title: 'Failed to start trip',
-        description: 'Please try again.',
-        variant: 'destructive',
-      });
     } finally {
       setIsStarting(false);
     }
