@@ -594,8 +594,8 @@ const ActiveTrip = () => {
             <ArrowUp className="h-6 w-6 text-primary" />
           </div>
           <div className="flex-1">
-            <p className="text-foreground font-semibold text-lg line-clamp-1">{currentInstruction}</p>
-            <p className="text-muted-foreground text-sm flex items-center gap-1">
+            <p className="text-gray-900 font-semibold text-lg line-clamp-1">{currentInstruction}</p>
+            <p className="text-gray-500 text-sm flex items-center gap-1">
               {route?.steps?.[1]?.instruction ? `Then ${route.steps[1].instruction.split(' ').slice(0, 3).join(' ')}` : 'Continue'}
             </p>
           </div>
