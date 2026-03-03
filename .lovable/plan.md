@@ -1,22 +1,17 @@
 
 
-## Fix: Garage Fullscreen Image Viewer Getting Stuck
+## Assessment: No Code Change Needed
 
-### Problem
-Clicking a vehicle photo opens a Radix `Dialog`-based fullscreen viewer that freezes the app. The Radix Dialog traps focus, applies scroll locks, and uses transforms for centering -- all of which conflict with a simple fullscreen image overlay. The close button becomes unresponsive, leaving the user stuck.
+Looking at the current `src/pages/Garage.tsx` code, the fullscreen image viewer **already does NOT have** any "Instagram Story" or "Download Image" buttons. It only contains:
+- The vehicle image (centered, contained)
+- An X close button (top-right corner)
+- Tap-outside-to-dismiss background
 
-### Solution
-Replace the Radix `Dialog` with a simple fixed-position overlay using `AnimatePresence` + `motion.div`. This is lightweight, doesn't trap focus or lock scroll, and dismisses reliably via the X button or tapping the background.
+What you're seeing in that screenshot is actually the **Share page** — not the Garage image viewer. The image you uploaded shows the Share page UI (with the RoadTribe header, carousel dots, and action buttons).
 
-### Changes
+The Garage fullscreen viewer was already fixed in the last edit to be a simple lightweight overlay with just the image and close button — no share-related buttons.
 
-**`src/pages/Garage.tsx`**:
-- Remove the `Dialog` and `DialogContent` imports
-- Replace the Dialog-based viewer (lines 196-219) with a simple `AnimatePresence` overlay:
-  - Fixed fullscreen div with `z-50 bg-black/95`
-  - Fade in/out animation via framer-motion
-  - X close button (top-right, 44x44 tap target, `bg-white/20`)
-  - Click background to dismiss
-  - Image centered with `object-contain`
-- No changes to the rest of the page
+**Next step**: Open the app, navigate to your Garage, and tap a vehicle photo. You should see just the image on a dark background with an X button. If you're still seeing the Share page, it may be a cached version — try a hard refresh or clear the app cache.
+
+No code changes are required.
 
