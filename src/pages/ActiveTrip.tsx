@@ -655,7 +655,7 @@ const ActiveTrip = () => {
       </div>
 
       {/* Re-centre Button and Convoy Status */}
-      <div className="absolute left-4 z-10 space-y-2" style={{ bottom: safeAreaBottom + 200 }}>
+      <div className="absolute left-4 z-10 space-y-2" style={{ bottom: safeAreaBottom + 210 }}>
         {(isConvoyConnected && totalMembersCount > 0) || !isOnline ? (
           <ConvoyStatusBar
             connectedCount={connectedMembersCount}
@@ -676,7 +676,7 @@ const ActiveTrip = () => {
       </div>
 
       {/* Bottom Info Card */}
-      <div className="absolute left-4 right-4 z-10" style={{ bottom: safeAreaBottom + 16 }}>
+      <div className="absolute left-4 right-4 z-10" style={{ bottom: safeAreaBottom + 32 }}>
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
