@@ -1,23 +1,18 @@
 
 
-## Already Implemented: Latitude/Longitude Input
+## Fix: Active Trip Bottom Bar Getting Cut Off
 
-Good news — the destination search box **already supports** entering coordinates directly. You can type latitude and longitude in the format `lat, lng` (e.g., `12.9716, 77.5946`) and it will:
+### Problem
+The bottom info card (showing time, distance, and Pause button) is positioned too low on the screen, getting cut off or overlapping with the Mapbox attribution on native iOS devices. The current positioning uses `bottom: safeAreaBottom + 16` which doesn't provide enough clearance.
 
-1. Detect the coordinate pattern automatically
-2. Reverse geocode it to show the nearest place name
-3. Let you select it as your destination
+### Solution
+Increase the bottom offset for the info card from `safeAreaBottom + 16` to `safeAreaBottom + 24` to give it more breathing room. Also adjust the Re-centre button cluster offset proportionally.
 
-This works in the destination field, start location field, and stop fields.
+### Changes
 
-### How to use it
-Type coordinates in the search box like: `28.6139, 77.2090` (for New Delhi). The dropdown will show the resolved location name which you can tap to select.
+**`src/pages/ActiveTrip.tsx`**:
+- Line 658: Change Re-centre button bottom from `safeAreaBottom + 200` to `safeAreaBottom + 210`
+- Line 679: Change bottom info card from `safeAreaBottom + 16` to `safeAreaBottom + 32`
 
-### Possible improvement
-The placeholder text currently says "Search for destination" which doesn't hint that coordinates are accepted. We could update it to something like `"Search or enter lat, lng"` so users know this option exists.
-
-### Change (optional)
-**`src/pages/TripPlanner.tsx`**: Update the destination placeholder from `"Search for destination"` to `"Search or enter lat, lng"` to make the coordinate input discoverable. Same for start location and stops placeholders.
-
-No other code changes needed — the coordinate parsing, validation, and reverse geocoding logic is already in place.
+This gives the bottom card more space above the screen edge and home indicator on iOS devices, preventing it from being clipped.
 
