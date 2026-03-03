@@ -24,6 +24,7 @@ import ConvoyPanel from '@/components/convoy/ConvoyPanel';
 import ConvoyStatusBar from '@/components/convoy/ConvoyStatusBar';
 import NearbySearchSheet from '@/components/trip/NearbySearchSheet';
 import ReportHazardSheet from '@/components/trip/ReportHazardSheet';
+import InviteMembersSheet from '@/components/convoy/InviteMembersSheet';
 import { useRoadHazards, RoadHazard } from '@/hooks/useRoadHazards';
 import logoWhite from '@/assets/logo-white.svg';
 import { useEmergencyNumber } from '@/hooks/useEmergencyNumber';
@@ -59,6 +60,7 @@ const ActiveTrip = () => {
   const [showRoute, setShowRoute] = useState(true);
   const [showNearbySearch, setShowNearbySearch] = useState(false);
   const [showReportHazard, setShowReportHazard] = useState(false);
+  const [showInviteSheet, setShowInviteSheet] = useState(false);
   
   const mapRef = useRef<LiveTrackingMapRef>(null);
   const prevPositionRef = useRef<[number, number] | null>(null);
@@ -331,8 +333,8 @@ const ActiveTrip = () => {
       'Connected:', connectedMembersCount, 'Total:', totalMembersCount);
   }, [mergedConvoyMembers, connectedMembersCount, totalMembersCount]);
 
-  // Convoy invites
-  const { createInvite, copyInviteLink, getShareLink } = useConvoyInvites();
+  // Convoy invites (sheet handles invite creation)
+  useConvoyInvites();
 
   // Road hazards
   const { hazards } = useRoadHazards(activeTripId);
@@ -430,29 +432,22 @@ const ActiveTrip = () => {
     navigate('/trip/paused');
   }, [leaveConvoy, pauseTrip, navigate]);
 
-  // Handle share invite
-  const handleShareInvite = useCallback(async () => {
+  // Open invite members sheet
+  const handleShareInvite = useCallback(() => {
     if (!activeTripId) {
       toast({ title: 'No active trip', description: 'Cannot create invite without an active trip.', variant: 'destructive' });
       return;
     }
-    try {
-      const result = await createInvite.mutateAsync({ tripId: activeTripId });
-      
-      if (navigator.share) {
-        await navigator.share({
-          title: 'Join my convoy!',
-          text: 'Join my road trip convoy on RoadTribe',
-          url: getShareLink(result.invite_code),
-        });
-      } else {
-        await copyInviteLink(result.invite_code);
-      }
-    } catch (error) {
-      console.error('Share failed:', error);
-      toast({ title: 'Invite failed', description: 'Could not create invite. Please try again.', variant: 'destructive' });
-    }
-  }, [createInvite, copyInviteLink, getShareLink, activeTripId, toast]);
+    setShowInviteSheet(true);
+  }, [activeTripId, toast]);
+
+  // Existing convoy member IDs for the sheet
+  const existingMemberIds = useMemo(() => {
+    const ids = new Set<string>();
+    if (user?.id) ids.add(user.id);
+    convoyRoster.filter(m => m.status === 'active').forEach(m => ids.add(m.user_id));
+    return ids;
+  }, [convoyRoster, user?.id]);
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -519,7 +514,7 @@ const ActiveTrip = () => {
             {/* Share invite button */}
             <button 
               onClick={handleShareInvite}
-              disabled={createInvite.isPending || !activeTripId}
+              disabled={!activeTripId}
               className="min-h-11 min-w-11 flex items-center justify-center bg-card/80 backdrop-blur rounded-full active:opacity-70 disabled:opacity-50"
             >
               <Share2 className="h-5 w-5 text-foreground" />
@@ -743,8 +738,8 @@ const ActiveTrip = () => {
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={handleShareInvite}
-                    disabled={createInvite.isPending || !activeTripId}
+                    onClick={() => setShowInviteSheet(true)}
+                    disabled={!activeTripId}
                     className="gap-2"
                   >
                     <Share2 className="h-4 w-4" />
@@ -827,13 +822,22 @@ const ActiveTrip = () => {
         }}
       />
 
-      {/* Report Hazard Sheet */}
       <ReportHazardSheet
         open={showReportHazard}
         onOpenChange={setShowReportHazard}
         userPosition={userPosition}
         tripId={activeTripId}
       />
+
+      {/* Invite Members Sheet */}
+      {activeTripId && (
+        <InviteMembersSheet
+          isOpen={showInviteSheet}
+          onClose={() => setShowInviteSheet(false)}
+          tripId={activeTripId}
+          existingMemberIds={existingMemberIds}
+        />
+      )}
     </div>
   );
 };
