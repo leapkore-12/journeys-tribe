@@ -1,17 +1,23 @@
 
 
-## Assessment: No Code Change Needed
+## Already Implemented: Latitude/Longitude Input
 
-Looking at the current `src/pages/Garage.tsx` code, the fullscreen image viewer **already does NOT have** any "Instagram Story" or "Download Image" buttons. It only contains:
-- The vehicle image (centered, contained)
-- An X close button (top-right corner)
-- Tap-outside-to-dismiss background
+Good news — the destination search box **already supports** entering coordinates directly. You can type latitude and longitude in the format `lat, lng` (e.g., `12.9716, 77.5946`) and it will:
 
-What you're seeing in that screenshot is actually the **Share page** — not the Garage image viewer. The image you uploaded shows the Share page UI (with the RoadTribe header, carousel dots, and action buttons).
+1. Detect the coordinate pattern automatically
+2. Reverse geocode it to show the nearest place name
+3. Let you select it as your destination
 
-The Garage fullscreen viewer was already fixed in the last edit to be a simple lightweight overlay with just the image and close button — no share-related buttons.
+This works in the destination field, start location field, and stop fields.
 
-**Next step**: Open the app, navigate to your Garage, and tap a vehicle photo. You should see just the image on a dark background with an X button. If you're still seeing the Share page, it may be a cached version — try a hard refresh or clear the app cache.
+### How to use it
+Type coordinates in the search box like: `28.6139, 77.2090` (for New Delhi). The dropdown will show the resolved location name which you can tap to select.
 
-No code changes are required.
+### Possible improvement
+The placeholder text currently says "Search for destination" which doesn't hint that coordinates are accepted. We could update it to something like `"Search or enter lat, lng"` so users know this option exists.
+
+### Change (optional)
+**`src/pages/TripPlanner.tsx`**: Update the destination placeholder from `"Search for destination"` to `"Search or enter lat, lng"` to make the coordinate input discoverable. Same for start location and stops placeholders.
+
+No other code changes needed — the coordinate parsing, validation, and reverse geocoding logic is already in place.
 
