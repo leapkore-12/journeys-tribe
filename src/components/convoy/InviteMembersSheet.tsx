@@ -187,22 +187,8 @@ const InviteMembersSheet = ({ isOpen, onClose, tripId, existingMemberIds }: Invi
                 </TabsContent>
               </Tabs>
 
-              {/* Share Link Footer */}
-              <div className="p-4 border-t border-border/50 pb-[calc(1rem+env(safe-area-inset-bottom,0px))]">
-                <Button
-                  variant="outline"
-                  className="w-full gap-2"
-                  onClick={handleShareLink}
-                  disabled={createInvite.isPending}
-                >
-                  {createInvite.isPending ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <Share2 className="h-4 w-4" />
-                  )}
-                  Share Invite Link
-                </Button>
-              </div>
+              {/* Safe area bottom padding */}
+              <div className="pb-[env(safe-area-inset-bottom,0px)]" />
             </div>
           </motion.div>
         </motion.div>

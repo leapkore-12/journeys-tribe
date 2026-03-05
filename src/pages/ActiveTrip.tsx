@@ -739,7 +739,7 @@ const ActiveTrip = () => {
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => setShowInviteSheet(true)}
+                    onClick={() => { setShowConvoyPanel(false); setShowInviteSheet(true); }}
                     disabled={!activeTripId}
                     className="gap-2"
                   >
