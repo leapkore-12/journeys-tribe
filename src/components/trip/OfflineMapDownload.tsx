@@ -195,7 +195,7 @@ export const OfflineMapDownload = ({
             <Download className="h-5 w-5 text-primary" />
           </div>
           <div className="flex-1">
-            <p className="font-medium">Download Maps for Offline</p>
+            <p className="font-medium text-foreground">Download Maps for Offline</p>
             <p className="text-sm text-muted-foreground mt-0.5">
               Route: {routeDistanceKm || estimate?.routeDistanceKm || 0} km • Est. size: ~{estimate?.estimatedSize || 'calculating...'}
             </p>
