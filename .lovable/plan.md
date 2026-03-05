@@ -1,18 +1,12 @@
 
 
-## Plan: Fix iOS Auto-Zoom Issue
+## Plan: Lift Bottom Info Card Higher on Active Trip
 
-### Root Cause
+The bottom info card (showing trip stats and Pause button) is positioned at `safeAreaBottom + 32` pixels, which sits too close to the screen edge. I'll increase this to `safeAreaBottom + 48` to give more breathing room.
 
-The viewport meta tag in `index.html` is missing `maximum-scale=1.0` and `user-scalable=no`. On iOS, this allows the browser to auto-zoom when the user interacts with form inputs (especially if any text input has a font-size below 16px) or accidentally pinch-zooms. Once zoomed, iOS doesn't always zoom back out, leaving the entire UI scaled up and clipped.
+### Change
 
-### Changes
-
-**`index.html`** (line 5):
-- Update the viewport meta tag to prevent user scaling and auto-zoom:
-```html
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-```
-
-This single change will prevent iOS from zooming in on input focus and block accidental pinch-zoom, keeping the app at the correct 1:1 scale on all iPhone models.
+**`src/pages/ActiveTrip.tsx`** (line 674):
+- Change `bottom: safeAreaBottom + 32` to `bottom: safeAreaBottom + 48`
+- Also adjust the re-centre button offset from `safeAreaBottom + 210` to `safeAreaBottom + 226` to maintain consistent spacing above the card.
 
