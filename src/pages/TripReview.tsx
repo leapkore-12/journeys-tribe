@@ -212,7 +212,7 @@ const TripReview = () => {
         <h1 className="text-xl font-semibold text-primary text-center">Trip Planner</h1>
       </div>
 
-      <div className="flex-1 overflow-y-auto px-4 pb-48 space-y-4 scrollbar-hide">
+      <div className="flex-1 overflow-y-auto px-4 pb-64 space-y-4 scrollbar-hide">
         {/* Route Section */}
         <div className="space-y-2">
           <label className="text-sm text-muted-foreground">Route</label>

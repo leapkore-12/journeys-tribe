@@ -1,17 +1,12 @@
 
 
-## Plan: Fix Trip Review Scroll & Text Visibility Issues
+## Plan: Lift Bottom Info Card Higher on Active Trip
 
-### Issues
-1. **Scroll bounce/clipping**: The scrollable area has `pb-48` but the `FixedBottomActions` overlay is taller, so content behind it gets cut off and the scroll "bounces back" when trying to reach the bottom.
-2. **"Download Maps for Offline" text invisible**: The title uses the default `font-medium` class without an explicit `text-foreground`, making it dark-on-dark in dark mode.
+The bottom info card (showing trip stats and Pause button) is positioned at `safeAreaBottom + 32` pixels, which sits too close to the screen edge. I'll increase this to `safeAreaBottom + 48` to give more breathing room.
 
-### Changes
+### Change
 
-**`src/pages/TripReview.tsx`** (line 215):
-- Increase bottom padding from `pb-48` to `pb-64` so the scrollable content extends well past the fixed bottom buttons, preventing the auto-scroll-back issue.
-
-**`src/components/trip/OfflineMapDownload.tsx`** (line 198):
-- Add `text-foreground` to the "Download Maps for Offline" title (`<p className="font-medium">`) so it's visible in dark mode.
-- Also add `text-foreground` to the "Downloading maps..." text on line 166 for consistency.
+**`src/pages/ActiveTrip.tsx`** (line 674):
+- Change `bottom: safeAreaBottom + 32` to `bottom: safeAreaBottom + 48`
+- Also adjust the re-centre button offset from `safeAreaBottom + 210` to `safeAreaBottom + 226` to maintain consistent spacing above the card.
 
