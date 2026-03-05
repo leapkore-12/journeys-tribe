@@ -87,23 +87,6 @@ const InviteMembersSheet = ({ isOpen, onClose, tripId, existingMemberIds }: Invi
     }
   };
 
-  const handleShareLink = async () => {
-    try {
-      const result = await createInvite.mutateAsync({ tripId });
-      if (navigator.share) {
-        await navigator.share({
-          title: 'Join my convoy!',
-          text: 'Join my road trip convoy on RoadTribe',
-          url: getShareLink(result.invite_code),
-        });
-      } else {
-        await copyInviteLink(result.invite_code);
-      }
-    } catch (error: any) {
-      console.error('Share link error:', error);
-      toast({ title: 'Share failed', description: error?.message || 'Could not create share link.', variant: 'destructive' });
-    }
-  };
 
   const getStatus = (userId: string): 'invite' | 'invited' | 'joined' => {
     if (existingMemberIds.has(userId)) return 'joined';
