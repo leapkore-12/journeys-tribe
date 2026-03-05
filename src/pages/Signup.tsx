@@ -11,13 +11,27 @@ import logoWhiteTagline from '@/assets/logo-white-tagline.svg';
 const Signup = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { signUp } = useAuth();
+  const { signUp, user, isLoading: authLoading } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState('');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    if (!authLoading && user) {
+      navigate('/feed', { replace: true });
+    }
+  }, [user, authLoading, navigate]);
+
+  if (authLoading || user) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
