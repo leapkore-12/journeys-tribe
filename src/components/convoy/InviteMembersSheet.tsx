@@ -68,7 +68,7 @@ const InviteMembersSheet = ({ isOpen, onClose, tripId, existingMemberIds }: Invi
   const { toast } = useToast();
   const { data: tribe = [], isLoading: tribeLoading } = useTribe();
   const { data: following = [], isLoading: followingLoading } = useFollowing();
-  const { createBulkInvites, createInvite, copyInviteLink, getShareLink } = useConvoyInvites();
+  const { createBulkInvites } = useConvoyInvites();
   
   const [invitedIds, setInvitedIds] = useState<Set<string>>(new Set());
   const [loadingIds, setLoadingIds] = useState<Set<string>>(new Set());
