@@ -1,43 +1,12 @@
 
 
-## Plan: Add Separate Latitude/Longitude Input Fields
+## Plan: Lift Bottom Info Card Higher on Active Trip
 
-Currently, `LocationSearchInput` accepts coordinates only as a single comma-separated string (e.g., `12.3, 45.6`). The user wants dedicated Lat and Lng fields as an alternative input method alongside the name search.
+The bottom info card (showing trip stats and Pause button) is positioned at `safeAreaBottom + 32` pixels, which sits too close to the screen edge. I'll increase this to `safeAreaBottom + 48` to give more breathing room.
 
-### Approach
+### Change
 
-Add a toggle inside `LocationSearchInput` that lets the user switch between **"Search by name"** and **"Enter coordinates"** modes.
-
-### Changes
-
-**`src/components/trip/LocationSearchInput.tsx`**:
-- Add a small toggle link/button below the search input: "Enter coordinates" / "Search by name"
-- When in coordinate mode, show two side-by-side `Input` fields for Latitude and Longitude (replacing the single search input)
-- When both lat/lng are valid numbers in range, auto-trigger reverse geocode and show the result in the dropdown for the user to confirm/select
-- When in search mode, behavior stays exactly as today
-- The toggle switches between modes without losing the other mode's state
-
-### UI Layout (Coordinate Mode)
-
-```text
-┌─────────────────────────────────────┐
-│  [Latitude]         [Longitude]     │
-│  ┌──────────────┐  ┌──────────────┐ │
-│  │ e.g. 12.345  │  │ e.g. 45.678  │ │
-│  └──────────────┘  └──────────────┘ │
-│  🔍 Search by name                  │  ← toggle link
-│                                     │
-│  ┌─ Dropdown ─────────────────────┐ │
-│  │ 📍 Reverse-geocoded place name │ │
-│  └────────────────────────────────┘ │
-└─────────────────────────────────────┘
-```
-
-### Technical Details
-
-- Coordinate mode uses two controlled inputs with `type="text"` and `inputMode="decimal"` for mobile numeric keyboard
-- Validation: lat must be -90 to 90, lng must be -180 to 180
-- When both are valid, debounce 500ms then call `reverseGeocode([lng, lat])` and show result
-- Selecting the result calls `onSelect()` with the geocoded result (same as name search)
-- The existing single-field coordinate regex path stays as a fallback
+**`src/pages/ActiveTrip.tsx`** (line 674):
+- Change `bottom: safeAreaBottom + 32` to `bottom: safeAreaBottom + 48`
+- Also adjust the re-centre button offset from `safeAreaBottom + 210` to `safeAreaBottom + 226` to maintain consistent spacing above the card.
 
