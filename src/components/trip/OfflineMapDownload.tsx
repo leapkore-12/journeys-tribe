@@ -163,7 +163,7 @@ export const OfflineMapDownload = ({
                 <Download className="h-4 w-4 text-primary" />
               </motion.div>
               <div>
-                <p className="font-medium">Downloading maps...</p>
+                <p className="font-medium text-foreground">Downloading maps...</p>
                 <p className="text-sm text-muted-foreground">
                   {downloadProgress}% complete
                 </p>
