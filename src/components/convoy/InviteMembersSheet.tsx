@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Share2, Check, Loader2, UserPlus } from 'lucide-react';
+import { X, Check, Loader2, UserPlus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
@@ -68,7 +68,7 @@ const InviteMembersSheet = ({ isOpen, onClose, tripId, existingMemberIds }: Invi
   const { toast } = useToast();
   const { data: tribe = [], isLoading: tribeLoading } = useTribe();
   const { data: following = [], isLoading: followingLoading } = useFollowing();
-  const { createBulkInvites, createInvite, copyInviteLink, getShareLink } = useConvoyInvites();
+  const { createBulkInvites } = useConvoyInvites();
   
   const [invitedIds, setInvitedIds] = useState<Set<string>>(new Set());
   const [loadingIds, setLoadingIds] = useState<Set<string>>(new Set());
@@ -87,23 +87,6 @@ const InviteMembersSheet = ({ isOpen, onClose, tripId, existingMemberIds }: Invi
     }
   };
 
-  const handleShareLink = async () => {
-    try {
-      const result = await createInvite.mutateAsync({ tripId });
-      if (navigator.share) {
-        await navigator.share({
-          title: 'Join my convoy!',
-          text: 'Join my road trip convoy on RoadTribe',
-          url: getShareLink(result.invite_code),
-        });
-      } else {
-        await copyInviteLink(result.invite_code);
-      }
-    } catch (error: any) {
-      console.error('Share link error:', error);
-      toast({ title: 'Share failed', description: error?.message || 'Could not create share link.', variant: 'destructive' });
-    }
-  };
 
   const getStatus = (userId: string): 'invite' | 'invited' | 'joined' => {
     if (existingMemberIds.has(userId)) return 'joined';
@@ -204,22 +187,8 @@ const InviteMembersSheet = ({ isOpen, onClose, tripId, existingMemberIds }: Invi
                 </TabsContent>
               </Tabs>
 
-              {/* Share Link Footer */}
-              <div className="p-4 border-t border-border/50 pb-[calc(1rem+env(safe-area-inset-bottom,0px))]">
-                <Button
-                  variant="outline"
-                  className="w-full gap-2"
-                  onClick={handleShareLink}
-                  disabled={createInvite.isPending}
-                >
-                  {createInvite.isPending ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <Share2 className="h-4 w-4" />
-                  )}
-                  Share Invite Link
-                </Button>
-              </div>
+              {/* Safe area bottom padding */}
+              <div className="pb-[env(safe-area-inset-bottom,0px)]" />
             </div>
           </motion.div>
         </motion.div>

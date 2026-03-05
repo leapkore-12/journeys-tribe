@@ -438,6 +438,7 @@ const ActiveTrip = () => {
       toast({ title: 'No active trip', description: 'Cannot create invite without an active trip.', variant: 'destructive' });
       return;
     }
+    setShowConvoyPanel(false);
     setShowInviteSheet(true);
   }, [activeTripId, toast]);
 
@@ -738,7 +739,7 @@ const ActiveTrip = () => {
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => setShowInviteSheet(true)}
+                    onClick={() => { setShowConvoyPanel(false); setShowInviteSheet(true); }}
                     disabled={!activeTripId}
                     className="gap-2"
                   >
